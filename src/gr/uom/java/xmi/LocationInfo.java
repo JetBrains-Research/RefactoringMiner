@@ -4,6 +4,11 @@ import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 
 import gr.uom.java.xmi.diff.CodeRange;
+import org.jetbrains.kotlin.com.intellij.openapi.editor.Document;
+import org.jetbrains.kotlin.com.intellij.openapi.util.TextRange;
+import org.jetbrains.kotlin.com.intellij.psi.FileViewProvider;
+import org.jetbrains.kotlin.psi.KtElement;
+import org.jetbrains.kotlin.psi.KtFile;
 
 public class LocationInfo {
 	private String filePath;
@@ -39,9 +44,50 @@ public class LocationInfo {
 		}
 	}
 
-	public String getFilePath() {
-		return filePath;
-	}
+	//TODO: debug it
+    public LocationInfo(KtFile ktFile, String filePath, KtElement node, CodeElementType codeElementType) {
+        this.filePath = filePath;
+        this.codeElementType = codeElementType;
+        TextRange range = node.getTextRange();
+        this.startOffset = range.getStartOffset();
+        this.length = range.getLength();
+        this.endOffset = range.getEndOffset();
+
+        FileViewProvider fileViewProvider = ktFile.getViewProvider();
+        Document document = fileViewProvider.getDocument();
+
+        this.startLine = document.getLineNumber(startOffset);
+        this.endLine = document.getLineNumber(endOffset);
+        //columns are 0-based
+        this.startColumn = countColumn(startLine, document);
+        //convert to 1-based
+        if (this.startColumn > 0) {
+            this.startColumn += 1;
+        }
+        this.endColumn = countColumn(endLine, document);
+        //convert to 1-based
+        if (this.endColumn > 0) {
+            this.endColumn += 1;
+        }
+    }
+
+    private int countColumn(int lineNumber, Document doc) {
+        final String line = doc.getText(new TextRange(doc.getLineStartOffset(lineNumber), doc.getLineEndOffset(lineNumber)));
+        int count = 0;
+        for (char c : line.toCharArray()) {
+            if (c == ' ')
+                count++;
+            else if (c == '\t')
+                count += 4;
+            else
+                return count;
+        }
+        return count;
+    }
+
+    public String getFilePath() {
+        return filePath;
+    }
 
 	public int getStartOffset() {
 		return startOffset;

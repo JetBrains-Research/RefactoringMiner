@@ -43,7 +43,7 @@ public class GitServiceImpl implements GitService {
 	Logger logger = LoggerFactory.getLogger(GitServiceImpl.class);
 
 	DefaultCommitsFilter commitsFilter = new DefaultCommitsFilter();
-	
+
 	@Override
 	public Repository cloneIfNotExists(String projectPath, String cloneUrl/*, String branch*/) throws Exception {
 		File folder = new File(projectPath);
@@ -55,9 +55,9 @@ public class GitServiceImpl implements GitService {
 					.readEnvironment()
 					.findGitDir()
 					.build();
-			
+
 			//logger.info("Project {} is already cloned, current branch is {}", cloneUrl, repository.getBranch());
-			
+
 		} else {
 			logger.info("Cloning {} ...", cloneUrl);
 			Git git = Git.cloneRepository()
@@ -153,7 +153,7 @@ public class GitServiceImpl implements GitService {
         logger.info("Fetching changes of repository {}", repository.getDirectory().toString());
         try (Git git = new Git(repository)) {
     		FetchResult result = git.fetch().call();
-    		
+
     		Collection<TrackingRefUpdate> updates = result.getTrackingRefUpdates();
     		List<TrackingRefUpdate> remoteRefsChanges = new ArrayList<TrackingRefUpdate>();
     		for (TrackingRefUpdate update : updates) {
@@ -176,16 +176,16 @@ public class GitServiceImpl implements GitService {
 	}
 
 	public RevWalk fetchAndCreateNewRevsWalk(Repository repository, String branch) throws Exception {
-		List<ObjectId> currentRemoteRefs = new ArrayList<ObjectId>(); 
+		List<ObjectId> currentRemoteRefs = new ArrayList<ObjectId>();
 		for (Ref ref : repository.getRefDatabase().getRefs()) {
 			String refName = ref.getName();
 			if (refName.startsWith(REMOTE_REFS_PREFIX)) {
 				currentRemoteRefs.add(ref.getObjectId());
 			}
 		}
-		
+
 		List<TrackingRefUpdate> newRemoteRefs = this.fetch(repository);
-		
+
 		RevWalk walk = new RevWalk(repository);
 		for (TrackingRefUpdate newRef : newRemoteRefs) {
 			if (branch == null || newRef.getLocalName().endsWith("/" + branch)) {
@@ -204,7 +204,7 @@ public class GitServiceImpl implements GitService {
 	}
 
 	public RevWalk createAllRevsWalk(Repository repository, String branch) throws Exception {
-		List<ObjectId> currentRemoteRefs = new ArrayList<ObjectId>(); 
+		List<ObjectId> currentRemoteRefs = new ArrayList<ObjectId>();
 		for (Ref ref : repository.getRefDatabase().getRefs()) {
 			String refName = ref.getName();
 			if (refName.startsWith(REMOTE_REFS_PREFIX)) {
@@ -213,7 +213,7 @@ public class GitServiceImpl implements GitService {
 				}
 			}
 		}
-		
+
 		RevWalk walk = new RevWalk(repository);
 		for (ObjectId newRef : currentRemoteRefs) {
 			walk.markStart(walk.parseCommit(newRef));
@@ -221,7 +221,7 @@ public class GitServiceImpl implements GitService {
 		walk.setRevFilter(commitsFilter);
 		return walk;
 	}
-	
+
 	@Override
 	public Iterable<RevCommit> createRevsWalkBetweenTags(Repository repository, String startTag, String endTag)
 			throws Exception {
@@ -285,7 +285,7 @@ public class GitServiceImpl implements GitService {
 		}
 	}
 
-	public void fileTreeDiff(Repository repository, RevCommit currentCommit, List<String> javaFilesBefore, List<String> javaFilesCurrent, Map<String, String> renamedFilesHint) throws Exception {
+	public void fileTreeDiff(Repository repository, RevCommit currentCommit, List<String> filesBefore, List<String> filesCurrent, Map<String, String> renamedFilesHint) throws Exception {
         if (currentCommit.getParentCount() > 0) {
         	ObjectId oldTree = currentCommit.getParent(0).getTree();
 	        ObjectId newTree = currentCommit.getTree();
@@ -303,17 +303,18 @@ public class GitServiceImpl implements GitService {
         		String oldPath = diff.getOldPath();
         		String newPath = diff.getNewPath();
         		if (changeType != ChangeType.ADD) {
-	        		if (isJavafile(oldPath)) {
-	        			javaFilesBefore.add(oldPath);
+	        		if (isJavaFile(oldPath) || isKotlinFile(oldPath)) {
+	        			filesBefore.add(oldPath);
 	        		}
 	        	}
         		if (changeType != ChangeType.DELETE) {
-	        		if (isJavafile(newPath)) {
-	        			javaFilesCurrent.add(newPath);
+	        		if (isJavaFile(newPath) || isKotlinFile(newPath)) {
+	        			filesCurrent.add(newPath);
 	        		}
         		}
         		if (changeType == ChangeType.RENAME && diff.getScore() >= rd.getRenameScore()) {
-        			if (isJavafile(oldPath) && isJavafile(newPath)) {
+        			if (isJavaFile(oldPath) && isJavaFile(newPath)
+                            || isKotlinFile(oldPath) && isKotlinFile(newPath)) {
         				renamedFilesHint.put(oldPath, newPath);
         			}
         		}
@@ -321,8 +322,12 @@ public class GitServiceImpl implements GitService {
         }
 	}
 
-	private boolean isJavafile(String path) {
+	private boolean isJavaFile(String path) {
 		return path.endsWith(".java");
+	}
+
+	private boolean isKotlinFile(String path) {
+		return path.endsWith(".kt");
 	}
 
 	@Override

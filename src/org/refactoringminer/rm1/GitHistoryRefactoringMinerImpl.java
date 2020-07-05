@@ -34,6 +34,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import gr.uom.java.xmi.UMLModelPsiReader;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.eclipse.jgit.errors.MissingObjectException;
@@ -114,6 +115,7 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 		logger.info(String.format("Analyzed %s [Commits: %d, Errors: %d, Refactorings: %d]", projectName, commitsCount, errorCommitsCount, refactoringsCount));
 	}
 
+	//TODO: generalize to work with both Java and Kotlin files
 	protected List<Refactoring> detectRefactorings(GitService gitService, Repository repository, final RefactoringHandler handler, File projectFolder, RevCommit currentCommit) throws Exception {
 		List<Refactoring> refactoringsAtRevision;
 		String commitId = currentCommit.getId().getName();
@@ -132,10 +134,10 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 			if (!filePathsBefore.isEmpty() && !filePathsCurrent.isEmpty() && currentCommit.getParentCount() > 0) {
 				RevCommit parentCommit = currentCommit.getParent(0);
 				populateFileContents(repository, parentCommit, filePathsBefore, fileContentsBefore, repositoryDirectoriesBefore);
-				UMLModel parentUMLModel = createModel(fileContentsBefore, repositoryDirectoriesBefore);
+				UMLModel parentUMLModel = createModelInKotlin(fileContentsBefore, repositoryDirectoriesBefore);
 
 				populateFileContents(repository, currentCommit, filePathsCurrent, fileContentsCurrent, repositoryDirectoriesCurrent);
-				UMLModel currentUMLModel = createModel(fileContentsCurrent, repositoryDirectoriesCurrent);
+				UMLModel currentUMLModel = createModelInKotlin(fileContentsCurrent, repositoryDirectoriesCurrent);
 				
 				refactoringsAtRevision = parentUMLModel.diff(currentUMLModel, renamedFilesHint).getRefactorings();
 				refactoringsAtRevision = filter(refactoringsAtRevision);
@@ -166,7 +168,7 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 					IOUtils.copy(loader.openStream(), writer);
 					fileContents.put(pathString, writer.toString());
 				}
-				if(pathString.endsWith(".java") && pathString.contains("/")) {
+				if ((pathString.endsWith(".java")) || (pathString.endsWith(".kt")) && pathString.contains("/")) {
 					String directory = pathString.substring(0, pathString.lastIndexOf("/"));
 					repositoryDirectories.add(directory);
 					//include sub-directories
@@ -346,6 +348,10 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 
 	protected UMLModel createModel(Map<String, String> fileContents, Set<String> repositoryDirectories) throws Exception {
 		return new UMLModelASTReader(fileContents, repositoryDirectories).getUmlModel();
+	}
+
+	protected UMLModel createModelInKotlin(Map<String, String> fileContents, Set<String> repositoryDirectories) throws Exception {
+		return new UMLModelPsiReader(fileContents, repositoryDirectories).getUmlModel();
 	}
 
 	protected UMLModel createModel(File projectFolder, List<String> filePaths) throws Exception {

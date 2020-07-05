@@ -20,6 +20,8 @@ import gr.uom.java.xmi.ListCompositeType.Kind;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.diff.CodeRange;
 import gr.uom.java.xmi.diff.StringDistance;
+import org.jetbrains.kotlin.psi.KtElement;
+import org.jetbrains.kotlin.psi.KtFile;
 
 public abstract class UMLType implements Serializable, LocationInfoProvider {
 	private LocationInfo locationInfo;
@@ -226,6 +228,17 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
 		umlType.locationInfo = new LocationInfo(cu, filePath, type, CodeElementType.TYPE);
 		umlType.arrayDimension += extraDimensions;
 		return umlType;
+	}
+
+	public static UMLType extractTypeObject(KtFile ktFile, String filePath, KtElement type, int extraDimensions) {
+/*	    TODO: implement extracting of type
+
+        UMLType umlType = extractTypeObject(ktFile, filePath, type);
+		umlType.locationInfo = new LocationInfo(ktFile, filePath, type, CodeElementType.TYPE);
+		umlType.arrayDimension += extraDimensions;
+		return umlType;
+*/
+        return null;
 	}
 
 	private static UMLType extractTypeObject(CompilationUnit cu, String filePath, Type type) {

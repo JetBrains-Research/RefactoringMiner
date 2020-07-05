@@ -14,6 +14,9 @@ import org.eclipse.jdt.core.dom.SingleMemberAnnotation;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.decomposition.AbstractExpression;
 import gr.uom.java.xmi.diff.CodeRange;
+import org.jetbrains.kotlin.psi.KtAnnotation;
+import org.jetbrains.kotlin.psi.KtAnnotationEntry;
+import org.jetbrains.kotlin.psi.KtFile;
 
 public class UMLAnnotation implements Serializable, LocationInfoProvider {
 	private LocationInfo locationInfo;
@@ -36,6 +39,14 @@ public class UMLAnnotation implements Serializable, LocationInfoProvider {
 				memberValuePairs.put(pair.getName().getIdentifier(), value);
 			}
 		}
+	}
+
+	public UMLAnnotation(KtFile cu, String filePath, KtAnnotation annotation) {
+		//TODO: get fully qualified name
+		this.typeName = annotation.getName();
+		this.locationInfo = new LocationInfo(cu, filePath, annotation, CodeElementType.ANNOTATION);
+		List<KtAnnotationEntry> ktAnnotationEntries = annotation.getEntries();
+		//TODO: process annotation entries
 	}
 
 	public String getTypeName() {
