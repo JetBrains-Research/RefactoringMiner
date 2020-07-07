@@ -16,6 +16,7 @@ import org.jetbrains.kotlin.idea.KotlinLanguage;
 import org.jetbrains.kotlin.kdoc.psi.api.KDoc;
 import org.jetbrains.kotlin.kdoc.psi.impl.KDocSection;
 import org.jetbrains.kotlin.lexer.KtModifierKeywordToken;
+import org.jetbrains.kotlin.name.FqName;
 import org.jetbrains.kotlin.psi.*;
 import org.refactoringminer.util.KotlinLightVirtualFile;
 
@@ -32,18 +33,34 @@ public class UMLModelPsiReader {
         this.umlModel = new UMLModel(repositoryDirectories);
         for (String filePath : kotlinFileContents.keySet()) {
             KtFile ktFile = (KtFile) buildPsiFile(filePath, createKotlinCoreEnvironment(new HashSet<>()), kotlinFileContents.get(filePath));
+            List<String> importedTypes = processImports(ktFile);
+
             PsiElement[] elementsInFile = ktFile.getChildren();
             for (PsiElement psiElement : elementsInFile) {
                 if (psiElement instanceof KtClass) {
-                    //TODO: process imports
                     KtClass ktClass = (KtClass) psiElement;
                     if (ktClass.isEnum()) {
-                        processKtEnum(ktClass, ktFile.getPackageFqName().asString(), ktFile.getVirtualFilePath(), null);
+                        processKtEnum(ktClass, ktFile.getPackageFqName().asString(), ktFile.getVirtualFilePath(), importedTypes);
+                    } else {
+                        processKtClass(ktClass, ktFile.getPackageFqName().asString(), ktFile.getVirtualFilePath(), importedTypes);
                     }
-                    processKtClass(ktClass, ktFile.getPackageFqName().asString(), ktFile.getVirtualFilePath(), null);
                 }
             }
         }
+    }
+
+    public List<String> processImports(KtFile ktFile) {
+        List<String> importedTypes = new ArrayList<>();
+        KtImportList importList = ktFile.getImportList();
+        if (importList != null) {
+            for (KtImportDirective importDeclaration : importList.getImports()) {
+                FqName fqName = importDeclaration.getImportedFqName();
+                String importName = fqName == null ? null : fqName.asString();
+                if (importName != null)
+                    importedTypes.add(importName);
+            }
+        }
+        return importedTypes;
     }
 
     public void processKtEnum(KtClass ktEnum, String packageName, String sourceFile, List<String> importedTypes) {
