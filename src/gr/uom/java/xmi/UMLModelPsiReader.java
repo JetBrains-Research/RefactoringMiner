@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
+import gr.uom.java.xmi.decomposition.OperationBody;
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment;
 import org.jetbrains.kotlin.com.intellij.openapi.util.io.FileUtilRt;
 import org.jetbrains.kotlin.com.intellij.openapi.vfs.CharsetToolkit;
@@ -235,7 +236,18 @@ public class UMLModelPsiReader {
             umlOperation.addTypeParameter(umlTypeParameter);
         }
 
-        //TODO: process method body, return type, and parameters
+        KtBlockExpression methodBody = methodDeclaration.getBodyBlockExpression();
+        if (methodBody != null) {
+            OperationBody body = new OperationBody(ktClass.getContainingKtFile(), sourceFile, methodBody);
+            umlOperation.setBody(body);
+            if (methodBody.getStatements().size() == 0) {
+                umlOperation.setEmptyBody(true);
+            }
+        } else {
+            umlOperation.setBody(null);
+        }
+
+        //TODO: process return type, and parameters
 
         return umlOperation;
     }

@@ -13,6 +13,8 @@ import org.eclipse.jdt.core.dom.Statement;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.diff.CodeRange;
+import org.jetbrains.kotlin.psi.KtElement;
+import org.jetbrains.kotlin.psi.KtFile;
 
 public class CompositeStatementObject extends AbstractStatement {
 
@@ -22,6 +24,15 @@ public class CompositeStatementObject extends AbstractStatement {
 	private LocationInfo locationInfo;
 
 	public CompositeStatementObject(CompilationUnit cu, String filePath, Statement statement, int depth, CodeElementType codeElementType) {
+		super();
+		this.setDepth(depth);
+		this.locationInfo = new LocationInfo(cu, filePath, statement, codeElementType);
+		this.statementList = new ArrayList<AbstractStatement>();
+		this.expressionList = new ArrayList<AbstractExpression>();
+		this.variableDeclarations = new ArrayList<VariableDeclaration>();
+	}
+
+	public CompositeStatementObject(KtFile cu, String filePath, KtElement statement, int depth, CodeElementType codeElementType) {
 		super();
 		this.setDepth(depth);
 		this.locationInfo = new LocationInfo(cu, filePath, statement, codeElementType);
