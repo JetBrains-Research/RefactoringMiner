@@ -4,14 +4,16 @@ import java.io.File;
 import java.io.IOException;
 import java.util.*;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment;
 import org.jetbrains.kotlin.com.intellij.openapi.util.io.FileUtilRt;
 import org.jetbrains.kotlin.com.intellij.openapi.vfs.CharsetToolkit;
-import org.jetbrains.kotlin.com.intellij.psi.PsiElement;
-import org.jetbrains.kotlin.com.intellij.psi.PsiFile;
-import org.jetbrains.kotlin.com.intellij.psi.PsiFileFactory;
+import org.jetbrains.kotlin.com.intellij.psi.*;
 import org.jetbrains.kotlin.com.intellij.psi.impl.PsiFileFactoryImpl;
 
+import org.jetbrains.kotlin.com.intellij.psi.impl.source.PsiTypeElementImpl;
+import org.jetbrains.kotlin.com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.kotlin.idea.KotlinLanguage;
 import org.jetbrains.kotlin.kdoc.psi.api.KDoc;
 import org.jetbrains.kotlin.kdoc.psi.impl.KDocSection;
