@@ -214,11 +214,10 @@ public class UMLModelPsiReader {
             else
                 umlOperation.setVisibility("package");
 
-        }
-
-        List<KtAnnotation> ktAnnotations = methodDeclaration.getModifierList().getAnnotations();
-        for (KtAnnotation annotation : ktAnnotations) {
-            umlOperation.addAnnotation(new UMLAnnotation(ktClass.getContainingKtFile(), sourceFile, annotation));
+            List<KtAnnotation> ktAnnotations = methodModifiers.getAnnotations();
+            for (KtAnnotation annotation : ktAnnotations) {
+                umlOperation.addAnnotation(new UMLAnnotation(ktClass.getContainingKtFile(), sourceFile, annotation));
+            }
         }
 
         List<KtTypeParameter> typeParameters = methodDeclaration.getTypeParameters();
@@ -228,10 +227,12 @@ public class UMLModelPsiReader {
             if (typeBounds != null) {
                 umlTypeParameter.addTypeBound(UMLType.extractTypeObject(ktClass.getContainingKtFile(), sourceFile, typeBounds, 0));
             }
-            KtModifierList typeParameterExtendedModifiers = typeParameter.getModifierList();
-            for (KtAnnotation annotation : typeParameterExtendedModifiers.getAnnotations()) {
-                umlTypeParameter.addAnnotation(new UMLAnnotation(ktClass.getContainingKtFile(), sourceFile, annotation));
 
+            KtModifierList typeParameterExtendedModifiers = typeParameter.getModifierList();
+            if (typeParameterExtendedModifiers != null) {
+                for (KtAnnotation annotation : typeParameterExtendedModifiers.getAnnotations()) {
+                    umlTypeParameter.addAnnotation(new UMLAnnotation(ktClass.getContainingKtFile(), sourceFile, annotation));
+                }
             }
             umlOperation.addTypeParameter(umlTypeParameter);
         }
