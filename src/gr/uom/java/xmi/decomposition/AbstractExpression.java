@@ -9,6 +9,8 @@ import org.eclipse.jdt.core.dom.Expression;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.diff.CodeRange;
+import org.jetbrains.kotlin.psi.KtExpression;
+import org.jetbrains.kotlin.psi.KtFile;
 
 public class AbstractExpression extends AbstractCodeFragment {
 	
@@ -60,7 +62,35 @@ public class AbstractExpression extends AbstractCodeFragment {
     	this.owner = null;
     }
 
-    public void setOwner(CompositeStatementObject owner) {
+	public AbstractExpression(KtFile cu, String filePath, KtExpression expression, CodeElementType codeElementType) {
+		this.locationInfo = new LocationInfo(cu, filePath, expression, codeElementType);
+/*		TODO: to adapt Visitor
+		Visitor visitor = new Visitor(cu, filePath);
+		expression.accept(visitor);
+		this.variables = visitor.getVariables();
+		this.types = visitor.getTypes();
+		this.variableDeclarations = visitor.getVariableDeclarations();
+		this.methodInvocationMap = visitor.getMethodInvocationMap();
+		this.anonymousClassDeclarations = visitor.getAnonymousClassDeclarations();
+		this.stringLiterals = visitor.getStringLiterals();
+		this.numberLiterals = visitor.getNumberLiterals();
+		this.nullLiterals = visitor.getNullLiterals();
+		this.booleanLiterals = visitor.getBooleanLiterals();
+		this.typeLiterals = visitor.getTypeLiterals();
+		this.creationMap = visitor.getCreationMap();
+		this.infixOperators = visitor.getInfixOperators();
+		this.arrayAccesses = visitor.getArrayAccesses();
+		this.prefixExpressions = visitor.getPrefixExpressions();
+		this.postfixExpressions = visitor.getPostfixExpressions();
+		this.arguments = visitor.getArguments();
+		this.ternaryOperatorExpressions = visitor.getTernaryOperatorExpressions();
+		this.lambdas = visitor.getLambdas();
+		this.expression = expression.toString();
+		this.owner = null;*/
+	}
+
+
+	public void setOwner(CompositeStatementObject owner) {
     	this.owner = owner;
     }
 

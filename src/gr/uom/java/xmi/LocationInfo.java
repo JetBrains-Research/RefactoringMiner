@@ -44,7 +44,6 @@ public class LocationInfo {
 		}
 	}
 
-	//TODO: debug it
     public LocationInfo(KtFile ktFile, String filePath, KtElement node, CodeElementType codeElementType) {
         this.filePath = filePath;
         this.codeElementType = codeElementType;
@@ -56,8 +55,8 @@ public class LocationInfo {
         FileViewProvider fileViewProvider = ktFile.getViewProvider();
         Document document = fileViewProvider.getDocument();
 
-        this.startLine = document.getLineNumber(startOffset);
-        this.endLine = document.getLineNumber(endOffset);
+        this.startLine = document.getLineNumber(startOffset) + 1;
+        this.endLine = document.getLineNumber(endOffset) + 1;
         //columns are 0-based
         this.startColumn = countColumn(startLine, document);
         //convert to 1-based
