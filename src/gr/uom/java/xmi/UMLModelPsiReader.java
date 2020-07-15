@@ -134,11 +134,11 @@ public class UMLModelPsiReader {
 
     private List<UMLAttribute> processFieldDeclaration(KtFile ktFile, KtProperty fieldDeclaration, boolean isInterfaceField, String sourceFile) {
         UMLJavadoc javadoc = generateDocComment(fieldDeclaration);
-        List<UMLAttribute> attributes = new ArrayList<UMLAttribute>();
+        List<UMLAttribute> attributes = new ArrayList<>();
         KtExpression initializer = fieldDeclaration.getInitializer();
 
         //TODO: figure out how to get dimensions
-        UMLType type = UMLType.extractTypeObject(ktFile, sourceFile, fieldDeclaration, 0);
+        UMLType type = UMLType.extractTypeObject(ktFile, sourceFile, fieldDeclaration.getTypeReference(), 0);
         String fieldName = getQualifiedName(fieldDeclaration);
         LocationInfo locationInfo = generateLocationInfo(ktFile, sourceFile, initializer, LocationInfo.CodeElementType.FIELD_DECLARATION);
         UMLAttribute umlAttribute = new UMLAttribute(fieldName, type, locationInfo);
