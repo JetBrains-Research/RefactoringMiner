@@ -9,11 +9,11 @@ import gr.uom.java.xmi.decomposition.VariableDeclaration;
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment;
 import org.jetbrains.kotlin.com.intellij.openapi.util.io.FileUtilRt;
 import org.jetbrains.kotlin.com.intellij.openapi.vfs.CharsetToolkit;
-import org.jetbrains.kotlin.com.intellij.psi.PsiElement;
-import org.jetbrains.kotlin.com.intellij.psi.PsiFile;
-import org.jetbrains.kotlin.com.intellij.psi.PsiFileFactory;
+import org.jetbrains.kotlin.com.intellij.psi.*;
 import org.jetbrains.kotlin.com.intellij.psi.impl.PsiFileFactoryImpl;
 
+import org.jetbrains.kotlin.com.intellij.psi.impl.source.PsiTypeElementImpl;
+import org.jetbrains.kotlin.com.intellij.psi.search.GlobalSearchScope;
 import org.jetbrains.kotlin.idea.KotlinLanguage;
 import org.jetbrains.kotlin.kdoc.psi.api.KDoc;
 import org.jetbrains.kotlin.kdoc.psi.impl.KDocSection;
@@ -21,6 +21,7 @@ import org.jetbrains.kotlin.lexer.KtModifierKeywordToken;
 import org.jetbrains.kotlin.name.FqName;
 import org.jetbrains.kotlin.psi.*;
 import org.refactoringminer.util.KotlinLightVirtualFile;
+import org.refactoringminer.util.PsiUtils;
 
 import static org.refactoringminer.util.EnvironmentManager.createKotlinCoreEnvironment;
 import static org.refactoringminer.util.PsiUtils.getQualifiedName;
@@ -105,7 +106,7 @@ public class UMLModelPsiReader {
 
         List<KtSuperTypeListEntry> superTypeListEntries = ktClass.getSuperTypeListEntries();
         for (KtSuperTypeListEntry superTypeListEntry : superTypeListEntries) {
-            UMLType umlType = UMLType.extractTypeObject(ktClass.getContainingKtFile(), sourceFile, superTypeListEntry.getTypeAsUserType(), 0);
+            UMLType umlType = UMLType.extractTypeObject(ktClass.getContainingKtFile(), sourceFile, superTypeListEntry.getTypeReference(), 0);
             UMLGeneralization umlGeneralization = new UMLGeneralization(umlClass, umlType.getClassType());
             umlClass.setSuperclass(umlType);
             getUmlModel().addGeneralization(umlGeneralization);
@@ -253,7 +254,8 @@ public class UMLModelPsiReader {
         List<KtParameter> parameters = methodDeclaration.getValueParameters();
         for (KtParameter parameter : parameters) {
             KtTypeReference typeReference = parameter.getTypeReference();
-            String paramName = getQualifiedName(parameter);
+            String paramName = getQualifiedName(parameter) != null ? getQualifiedName(parameter) : parameter.getText();
+
             UMLType type = UMLType.extractTypeObject(parameter.getContainingKtFile(), sourceFile, typeReference, 0);
             UMLParameter umlParameter = new UMLParameter(paramName, type, "in", parameter.isVarArg());
             VariableDeclaration variableDeclaration = new VariableDeclaration(parameter.getContainingKtFile(), sourceFile, parameter, parameter.isVarArg());

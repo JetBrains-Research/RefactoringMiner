@@ -101,13 +101,13 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
 	public VariableDeclaration(KtFile ktFile, String filePath, KtParameter fragment) {
 		this.annotations = new ArrayList<UMLAnnotation>();
 		KtModifierList extendedModifiers = fragment.getModifierList();
-		List<KtAnnotation> annotations =  extendedModifiers.getAnnotations();
-		annotations.forEach(ktAnnotation -> this.annotations.add(new UMLAnnotation(ktFile, filePath, ktAnnotation)));
-
+        if (extendedModifiers != null) {
+			List<KtAnnotation> annotations = extendedModifiers.getAnnotations();
+			annotations.forEach(ktAnnotation -> this.annotations.add(new UMLAnnotation(ktFile, filePath, ktAnnotation)));
+		}
 		//TODO check for the code element type
 		this.locationInfo = new LocationInfo(ktFile, filePath, fragment, CodeElementType.SINGLE_VARIABLE_DECLARATION);
 		this.variableName = String.valueOf(fragment.getNameIdentifier());
-		//this.initializer = fragment.get() != null ? new AbstractExpression(ktFile, filePath, fragment.getInitializer(), CodeElementType.VARIABLE_DECLARATION_INITIALIZER) : null;
 
 		this.type = UMLType.extractTypeObject(ktFile, filePath, fragment.getTypeReference(), 0);
 		int startOffset = fragment.getStartOffsetInParent();
