@@ -21,6 +21,10 @@ import gr.uom.java.xmi.UMLAnnotation;
 import gr.uom.java.xmi.UMLType;
 import gr.uom.java.xmi.VariableDeclarationProvider;
 import gr.uom.java.xmi.diff.CodeRange;
+import org.jetbrains.kotlin.psi.KtAnnotation;
+import org.jetbrains.kotlin.psi.KtFile;
+import org.jetbrains.kotlin.psi.KtModifierList;
+import org.jetbrains.kotlin.psi.KtParameter;
 
 public class VariableDeclaration implements LocationInfoProvider, VariableDeclarationProvider {
 	private String variableName;
@@ -94,7 +98,29 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
 		this.scope = new VariableScope(cu, filePath, startOffset, endOffset);
 	}
 
+	public VariableDeclaration(KtFile ktFile, String filePath, KtParameter fragment) {
+		this.annotations = new ArrayList<UMLAnnotation>();
+		KtModifierList extendedModifiers = fragment.getModifierList();
+		List<KtAnnotation> annotations =  extendedModifiers.getAnnotations();
+		annotations.forEach(ktAnnotation -> this.annotations.add(new UMLAnnotation(ktFile, filePath, ktAnnotation)));
+
+		//TODO check for the code element type
+		this.locationInfo = new LocationInfo(ktFile, filePath, fragment, CodeElementType.SINGLE_VARIABLE_DECLARATION);
+		this.variableName = String.valueOf(fragment.getNameIdentifier());
+		//this.initializer = fragment.get() != null ? new AbstractExpression(ktFile, filePath, fragment.getInitializer(), CodeElementType.VARIABLE_DECLARATION_INITIALIZER) : null;
+
+		this.type = UMLType.extractTypeObject(ktFile, filePath, fragment.getTypeReference(), 0);
+		int startOffset = fragment.getStartOffsetInParent();
+		int endOffset = startOffset + fragment.getTextLength();
+		this.scope = new VariableScope(ktFile, filePath, startOffset, endOffset);
+	}
+
 	public VariableDeclaration(CompilationUnit cu, String filePath, SingleVariableDeclaration fragment, boolean varargs) {
+		this(cu, filePath, fragment);
+		this.varargsParameter = varargs;
+	}
+
+	public VariableDeclaration(KtFile cu, String filePath, KtParameter fragment, boolean varargs) {
 		this(cu, filePath, fragment);
 		this.varargsParameter = varargs;
 	}
