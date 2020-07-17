@@ -22,7 +22,6 @@ import org.jetbrains.kotlin.psi.*;
 import org.refactoringminer.util.KotlinLightVirtualFile;
 
 import static org.refactoringminer.util.EnvironmentManager.createKotlinCoreEnvironment;
-import static org.refactoringminer.util.PsiUtils.getQualifiedName;
 
 /**
  * Parses and processes the files written in Kotlin
@@ -66,7 +65,7 @@ public class UMLModelPsiReader {
 
     public void processKtEnum(KtClass ktEnum, String packageName, String sourceFile, List<String> importedTypes) {
         UMLJavadoc javadoc = generateDocComment(ktEnum);
-        String className = getQualifiedName(ktEnum);
+        String className = ktEnum.getName();
         LocationInfo locationInfo = generateLocationInfo(ktEnum.getContainingKtFile(), sourceFile, ktEnum, LocationInfo.CodeElementType.TYPE_DECLARATION);
         UMLClass umlClass = new UMLClass(packageName, className, locationInfo, ktEnum.isTopLevel(), importedTypes);
         umlClass.setJavadoc(javadoc);
@@ -80,7 +79,7 @@ public class UMLModelPsiReader {
     }
 
     public void processKtClass(KtClass ktClass, String packageName, String sourceFile, List<String> importedTypes) {
-        String className = getQualifiedName(ktClass);
+        String className = ktClass.getName();
         LocationInfo locationInfo = generateLocationInfo(ktClass.getContainingKtFile(), sourceFile, ktClass, LocationInfo.CodeElementType.TYPE_DECLARATION);
         UMLClass umlClass = new UMLClass(packageName, className, locationInfo, ktClass.isTopLevel(), importedTypes);
 
@@ -93,7 +92,7 @@ public class UMLModelPsiReader {
         List<KtTypeParameter> parameters = ktClass.getTypeParameters();
 
         for (KtTypeParameter parameter : parameters) {
-            UMLTypeParameter umlTypeParameter = new UMLTypeParameter(getQualifiedName(parameter));
+            UMLTypeParameter umlTypeParameter = new UMLTypeParameter(parameter.getName());
             //TODO: umlTypeParameter.addTypeBound(UMLType.extractTypeObject(ktFile, sourceFile, type, 0));
             KtModifierList parameterModifierList = parameter.getModifierList();
             for (KtAnnotation annotation : parameterModifierList.getAnnotations()) {
@@ -139,7 +138,7 @@ public class UMLModelPsiReader {
 
         //TODO: figure out how to get dimensions
         UMLType type = UMLType.extractTypeObject(ktFile, sourceFile, fieldDeclaration.getTypeReference(), 0);
-        String fieldName = getQualifiedName(fieldDeclaration);
+        String fieldName = fieldDeclaration.getName();
         LocationInfo locationInfo = generateLocationInfo(ktFile, sourceFile, initializer, LocationInfo.CodeElementType.FIELD_DECLARATION);
         UMLAttribute umlAttribute = new UMLAttribute(fieldName, type, locationInfo);
 /*      TODO: VariableDeclaration variableDeclaration = new VariableDeclaration(ktFile, sourceFile, fragment);
@@ -182,7 +181,7 @@ public class UMLModelPsiReader {
 
     private UMLOperation processMethodDeclaration(KtClass ktClass, KtNamedFunction methodDeclaration, String packageName, boolean isInterfaceMethod, String sourceFile) {
         UMLJavadoc javadoc = generateDocComment(methodDeclaration);
-        String methodName = getQualifiedName(methodDeclaration);
+        String methodName = methodDeclaration.getName();
         LocationInfo locationInfo = generateLocationInfo(ktClass.getContainingKtFile(), sourceFile, methodDeclaration, LocationInfo.CodeElementType.METHOD_DECLARATION);
         UMLOperation umlOperation = new UMLOperation(methodName, locationInfo);
         umlOperation.setJavadoc(javadoc);
@@ -222,7 +221,7 @@ public class UMLModelPsiReader {
 
         List<KtTypeParameter> typeParameters = methodDeclaration.getTypeParameters();
         for (KtTypeParameter typeParameter : typeParameters) {
-            UMLTypeParameter umlTypeParameter = new UMLTypeParameter(getQualifiedName(typeParameter));
+            UMLTypeParameter umlTypeParameter = new UMLTypeParameter(typeParameter.getName());
             KtTypeReference typeBounds = typeParameter.getExtendsBound();
             if (typeBounds != null) {
                 umlTypeParameter.addTypeBound(UMLType.extractTypeObject(ktClass.getContainingKtFile(), sourceFile, typeBounds, 0));
