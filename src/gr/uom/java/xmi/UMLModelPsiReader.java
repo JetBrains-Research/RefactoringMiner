@@ -254,7 +254,7 @@ public class UMLModelPsiReader {
         List<KtParameter> parameters = methodDeclaration.getValueParameters();
         for (KtParameter parameter : parameters) {
             KtTypeReference typeReference = parameter.getTypeReference();
-            String paramName = getQualifiedName(parameter) != null ? getQualifiedName(parameter) : parameter.getText();
+            String paramName = parameter.getName();
 
             UMLType type = UMLType.extractTypeObject(parameter.getContainingKtFile(), sourceFile, typeReference, 0);
             UMLParameter umlParameter = new UMLParameter(paramName, type, "in", parameter.isVarArg());
