@@ -3,6 +3,10 @@ package gr.uom.java.xmi.decomposition;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 
 import gr.uom.java.xmi.LocationInfo;
+import org.jetbrains.kotlin.com.intellij.openapi.editor.Document;
+import org.jetbrains.kotlin.com.intellij.psi.FileViewProvider;
+import org.jetbrains.kotlin.psi.KtClass;
+import org.jetbrains.kotlin.psi.KtFile;
 
 public class VariableScope {
 	private String filePath;
@@ -20,7 +24,7 @@ public class VariableScope {
 		this.endOffset = endOffset;
 		//this.startOffset = node.getStartPosition();
 		//this.endOffset = parent.getStartPosition() + parent.getLength();
-		
+
 		//lines are 1-based
 		this.startLine = cu.getLineNumber(startOffset);
 		this.endLine = cu.getLineNumber(endOffset);
@@ -33,6 +37,31 @@ public class VariableScope {
 		this.endColumn = cu.getColumnNumber(endOffset);
 		//convert to 1-based
 		if(this.endColumn > 0) {
+			this.endColumn += 1;
+		}
+	}
+
+	public VariableScope(KtFile ktFile, String filePath, int startOffset, int endOffset) {
+		//ASTNode parent = node.getParent();
+		this.filePath = filePath;
+		this.startOffset = startOffset;
+		this.endOffset = endOffset;
+		//this.startOffset = node.getStartPosition();
+		//this.endOffset = parent.getStartPosition() + parent.getLength();
+		FileViewProvider fileViewProvider = ktFile.getViewProvider();
+		Document document = fileViewProvider.getDocument();
+
+		this.startLine = document.getLineNumber(startOffset) + 1;
+		this.endLine = document.getLineNumber(endOffset) + 1;
+		//columns are 0-based
+		this.startColumn = LocationInfo.countColumn(startLine, document);
+		//convert to 1-based
+		if (this.startColumn > 0) {
+			this.startColumn += 1;
+		}
+		this.endColumn = LocationInfo.countColumn(endLine, document);
+		//convert to 1-based
+		if (this.endColumn > 0) {
 			this.endColumn += 1;
 		}
 	}

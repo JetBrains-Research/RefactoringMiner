@@ -70,7 +70,7 @@ public class LocationInfo {
         }
     }
 
-    private int countColumn(int lineNumber, Document doc) {
+    public static int countColumn(int lineNumber, Document doc) {
         final String line = doc.getText(new TextRange(doc.getLineStartOffset(lineNumber), doc.getLineEndOffset(lineNumber)));
         int count = 0;
         for (char c : line.toCharArray()) {

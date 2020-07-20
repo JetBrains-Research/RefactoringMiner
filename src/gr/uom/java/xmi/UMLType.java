@@ -20,8 +20,8 @@ import gr.uom.java.xmi.ListCompositeType.Kind;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.diff.CodeRange;
 import gr.uom.java.xmi.diff.StringDistance;
-import org.jetbrains.kotlin.psi.KtElement;
-import org.jetbrains.kotlin.psi.KtFile;
+import org.jetbrains.kotlin.psi.*;
+import org.refactoringminer.util.PsiUtils;
 
 public abstract class UMLType implements Serializable, LocationInfoProvider {
 	private LocationInfo locationInfo;
@@ -231,14 +231,51 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
 	}
 
 	public static UMLType extractTypeObject(KtFile ktFile, String filePath, KtElement type, int extraDimensions) {
-/*	    TODO: implement extracting of type
-
-        UMLType umlType = extractTypeObject(ktFile, filePath, type);
+		UMLType umlType = extractTypeObject(ktFile, filePath, type);
 		umlType.locationInfo = new LocationInfo(ktFile, filePath, type, CodeElementType.TYPE);
 		umlType.arrayDimension += extraDimensions;
 		return umlType;
-*/
-        return null;
+	}
+
+	private static UMLType extractTypeObject(KtFile ktFile, String filePath, KtElement type) {
+    	if (type instanceof KtUserType) {
+    		KtUserType userType = (KtUserType) type;
+    		KtUserType qualifier = userType.getQualifier();
+    		if (qualifier != null) {
+    			UMLType left = extractTypeObject(ktFile, filePath, qualifier);
+				LeafType rightType = extractTypeObject(userType.getText());
+			    return new CompositeType(left, rightType);
+			}
+    		else return extractTypeObject(type.getText());
+		}
+		else if (type instanceof KtTypeReference) {
+    		KtTypeReference typeReference = (KtTypeReference) type;
+    		KtTypeElement element = typeReference.getTypeElement();
+    		UMLType result = extractTypeObject(element.getText());
+			List<KtTypeReference> types = element.getTypeArgumentsAsTypes();
+			if (types != null) {
+				for (KtTypeReference t : types) {
+					result.typeArguments.add(extractTypeObject(ktFile, filePath, t));
+				}
+			}
+			final List<KtAnnotation> annotations = typeReference.getAnnotations();
+			for (KtAnnotation annotation : annotations) {
+				result.annotations.add(new UMLAnnotation(ktFile, filePath, annotation));
+			}
+
+			if (element instanceof KtUserType) {
+				KtUserType userType = (KtUserType) element;
+				if (userType.getQualifier() != null) {
+					UMLType left = extractTypeObject(ktFile, filePath, userType.getQualifier());
+					return new CompositeType(left, (LeafType) result);
+				}
+			}
+			return result;
+		} else if (type instanceof KtProperty) {
+    		KtProperty property = (KtProperty) type;
+    		return extractTypeObject(ktFile, filePath, property.getTypeReference());
+		}
+    return null;
 	}
 
 	private static UMLType extractTypeObject(CompilationUnit cu, String filePath, Type type) {
