@@ -1,20 +1,27 @@
 package gr.uom.java.xmi;
 
+import com.intellij.psi.PsiAnonymousClass;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiElementVisitor;
+import org.jetbrains.annotations.NotNull;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import org.eclipse.jdt.core.dom.ASTVisitor;
-import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
+// TODO: Build a tree
+// TODO: extends recursive
+public class AnonymousClassDeclarationVisitor extends PsiElementVisitor {
+    private final Set<PsiAnonymousClass> anonymousClassDeclarations = new LinkedHashSet<>();
 
-public class AnonymousClassDeclarationVisitor extends ASTVisitor {
+    @Override
+    public void visitElement(@NotNull PsiElement element) {
+        if (element instanceof PsiAnonymousClass) {
+            PsiAnonymousClass anonymousClass = (PsiAnonymousClass) element;
+            anonymousClassDeclarations.add(anonymousClass);
+        }
+        element.accept(this);
+    }
 
-	private Set<AnonymousClassDeclaration> anonymousClassDeclarations = new LinkedHashSet<AnonymousClassDeclaration>();
-	public boolean visit(AnonymousClassDeclaration node) {
-		anonymousClassDeclarations.add(node);
-		return super.visit(node);
-	}
-
-	public Set<AnonymousClassDeclaration> getAnonymousClassDeclarations() {
-		return anonymousClassDeclarations;
-	}
+    public Set<PsiAnonymousClass> getAnonymousClassDeclarations() {
+        return anonymousClassDeclarations;
+    }
 }
