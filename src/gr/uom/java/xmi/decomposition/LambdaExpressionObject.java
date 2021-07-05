@@ -1,44 +1,44 @@
 package gr.uom.java.xmi.decomposition;
 
-import org.eclipse.jdt.core.dom.Block;
-import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.Expression;
-import org.eclipse.jdt.core.dom.LambdaExpression;
-
+import com.intellij.psi.PsiCodeBlock;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiExpression;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiLambdaExpression;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
-import gr.uom.java.xmi.diff.CodeRange;
 import gr.uom.java.xmi.LocationInfoProvider;
+import gr.uom.java.xmi.diff.CodeRange;
 
 public class LambdaExpressionObject implements LocationInfoProvider {
-	private LocationInfo locationInfo;
-	private OperationBody body;
-	private AbstractExpression expression;
-	
-	public LambdaExpressionObject(CompilationUnit cu, String filePath, LambdaExpression lambda) {
-		this.locationInfo = new LocationInfo(cu, filePath, lambda, CodeElementType.LAMBDA_EXPRESSION);
-		if(lambda.getBody() instanceof Block) {
-			this.body = new OperationBody(cu, filePath, (Block)lambda.getBody());
-		}
-		else if(lambda.getBody() instanceof Expression) {
-			this.expression = new AbstractExpression(cu, filePath, (Expression)lambda.getBody(), CodeElementType.LAMBDA_EXPRESSION_BODY);
-		}
-	}
+    private final LocationInfo locationInfo;
+    private OperationBody body;
+    private AbstractExpression expression;
 
-	public OperationBody getBody() {
-		return body;
-	}
+    public LambdaExpressionObject(PsiFile file, String filePath, PsiLambdaExpression lambda) {
+        this.locationInfo = new LocationInfo(file, filePath, lambda, CodeElementType.LAMBDA_EXPRESSION);
+        PsiElement body = lambda.getBody();
+        if (body instanceof PsiCodeBlock) {
+            this.body = new OperationBody(file, filePath, (PsiCodeBlock) body);
+        } else if (body instanceof PsiExpression) {
+            this.expression = new AbstractExpression(file, filePath, (PsiExpression) body, CodeElementType.LAMBDA_EXPRESSION_BODY);
+        }
+    }
 
-	public AbstractExpression getExpression() {
-		return expression;
-	}
+    public OperationBody getBody() {
+        return body;
+    }
 
-	@Override
-	public LocationInfo getLocationInfo() {
-		return locationInfo;
-	}
+    public AbstractExpression getExpression() {
+        return expression;
+    }
 
-	public CodeRange codeRange() {
-		return locationInfo.codeRange();
-	}
+    @Override
+    public LocationInfo getLocationInfo() {
+        return locationInfo;
+    }
+
+    public CodeRange codeRange() {
+        return locationInfo.codeRange();
+    }
 }
