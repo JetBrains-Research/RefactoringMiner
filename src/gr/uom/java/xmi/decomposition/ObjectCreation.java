@@ -20,8 +20,8 @@ public class ObjectCreation extends AbstractCall {
     public ObjectCreation(PsiFile file, String filePath, PsiNewExpression creation) {
         if (!creation.isArrayCreation()) {
             this.locationInfo = new LocationInfo(file, filePath, creation, CodeElementType.CLASS_INSTANCE_CREATION);
-            PsiMethod constructor = creation.resolveConstructor();
-            this.type = UMLType.extractTypeObject(file, filePath, constructor.getReturnTypeElement(), 0);
+            // TODO: Element
+            this.type = UMLType.extractTypeObject(file, filePath, creation, creation.getType());
             this.typeArguments = creation.getTypeArguments().length;
             this.arguments = new ArrayList<>();
             PsiExpression[] args = creation.getArgumentList().getExpressions();
@@ -38,7 +38,7 @@ public class ObjectCreation extends AbstractCall {
         } else {
             this.locationInfo = new LocationInfo(file, filePath, creation, CodeElementType.ARRAY_CREATION);
             this.isArray = true;
-            this.type = UMLType.extractTypeObject(file, filePath, creation.resolveConstructor().getReturnTypeElement(), 0);
+            this.type = UMLType.extractTypeObject(file, filePath, creation, creation.getType());
             this.typeArguments = creation.getArrayDimensions().length;
             this.arguments = new ArrayList<>();
             PsiExpression[] args = creation.getArrayDimensions();

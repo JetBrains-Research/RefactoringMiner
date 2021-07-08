@@ -41,7 +41,7 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
             this.initializer = new AbstractExpression(file, filePath, initializer, CodeElementType.VARIABLE_DECLARATION_INITIALIZER);
         }
 
-        this.type = UMLType.extractTypeObject(file, filePath, variable.getTypeElement(), 0); //TODO: extra?
+        this.type = UMLType.extractTypeObject(file, filePath, variable.getTypeElement(), variable.getType()); //TODO: extra?
 
         CodeElementType declarationType = extractVariableDeclarationType(variable);
         this.locationInfo = new LocationInfo(file, filePath, variable, declarationType);

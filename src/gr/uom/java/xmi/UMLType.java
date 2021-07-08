@@ -3,6 +3,7 @@ package gr.uom.java.xmi;
 import com.intellij.psi.PsiAnnotation;
 import com.intellij.psi.PsiArrayType;
 import com.intellij.psi.PsiDisjunctionType;
+import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiIntersectionType;
 import com.intellij.psi.PsiPrimitiveType;
@@ -231,30 +232,34 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
         return openingTags == closingTags;
     }
 
-    public static UMLType extractTypeObject(PsiFile cu, String filePath, PsiTypeElement typeElement, int extraDimensions) {
-        PsiType type = typeElement.getType();
-        UMLType umlType = extractTypeObject(cu, filePath, type);
-        umlType.locationInfo = new LocationInfo(cu, filePath, typeElement, CodeElementType.TYPE);
-        umlType.arrayDimension += extraDimensions;
+    /**
+     * Construct UMLType from Psi parameters
+     *
+     * @param typeElement Element associated with type declaration position
+     * @param type Real type (differs from typeElement.getType() on C-style arrays)
+     */
+    public static UMLType extractTypeObject(PsiFile file, String filePath, PsiElement typeElement, PsiType type) {
+        UMLType umlType = extractTypeObject(type);
+        umlType.locationInfo = new LocationInfo(file, filePath, typeElement, CodeElementType.TYPE);
         PsiAnnotation[] annotations = type.getAnnotations();
         for (PsiAnnotation annotation : annotations) {
-            umlType.annotations.add(new UMLAnnotation(cu, filePath, annotation));
+            umlType.annotations.add(new UMLAnnotation(file, filePath, annotation));
         }
         return umlType;
     }
 
-    private static UMLType extractTypeObject(PsiFile file, String filePath, PsiType type) {
+    private static UMLType extractTypeObject(PsiType type) {
         if (type instanceof PsiPrimitiveType) {
             PsiPrimitiveType primitiveType = (PsiPrimitiveType) type;
             return extractTypeObject(primitiveType.getName());
         } else if (type instanceof PsiWildcardType) {
             PsiWildcardType wildcardType = (PsiWildcardType) type;
             return wildcardType.isBounded()
-                ? new WildcardType(extractTypeObject(file, filePath, wildcardType.getBound()), wildcardType.isSuper())
+                ? new WildcardType(extractTypeObject(wildcardType.getBound()), wildcardType.isSuper())
                 : new WildcardType(null, false);
         } else if (type instanceof PsiArrayType) {
             PsiArrayType arrayType = (PsiArrayType) type;
-            UMLType myArrayType = extractTypeObject(file, filePath, arrayType.getDeepComponentType());
+            UMLType myArrayType = extractTypeObject(arrayType.getDeepComponentType());
             myArrayType.arrayDimension = arrayType.getArrayDimensions();
             return myArrayType;
         } else if (type instanceof PsiDisjunctionType) {
@@ -262,7 +267,7 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
             List<PsiType> types = disjunctionType.getDisjunctions();
             List<UMLType> umlTypes = new ArrayList<UMLType>();
             for (PsiType dType : types) {
-                umlTypes.add(extractTypeObject(file, filePath, dType));
+                umlTypes.add(extractTypeObject(dType));
             }
             return new ListCompositeType(umlTypes, Kind.UNION);
         } else if (type instanceof PsiIntersectionType) {
@@ -270,7 +275,7 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
             PsiType[] types = intersectionType.getConjuncts();
             List<UMLType> umlTypes = new ArrayList<UMLType>();
             for (PsiType iType : types) {
-                umlTypes.add(extractTypeObject(file, filePath, iType));
+                umlTypes.add(extractTypeObject(iType));
             }
             return new ListCompositeType(umlTypes, Kind.INTERSECTION);
         } else {

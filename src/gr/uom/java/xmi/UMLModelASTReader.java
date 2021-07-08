@@ -13,11 +13,10 @@ import gr.uom.java.xmi.decomposition.OperationBody;
 import gr.uom.java.xmi.decomposition.VariableDeclaration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.TreeNode;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.Enumeration;
+import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -157,9 +156,7 @@ public class UMLModelASTReader {
         umlClass.setJavadoc(generateJavadoc(file, psiEnumClass, sourceFile));
         umlClass.setEnum(true);
 
-        PsiJavaCodeReferenceElement[] superInterfaceTypes = psiEnumClass.getExtendsList().getReferenceElements();
-        for (PsiJavaCodeReferenceElement interfaceType : superInterfaceTypes) {
-            UMLType umlType = UMLType.extractTypeObject(file, sourceFile, (PsiTypeElement) interfaceType.getElement(), 0);
+        for (UMLType umlType : getUMLTypes(file, sourceFile, psiEnumClass.getImplementsList())) {
             UMLRealization umlRealization = new UMLRealization(umlClass, umlType.getClassType());
             umlClass.addImplementedInterface(umlType);
             this.umlModel.addRealization(umlRealization);
@@ -179,6 +176,20 @@ public class UMLModelASTReader {
 
         this.umlModel.addClass(umlClass);
         distributeComments(comments, locationInfo, umlClass.getComments());
+    }
+
+    private List<UMLType> getUMLTypes(PsiFile file, String sourceFile, @Nullable PsiReferenceList list) {
+        if (list == null) {
+            return Collections.emptyList();
+        }
+        PsiJavaCodeReferenceElement[] superInterfaceElements = list.getReferenceElements();
+        PsiClassType[] superInterfaceTypes = list.getReferencedTypes();
+        assert superInterfaceTypes.length == superInterfaceElements.length;
+        List<UMLType> types = new ArrayList<>(superInterfaceTypes.length);
+        for (int i = 0; i < superInterfaceTypes.length; i++) {
+            types.set(i, UMLType.extractTypeObject(file, sourceFile, superInterfaceElements[i], superInterfaceTypes[i]));
+        }
+        return types;
     }
 
     private void processBodyDeclarations(PsiFile file, PsiClass psiClass, String packageName,
@@ -221,25 +232,19 @@ public class UMLModelASTReader {
         if (psiClass.isInterface()) {
             umlClass.setInterface(true);
         } else {
-            PsiReferenceList extendsList = psiClass.getExtendsList();
-            if (extendsList != null && extendsList.getReferenceElements().length > 0) {
-                assert extendsList.getReferenceElements().length == 1;
-                PsiTypeElement superclass = (PsiTypeElement) extendsList.getReferenceElements()[0].getElement();
-                UMLType umlType = UMLType.extractTypeObject(file, sourceFile, superclass, 0);
+            List<UMLType> extendsList = getUMLTypes(file, sourceFile, psiClass.getExtendsList());
+            if (!extendsList.isEmpty()) {
+                assert extendsList.size() == 1;
+                UMLType umlType = extendsList.get(0);
                 UMLGeneralization umlGeneralization = new UMLGeneralization(umlClass, umlType.getClassType());
                 umlClass.setSuperclass(umlType);
                 this.umlModel.addGeneralization(umlGeneralization);
             }
 
-            PsiReferenceList implementsList = psiClass.getImplementsList();
-            if (implementsList != null) {
-                for (PsiJavaCodeReferenceElement interfaceTypeCode : implementsList.getReferenceElements()) {
-                    PsiTypeElement interfaceType = (PsiTypeElement) interfaceTypeCode.getElement();
-                    UMLType umlType = UMLType.extractTypeObject(file, sourceFile, interfaceType, 0);
-                    UMLRealization umlRealization = new UMLRealization(umlClass, umlType.getClassType());
-                    umlClass.addImplementedInterface(umlType);
-                    this.umlModel.addRealization(umlRealization);
-                }
+            for (UMLType umlType : getUMLTypes(file, sourceFile, psiClass.getImplementsList())) {
+                UMLRealization umlRealization = new UMLRealization(umlClass, umlType.getClassType());
+                umlClass.addImplementedInterface(umlType);
+                this.umlModel.addRealization(umlRealization);
             }
         }
 
@@ -284,10 +289,11 @@ public class UMLModelASTReader {
     @NotNull
     private UMLTypeParameter processTypeParameters(PsiFile file, String sourceFile, PsiTypeParameter typeParameter) {
         UMLTypeParameter umlTypeParameter = new UMLTypeParameter(typeParameter.getQualifiedName());
-        PsiJavaCodeReferenceElement[] extendsElements = typeParameter.getExtendsList().getReferenceElements();
-        assert extendsElements.length == 1;
-        PsiTypeElement element = (PsiTypeElement) extendsElements[0].getElement();
-        umlTypeParameter.addTypeBound(UMLType.extractTypeObject(file, sourceFile, element, 0));
+        List<UMLType> extendsList = getUMLTypes(file, sourceFile, typeParameter.getExtendsList());
+        if (!extendsList.isEmpty()) {
+            assert extendsList.size() == 1;
+            umlTypeParameter.addTypeBound(extendsList.get(0));
+        }
         PsiAnnotation[] typeParameterAnnotations = typeParameter.getAnnotations();
         for (PsiAnnotation psiAnnotation : typeParameterAnnotations) {
             umlTypeParameter.addAnnotation(new UMLAnnotation(file, sourceFile, psiAnnotation));
@@ -462,16 +468,15 @@ public class UMLModelASTReader {
             umlOperation.setBody(null);
         }
 
-        PsiTypeElement returnType = psiMethod.getReturnTypeElement();
-        if (returnType != null) {
-            UMLType type = UMLType.extractTypeObject(file, sourceFile, returnType, 0);
+
+        if (!psiMethod.isConstructor()) {
+            UMLType type = UMLType.extractTypeObject(file, sourceFile, psiMethod.getReturnTypeElement(), psiMethod.getReturnType());
             UMLParameter returnParameter = new UMLParameter("return", type, "return", false);
             umlOperation.addParameter(returnParameter);
         }
         PsiParameter[] parameters = psiMethod.getParameterList().getParameters();
         for (PsiParameter parameter : parameters) {
-            PsiTypeElement parameterType = parameter.getTypeElement();
-            UMLType type = UMLType.extractTypeObject(file, sourceFile, parameterType, 0);
+            UMLType type = UMLType.extractTypeObject(file, sourceFile, parameter.getTypeElement(), parameter.getType());
             String parameterName = parameter.getName();
             UMLParameter umlParameter = new UMLParameter(parameterName, type, "in", parameter.isVarArgs());
             VariableDeclaration variableDeclaration = new VariableDeclaration(file, sourceFile, parameter, parameter.isVarArgs());
@@ -479,10 +484,8 @@ public class UMLModelASTReader {
             umlParameter.setVariableDeclaration(variableDeclaration);
             umlOperation.addParameter(umlParameter);
         }
-        PsiJavaCodeReferenceElement[] thrownExceptionTypes = psiMethod.getThrowsList().getReferenceElements();
-        for (PsiJavaCodeReferenceElement thrownExceptionType : thrownExceptionTypes) {
-            UMLType type = UMLType.extractTypeObject(file, sourceFile, (PsiTypeElement) thrownExceptionType.getElement(), 0);
-            umlOperation.addThrownExceptionType(type);
+        for (UMLType umlType : getUMLTypes(file, sourceFile, psiMethod.getThrowsList())) {
+            umlOperation.addThrownExceptionType(umlType);
         }
         return umlOperation;
     }
@@ -514,8 +517,7 @@ public class UMLModelASTReader {
                                                        String sourceFile, List<UMLComment> comments) {
         UMLJavadoc javadoc = generateJavadoc(file, psiField, sourceFile);
         List<UMLAttribute> attributes = new ArrayList<>();
-        PsiTypeElement fieldType = psiField.getTypeElement();
-        UMLType type = UMLType.extractTypeObject(file, sourceFile, fieldType, 0);
+        UMLType type = UMLType.extractTypeObject(file, sourceFile, psiField.getTypeElement(), psiField.getType());
         String fieldName = psiField.getName();
         LocationInfo locationInfo = new LocationInfo(file, sourceFile, psiField, LocationInfo.CodeElementType.FIELD_DECLARATION);
         VariableDeclaration variableDeclaration = new VariableDeclaration(file, sourceFile, psiField);
