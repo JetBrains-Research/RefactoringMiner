@@ -300,62 +300,50 @@ public class UMLModelASTReader {
                                                    String className, UMLClass umlClass) {
         AnonymousClassDeclarationVisitor visitor = new AnonymousClassDeclarationVisitor();
         psiClass.accept(visitor);
-        Set<PsiAnonymousClass> anonymousClassDeclarations = visitor.getAnonymousClassDeclarations();
-
-        DefaultMutableTreeNode root = new DefaultMutableTreeNode();
-        for (PsiAnonymousClass anonymous : anonymousClassDeclarations) {
-            insertNode(anonymous, root);
-        }
-
         List<UMLAnonymousClass> createdAnonymousClasses = new ArrayList<>();
-        Enumeration<TreeNode> enumeration = root.postorderEnumeration();
-        while (enumeration.hasMoreElements()) {
-            DefaultMutableTreeNode node = (DefaultMutableTreeNode) enumeration.nextElement();
-            if (node.getUserObject() != null) {
-                PsiAnonymousClass anonymous = (PsiAnonymousClass) node.getUserObject();
-                boolean operationFound = false;
-                UMLOperation matchingOperation = null;
-                UMLAttribute matchingAttribute = null;
-                List<UMLComment> comments = null;
-                for (UMLOperation operation : umlClass.getOperations()) {
-                    if (operation.getLocationInfo().getStartOffset() <= anonymous.getTextRange().getStartOffset() &&
-                        operation.getLocationInfo().getEndOffset() >= anonymous.getTextRange().getEndOffset()) {
-                        comments = operation.getComments();
-                        operationFound = true;
-                        matchingOperation = operation;
+        for (AnonymousClassDeclarationVisitor.AnonymousClassDeclaration anonymousClassDeclaration
+            : visitor.getPostOrderedAnonymousClassDeclarations()) {
+            PsiAnonymousClass anonymous = anonymousClassDeclaration.psiAnonymousClass;
+            UMLOperation matchingOperation = null;
+            UMLAttribute matchingAttribute = null;
+            List<UMLComment> comments = null;
+            for (UMLOperation operation : umlClass.getOperations()) {
+                if (operation.getLocationInfo().getStartOffset() <= anonymous.getTextRange().getStartOffset() &&
+                    operation.getLocationInfo().getEndOffset() >= anonymous.getTextRange().getEndOffset()) {
+                    comments = operation.getComments();
+                    matchingOperation = operation;
+                    break;
+                }
+            }
+            if (matchingOperation == null) {
+                for (UMLAttribute attribute : umlClass.getAttributes()) {
+                    if (attribute.getLocationInfo().getStartOffset() <= anonymous.getTextRange().getStartOffset() &&
+                        attribute.getLocationInfo().getEndOffset() >= anonymous.getTextRange().getEndOffset()) {
+                        comments = attribute.getComments();
+                        matchingAttribute = attribute;
                         break;
                     }
                 }
-                if (!operationFound) {
-                    for (UMLAttribute attribute : umlClass.getAttributes()) {
-                        if (attribute.getLocationInfo().getStartOffset() <= anonymous.getTextRange().getStartOffset() &&
-                            attribute.getLocationInfo().getEndOffset() >= anonymous.getTextRange().getEndOffset()) {
-                            comments = attribute.getComments();
-                            matchingAttribute = attribute;
-                            break;
+            }
+            if (matchingOperation != null || matchingAttribute != null) {
+                String anonymousBinaryName = anonymousClassDeclaration.binaryName;
+                String anonymousCodePath = anonymous.getName();
+                UMLAnonymousClass anonymousClass = processAnonymousClassDeclaration(file, anonymous, packageName + "." + className, anonymousBinaryName, anonymousCodePath, sourceFile, comments);
+                umlClass.addAnonymousClass(anonymousClass);
+                if (matchingOperation != null) {
+                    matchingOperation.addAnonymousClass(anonymousClass);
+                }
+                if (matchingAttribute != null) {
+                    matchingAttribute.addAnonymousClass(anonymousClass);
+                }
+                for (UMLOperation operation : anonymousClass.getOperations()) {
+                    for (UMLAnonymousClass createdAnonymousClass : createdAnonymousClasses) {
+                        if (operation.getLocationInfo().subsumes(createdAnonymousClass.getLocationInfo())) {
+                            operation.addAnonymousClass(createdAnonymousClass);
                         }
                     }
                 }
-                if (matchingOperation != null || matchingAttribute != null) {
-                    String anonymousBinaryName = getAnonymousBinaryName(node);
-                    String anonymousCodePath = getAnonymousCodePath(node);
-                    UMLAnonymousClass anonymousClass = processAnonymousClassDeclaration(file, anonymous, packageName + "." + className, anonymousBinaryName, anonymousCodePath, sourceFile, comments);
-                    umlClass.addAnonymousClass(anonymousClass);
-                    if (matchingOperation != null) {
-                        matchingOperation.addAnonymousClass(anonymousClass);
-                    }
-                    if (matchingAttribute != null) {
-                        matchingAttribute.addAnonymousClass(anonymousClass);
-                    }
-                    for (UMLOperation operation : anonymousClass.getOperations()) {
-                        for (UMLAnonymousClass createdAnonymousClass : createdAnonymousClasses) {
-                            if (operation.getLocationInfo().subsumes(createdAnonymousClass.getLocationInfo())) {
-                                operation.addAnonymousClass(createdAnonymousClass);
-                            }
-                        }
-                    }
-                    createdAnonymousClasses.add(anonymousClass);
-                }
+                createdAnonymousClasses.add(anonymousClass);
             }
         }
     }
@@ -563,45 +551,5 @@ public class UMLModelASTReader {
 
         distributeComments(comments, locationInfo, anonymousClass.getComments());
         return anonymousClass;
-    }
-
-    private void insertNode(PsiAnonymousClass childAnonymous, DefaultMutableTreeNode root) {
-        Enumeration<TreeNode> enumeration = root.postorderEnumeration();
-        DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(childAnonymous);
-
-        DefaultMutableTreeNode parentNode = root;
-        while (enumeration.hasMoreElements()) {
-            DefaultMutableTreeNode currentNode = (DefaultMutableTreeNode) enumeration.nextElement();
-            PsiAnonymousClass currentAnonymous = (PsiAnonymousClass) currentNode.getUserObject();
-            if (isParent(childAnonymous, currentAnonymous)) {
-                parentNode = currentNode;
-                break;
-            }
-        }
-        parentNode.add(childNode);
-    }
-
-    private String getAnonymousCodePath(DefaultMutableTreeNode node) {
-        return ((PsiAnonymousClass) node.getUserObject()).getName();
-    }
-
-    private String getAnonymousBinaryName(DefaultMutableTreeNode node) {
-        StringBuilder name = new StringBuilder();
-        TreeNode[] path = node.getPath();
-        for (int i = 0; i < path.length; i++) {
-            DefaultMutableTreeNode tmp = (DefaultMutableTreeNode) path[i];
-            if (tmp.getUserObject() != null) {
-                DefaultMutableTreeNode parent = (DefaultMutableTreeNode) tmp.getParent();
-                int index = parent.getIndex(tmp);
-                name.append(index + 1);
-                if (i < path.length - 1)
-                    name.append(".");
-            }
-        }
-        return name.toString();
-    }
-
-    private boolean isParent(PsiElement child, PsiElement parent) {
-        return PsiTreeUtil.isAncestor(parent, child, true);
     }
 }
