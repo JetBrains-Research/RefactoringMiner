@@ -165,10 +165,10 @@ public class UMLModelASTReader {
             this.umlModel.addRealization(umlRealization);
         }
 
-        // TODO: NON-recursive
-        Collection<PsiEnumConstant> enumConstantDeclarations = PsiTreeUtil.findChildrenOfType(psiEnumClass, PsiEnumConstant.class);
-        for (PsiEnumConstant enumConstantDeclaration : enumConstantDeclarations) {
-            processEnumConstantDeclaration(file, enumConstantDeclaration, sourceFile, umlClass, comments);
+        for (PsiElement enumElement : psiEnumClass.getChildren()) {
+            if (enumElement instanceof PsiEnumConstant) {
+                processEnumConstantDeclaration(file, (PsiEnumConstant) enumElement, sourceFile, umlClass, comments);
+            }
         }
 
         processModifiers(file, sourceFile, psiEnumClass, umlClass);
