@@ -209,7 +209,7 @@ public class OperationBody {
             processStatement(file, filePath, child, labeledStatement.getStatement());
         } else if (statement instanceof PsiReturnStatement) {
             PsiReturnStatement returnStatement = (PsiReturnStatement) statement;
-            StatementObject child = new StatementObject(file, filePath, returnStatement.getReturnValue(), parent.getDepth() + 1, CodeElementType.RETURN_STATEMENT);
+            StatementObject child = new StatementObject(file, filePath, returnStatement, parent.getDepth() + 1, CodeElementType.RETURN_STATEMENT);
             parent.addStatement(child);
             addStatementInVariableScopes(child);
         } else if (statement instanceof PsiSynchronizedStatement) {
