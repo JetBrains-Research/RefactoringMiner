@@ -1,11 +1,14 @@
 package gr.uom.java.xmi.decomposition;
 
-import com.intellij.lang.jvm.JvmModifier;
+import com.intellij.psi.PsiDeclarationStatement;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiEnumConstant;
 import com.intellij.psi.PsiExpression;
 import com.intellij.psi.PsiField;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiLocalVariable;
+import com.intellij.psi.PsiModifier;
+import com.intellij.psi.PsiParameter;
 import com.intellij.psi.PsiVariable;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
@@ -14,24 +17,22 @@ import gr.uom.java.xmi.UMLAnnotation;
 import gr.uom.java.xmi.UMLType;
 import gr.uom.java.xmi.VariableDeclarationProvider;
 import gr.uom.java.xmi.diff.CodeRange;
-import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
-import org.eclipse.jdt.core.dom.VariableDeclarationExpression;
-import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
-import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class VariableDeclaration implements LocationInfoProvider, VariableDeclarationProvider {
-    private String variableName;
+    private final String variableName;
     private AbstractExpression initializer;
-    private UMLType type;
+    private final UMLType type;
     private boolean varargsParameter;
-    private LocationInfo locationInfo;
+    private final LocationInfo locationInfo;
     private boolean isParameter;
     private boolean isAttribute;
-    private boolean isEnumConstant;
-    private VariableScope scope;
-    private boolean isFinal;
-    private List<UMLAnnotation> annotations;
+    private final boolean isEnumConstant;
+    private final VariableScope scope;
+    private final boolean isFinal;
+    private final List<UMLAnnotation> annotations;
 
     public VariableDeclaration(PsiFile file, String filePath, PsiVariable variable) {
         this.variableName = variable.getName();
@@ -41,7 +42,7 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
             this.initializer = new AbstractExpression(file, filePath, initializer, CodeElementType.VARIABLE_DECLARATION_INITIALIZER);
         }
 
-        this.type = UMLType.extractTypeObject(file, filePath, variable.getTypeElement(), variable.getType()); //TODO: extra?
+        this.type = UMLType.extractTypeObject(file, filePath, variable.getTypeElement(), variable.getType());
 
         CodeElementType declarationType = extractVariableDeclarationType(variable);
         this.locationInfo = new LocationInfo(file, filePath, variable, declarationType);
@@ -56,10 +57,11 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
         int endOffset = scopeNode.getTextRange().getEndOffset();
         this.scope = new VariableScope(file, filePath, startOffset, endOffset);
 
-        this.isFinal = variable.hasModifier(JvmModifier.FINAL);
+        this.isFinal = variable.hasModifierProperty(PsiModifier.FINAL);
         this.isEnumConstant = variable instanceof PsiEnumConstant;
-        // TODO: check
-        // TODO: Annotations
+        this.annotations = Arrays.stream(variable.getAnnotations())
+            .map(annotation -> new UMLAnnotation(file, filePath, annotation))
+            .collect(Collectors.toList());
     }
 
     public VariableDeclaration(PsiFile file, String filePath, PsiVariable variable, boolean isVararg) {
@@ -124,26 +126,9 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
         return result;
     }
 
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        VariableDeclaration other = (VariableDeclaration) obj;
-        if (scope == null) {
-            if (other.scope != null)
-                return false;
-        } else if (!scope.equals(other.scope))
-            return false;
-        if (variableName == null) {
-            if (other.variableName != null)
-                return false;
-        } else if (!variableName.equals(other.variableName))
-            return false;
-        return true;
+    // TODO:
+    private static PsiElement getScopeNode(PsiVariable variableDeclaration) {
+        return variableDeclaration.getParent().getParent();
     }
 
     public String toString() {
@@ -172,31 +157,36 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
         return locationInfo.codeRange();
     }
 
-    // TODO:
-    private static PsiElement getScopeNode(PsiVariable variableDeclaration) {
-        if (variableDeclaration instanceof SingleVariableDeclaration) {
-            return variableDeclaration.getParent();
-        } else if (variableDeclaration instanceof VariableDeclarationFragment) {
-            return variableDeclaration.getParent().getParent();
+    private static CodeElementType extractVariableDeclarationType(PsiVariable variableDeclaration) {
+        if (variableDeclaration instanceof PsiParameter) {
+            return CodeElementType.SINGLE_VARIABLE_DECLARATION;
+        } else if (variableDeclaration instanceof PsiLocalVariable) {
+            return CodeElementType.VARIABLE_DECLARATION_STATEMENT;
+        } else if (variableDeclaration instanceof PsiDeclarationStatement) {
+            return CodeElementType.VARIABLE_DECLARATION_EXPRESSION;
+        } else if (variableDeclaration instanceof PsiField) {
+            return CodeElementType.FIELD_DECLARATION;
         }
-        return null;
+        throw new IllegalStateException();
     }
 
-    // TODO:
-    private static CodeElementType extractVariableDeclarationType(PsiVariable variableDeclaration) {
-        if (variableDeclaration instanceof SingleVariableDeclaration) {
-            return CodeElementType.SINGLE_VARIABLE_DECLARATION;
-        } else if (variableDeclaration instanceof VariableDeclarationFragment) {
-            VariableDeclarationFragment fragment = (VariableDeclarationFragment) variableDeclaration;
-            if (fragment.getParent() instanceof VariableDeclarationStatement) {
-                return CodeElementType.VARIABLE_DECLARATION_STATEMENT;
-            } else if (fragment.getParent() instanceof VariableDeclarationExpression) {
-                return CodeElementType.VARIABLE_DECLARATION_EXPRESSION;
-            } else if (fragment.getParent() instanceof PsiField) {
-                return CodeElementType.FIELD_DECLARATION;
-            }
-        }
-        return null;
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        VariableDeclaration other = (VariableDeclaration) obj;
+        if (scope == null) {
+            if (other.scope != null)
+                return false;
+        } else if (!scope.equals(other.scope))
+            return false;
+        if (variableName == null) {
+            return other.variableName == null;
+        } else return variableName.equals(other.variableName);
     }
 
     public boolean equalVariableDeclarationType(VariableDeclaration other) {
