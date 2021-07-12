@@ -2,13 +2,13 @@ package gr.uom.java.xmi;
 
 import com.intellij.psi.PsiAnnotation;
 import com.intellij.psi.PsiArrayType;
+import com.intellij.psi.PsiClassType;
 import com.intellij.psi.PsiDisjunctionType;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiIntersectionType;
 import com.intellij.psi.PsiPrimitiveType;
 import com.intellij.psi.PsiType;
-import com.intellij.psi.PsiTypeElement;
 import com.intellij.psi.PsiWildcardType;
 import gr.uom.java.xmi.ListCompositeType.Kind;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
@@ -16,6 +16,7 @@ import gr.uom.java.xmi.diff.CodeRange;
 import gr.uom.java.xmi.diff.StringDistance;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public abstract class UMLType implements Serializable, LocationInfoProvider {
@@ -51,7 +52,6 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
     protected String typeArgumentsToString() {
         StringBuilder sb = new StringBuilder();
         if (typeArguments.isEmpty()) {
-            sb.append("");
         } else {
             sb.append("<");
             for (int i = 0; i < typeArguments.size(); i++) {
@@ -236,15 +236,15 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
      * Construct UMLType from Psi parameters
      *
      * @param typeElement Element associated with type declaration position
-     * @param type Real type (differs from typeElement.getType() on C-style arrays)
+     * @param type        Real type (differs from typeElement.getType() on C-style arrays)
      */
     public static UMLType extractTypeObject(PsiFile file, String filePath, PsiElement typeElement, PsiType type) {
+        // TODO: Annotation in reference lists
         UMLType umlType = extractTypeObject(type);
         umlType.locationInfo = new LocationInfo(file, filePath, typeElement, CodeElementType.TYPE);
-        PsiAnnotation[] annotations = type.getAnnotations();
-        for (PsiAnnotation annotation : annotations) {
-            umlType.annotations.add(new UMLAnnotation(file, filePath, annotation));
-        }
+        Arrays.stream(typeElement.getParent().getChildren())
+            .filter(el -> el instanceof PsiAnnotation)
+            .forEach(annotation -> umlType.annotations.add(new UMLAnnotation(file, filePath, (PsiAnnotation) annotation)));
         return umlType;
     }
 
@@ -278,6 +278,9 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
                 umlTypes.add(extractTypeObject(iType));
             }
             return new ListCompositeType(umlTypes, Kind.INTERSECTION);
+        } else if (type instanceof PsiClassType) {
+            PsiClassType classType = (PsiClassType) type;
+            return extractTypeObject(classType.getName());
         } else {
             System.out.println(type.getClass().getName());
             throw new IllegalArgumentException();
