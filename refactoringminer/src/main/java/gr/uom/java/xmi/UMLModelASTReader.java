@@ -142,7 +142,7 @@ public class UMLModelASTReader {
 
     private void processEnumDeclaration(PsiFile file, PsiClass psiEnumClass, String packageName, String sourceFile,
                                         List<String> importedTypes, List<UMLComment> comments) {
-        String className = psiEnumClass.getQualifiedName();
+        String className = psiEnumClass.getName();
         LocationInfo locationInfo = new LocationInfo(file, sourceFile, psiEnumClass, LocationInfo.CodeElementType.TYPE_DECLARATION);
         boolean isTopLevel = psiEnumClass.getParent() instanceof PsiFile;
         UMLClass umlClass = new UMLClass(packageName, className, locationInfo, isTopLevel, importedTypes);
@@ -216,7 +216,7 @@ public class UMLModelASTReader {
     private void processTypeDeclaration(PsiFile file, PsiClass psiClass,
                                         String packageName, String sourceFile,
                                         List<String> importedTypes, List<UMLComment> comments) {
-        String className = psiClass.getQualifiedName();
+        String className = psiClass.getName();
         LocationInfo locationInfo = new LocationInfo(file, sourceFile, psiClass, LocationInfo.CodeElementType.TYPE_DECLARATION);
         boolean isTopLevel = psiClass.getParent() instanceof PsiFile;
         UMLClass umlClass = new UMLClass(packageName, className, locationInfo, isTopLevel, importedTypes);
