@@ -1,20 +1,17 @@
 package gr.uom.java.xmi;
 
-import com.intellij.core.JavaCoreApplicationEnvironment;
-import com.intellij.core.JavaCoreProjectEnvironment;
 import com.intellij.lang.java.JavaLanguage;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.project.ProjectManager;
 import com.intellij.psi.*;
 import com.intellij.psi.javadoc.PsiDocComment;
 import com.intellij.psi.javadoc.PsiDocTag;
 import com.intellij.psi.util.PsiTreeUtil;
-import com.intellij.testFramework.LightVirtualFile;
 import gr.uom.java.xmi.decomposition.OperationBody;
 import gr.uom.java.xmi.decomposition.VariableDeclaration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -27,11 +24,7 @@ public class UMLModelASTReader {
 
     public UMLModelASTReader(Map<String, String> javaFileContents, Set<String> repositoryDirectories) {
         this.umlModel = new UMLModel(repositoryDirectories);
-        var env = new JavaCoreProjectEnvironment(() -> {}, new JavaCoreApplicationEnvironment(() -> {}));
-        for (String repositoryDirectory : repositoryDirectories) {
-            env.addSourcesToClasspath(new LightVirtualFile(repositoryDirectory));
-        }
-        processJavaFileContents(javaFileContents, env.getProject());
+        processJavaFileContents(javaFileContents, ProjectManager.getInstance().getDefaultProject());
     }
 
     public UMLModel getUmlModel() {
