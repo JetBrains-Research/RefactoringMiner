@@ -16,7 +16,8 @@ public class AnonymousClassDeclarationVisitor extends PsiRecursiveElementWalking
 
     @Override
     public void visitElement(@NotNull PsiElement element) {
-        if (element instanceof PsiAnonymousClass) {
+        boolean isAnonymous = element instanceof PsiAnonymousClass;
+        if (isAnonymous) {
             PsiAnonymousClass anonymousClass = (PsiAnonymousClass) element;
             stackDeclarations.add(anonymousClass);
             if (!childCount.empty()) {
@@ -25,8 +26,10 @@ public class AnonymousClassDeclarationVisitor extends PsiRecursiveElementWalking
             childCount.add(1);
         }
         super.visitElement(element);
-        declarationsPostOrdered.add(new AnonymousClassDeclaration(stackDeclarations.pop(), childCount));
-        childCount.pop();
+        if (isAnonymous) {
+            declarationsPostOrdered.add(new AnonymousClassDeclaration(stackDeclarations.pop(), childCount));
+            childCount.pop();
+        }
     }
 
     public List<AnonymousClassDeclaration> getPostOrderedAnonymousClassDeclarations() {
