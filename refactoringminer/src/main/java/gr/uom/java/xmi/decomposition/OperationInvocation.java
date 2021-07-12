@@ -1,5 +1,9 @@
 package gr.uom.java.xmi.decomposition;
 
+import com.intellij.psi.PsiExpression;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiMethodCallExpression;
+import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.UMLAbstractClass;
 import gr.uom.java.xmi.UMLClass;
 import gr.uom.java.xmi.UMLOperation;
@@ -26,7 +30,7 @@ public class OperationInvocation extends AbstractCall {
     private static Map<String, String> PRIMITIVE_WRAPPER_CLASS_MAP;
     private static Map<String, List<String>> PRIMITIVE_TYPE_WIDENING_MAP;
     private static Map<String, List<String>> PRIMITIVE_TYPE_NARROWING_MAP;
-    private static List<String> PRIMITIVE_TYPE_LIST;
+    private static final List<String> PRIMITIVE_TYPE_LIST;
 
     static {
         PRIMITIVE_TYPE_LIST = new ArrayList<>(Arrays.asList("byte", "short", "int", "long", "float", "double", "char", "boolean"));
@@ -64,7 +68,18 @@ public class OperationInvocation extends AbstractCall {
         PRIMITIVE_TYPE_NARROWING_MAP = Collections.unmodifiableMap(PRIMITIVE_TYPE_NARROWING_MAP);
     }
 
-    // TODO: return constructors
+    public OperationInvocation(PsiFile cu, String filePath, PsiMethodCallExpression invocation) {
+        this.locationInfo = new LocationInfo(cu, filePath, invocation, LocationInfo.CodeElementType.METHOD_INVOCATION);
+        this.methodName = invocation.getMethodExpression().getReferenceName();
+        this.typeArguments = invocation.getTypeArguments().length;
+        this.arguments = new ArrayList<>();
+        PsiExpression[] args = invocation.getArgumentList().getExpressions();
+        for (PsiExpression argument : args) {
+            this.arguments.add(argument.getText());
+        }
+        this.expression = invocation.getMethodExpression().getText();
+        // TODO: processExpression(invocation.getExpression(), this.subExpressions);
+    }
 
     private OperationInvocation() {}
 
@@ -95,6 +110,33 @@ public class OperationInvocation extends AbstractCall {
 
     public int numberOfSubExpressions() {
         return subExpressions.size();
+    }
+
+    private static boolean differInThisDot(String subExpression1, String subExpression2) {
+        if (subExpression1.length() < subExpression2.length()) {
+            String modified = subExpression1;
+            String previousCommonPrefix = "";
+            String commonPrefix = null;
+            while ((commonPrefix = PrefixSuffixUtils.longestCommonPrefix(modified, subExpression2)).length() > previousCommonPrefix.length()) {
+                modified = commonPrefix + "this." + modified.substring(commonPrefix.length());
+                if (modified.equals(subExpression2)) {
+                    return true;
+                }
+                previousCommonPrefix = commonPrefix;
+            }
+        } else if (subExpression1.length() > subExpression2.length()) {
+            String modified = subExpression2;
+            String previousCommonPrefix = "";
+            String commonPrefix = null;
+            while ((commonPrefix = PrefixSuffixUtils.longestCommonPrefix(modified, subExpression1)).length() > previousCommonPrefix.length()) {
+                modified = commonPrefix + "this." + modified.substring(commonPrefix.length());
+                if (modified.equals(subExpression1)) {
+                    return true;
+                }
+                previousCommonPrefix = commonPrefix;
+            }
+        }
+        return false;
     }
 
     public boolean matchesOperation(UMLOperation operation, UMLOperation callerOperation, UMLModelDiff modelDiff) {
@@ -156,7 +198,7 @@ public class OperationInvocation extends AbstractCall {
                 inferredArgumentTypes.add(UMLType.extractTypeObject("String"));
             } else if (PrefixSuffixUtils.isNumeric(arg)) {
                 inferredArgumentTypes.add(UMLType.extractTypeObject("int"));
-            } else if (arg.startsWith("\'") && arg.endsWith("\'")) {
+            } else if (arg.startsWith("'") && arg.endsWith("'")) {
                 inferredArgumentTypes.add(UMLType.extractTypeObject("char"));
             } else if (arg.endsWith(".class")) {
                 inferredArgumentTypes.add(UMLType.extractTypeObject("Class"));
@@ -204,6 +246,29 @@ public class OperationInvocation extends AbstractCall {
         }
         UMLType lastInferredArgumentType = inferredArgumentTypes.size() > 0 ? inferredArgumentTypes.get(inferredArgumentTypes.size() - 1) : null;
         return this.methodName.equals(operation.getName()) && (this.typeArguments == operation.getParameterTypeList().size() || varArgsMatch(operation, lastInferredArgumentType));
+    }
+
+    private static boolean isWideningPrimitiveConversion(String type1, String type2) {
+        return PRIMITIVE_TYPE_WIDENING_MAP.containsKey(type1) && PRIMITIVE_TYPE_WIDENING_MAP.get(type1).contains(type2);
+    }
+
+    private static boolean isNarrowingPrimitiveConversion(String type1, String type2) {
+        return PRIMITIVE_TYPE_NARROWING_MAP.containsKey(type1) && PRIMITIVE_TYPE_NARROWING_MAP.get(type1).contains(type2);
+    }
+
+    private static boolean isPrimitiveType(String argumentTypeClassName) {
+        return PRIMITIVE_TYPE_LIST.contains(argumentTypeClassName);
+    }
+
+    private UMLClassBaseDiff getUMLClassDiff(UMLModelDiff modelDiff, UMLType type) {
+        UMLClassBaseDiff classDiff = null;
+        if (modelDiff != null) {
+            classDiff = modelDiff.getUMLClassDiff(type.getClassType());
+            if (classDiff == null) {
+                classDiff = modelDiff.getUMLClassDiff(type);
+            }
+        }
+        return classDiff;
     }
 
     private boolean compatibleTypes(UMLParameter parameter, UMLType type, UMLModelDiff modelDiff) {
@@ -270,33 +335,7 @@ public class OperationInvocation extends AbstractCall {
         // the super type is available in the modelDiff, but not the subclass type
         UMLClassBaseDiff subclassDiff = getUMLClassDiff(modelDiff, type);
         UMLClassBaseDiff superclassDiff = getUMLClassDiff(modelDiff, parameter.getType());
-        if (superclassDiff != null && subclassDiff == null) {
-            return true;
-        }
-        return false;
-    }
-
-    private static boolean isWideningPrimitiveConversion(String type1, String type2) {
-        return PRIMITIVE_TYPE_WIDENING_MAP.containsKey(type1) && PRIMITIVE_TYPE_WIDENING_MAP.get(type1).contains(type2);
-    }
-
-    private static boolean isNarrowingPrimitiveConversion(String type1, String type2) {
-        return PRIMITIVE_TYPE_NARROWING_MAP.containsKey(type1) && PRIMITIVE_TYPE_NARROWING_MAP.get(type1).contains(type2);
-    }
-
-    private static boolean isPrimitiveType(String argumentTypeClassName) {
-        return PRIMITIVE_TYPE_LIST.contains(argumentTypeClassName);
-    }
-
-    private UMLClassBaseDiff getUMLClassDiff(UMLModelDiff modelDiff, UMLType type) {
-        UMLClassBaseDiff classDiff = null;
-        if (modelDiff != null) {
-            classDiff = modelDiff.getUMLClassDiff(type.getClassType());
-            if (classDiff == null) {
-                classDiff = modelDiff.getUMLClassDiff(type);
-            }
-        }
-        return classDiff;
+        return superclassDiff != null && subclassDiff == null;
     }
 
     private boolean varArgsMatch(UMLOperation operation, UMLType lastInferredArgumentType) {
@@ -311,32 +350,9 @@ public class OperationInvocation extends AbstractCall {
             if (lastParameterType.equals(lastInferredArgumentType)) {
                 return true;
             }
-            if (lastInferredArgumentType != null && lastParameterType.getClassType().equals(lastInferredArgumentType.getClassType())) {
-                return true;
-            }
+            return lastInferredArgumentType != null && lastParameterType.getClassType().equals(lastInferredArgumentType.getClassType());
         }
         return false;
-    }
-
-    public boolean compatibleExpression(OperationInvocation other) {
-        if (this.expression != null && other.expression != null) {
-            if (this.expression.startsWith("new ") && !other.expression.startsWith("new "))
-                return false;
-            if (!this.expression.startsWith("new ") && other.expression.startsWith("new "))
-                return false;
-        }
-        if (this.expression != null && this.expression.startsWith("new ") && other.expression == null)
-            return false;
-        if (other.expression != null && other.expression.startsWith("new ") && this.expression == null)
-            return false;
-        if (this.subExpressions.size() > 1 || other.subExpressions.size() > 1) {
-            Set<String> intersection = subExpressionIntersection(other);
-            int thisUnmatchedSubExpressions = this.subExpressions().size() - intersection.size();
-            int otherUnmatchedSubExpressions = other.subExpressions().size() - intersection.size();
-            if (thisUnmatchedSubExpressions > intersection.size() || otherUnmatchedSubExpressions > intersection.size())
-                return false;
-        }
-        return true;
     }
 
     public boolean containsVeryLongSubExpression() {
@@ -378,31 +394,24 @@ public class OperationInvocation extends AbstractCall {
         return intersection;
     }
 
-    private static boolean differInThisDot(String subExpression1, String subExpression2) {
-        if (subExpression1.length() < subExpression2.length()) {
-            String modified = subExpression1;
-            String previousCommonPrefix = "";
-            String commonPrefix = null;
-            while ((commonPrefix = PrefixSuffixUtils.longestCommonPrefix(modified, subExpression2)).length() > previousCommonPrefix.length()) {
-                modified = commonPrefix + "this." + modified.substring(commonPrefix.length(), modified.length());
-                if (modified.equals(subExpression2)) {
-                    return true;
-                }
-                previousCommonPrefix = commonPrefix;
-            }
-        } else if (subExpression1.length() > subExpression2.length()) {
-            String modified = subExpression2;
-            String previousCommonPrefix = "";
-            String commonPrefix = null;
-            while ((commonPrefix = PrefixSuffixUtils.longestCommonPrefix(modified, subExpression1)).length() > previousCommonPrefix.length()) {
-                modified = commonPrefix + "this." + modified.substring(commonPrefix.length(), modified.length());
-                if (modified.equals(subExpression1)) {
-                    return true;
-                }
-                previousCommonPrefix = commonPrefix;
-            }
+    public boolean compatibleExpression(OperationInvocation other) {
+        if (this.expression != null && other.expression != null) {
+            if (this.expression.startsWith("new ") && !other.expression.startsWith("new "))
+                return false;
+            if (!this.expression.startsWith("new ") && other.expression.startsWith("new "))
+                return false;
         }
-        return false;
+        if (this.expression != null && this.expression.startsWith("new ") && other.expression == null)
+            return false;
+        if (other.expression != null && other.expression.startsWith("new ") && this.expression == null)
+            return false;
+        if (this.subExpressions.size() > 1 || other.subExpressions.size() > 1) {
+            Set<String> intersection = subExpressionIntersection(other);
+            int thisUnmatchedSubExpressions = this.subExpressions().size() - intersection.size();
+            int otherUnmatchedSubExpressions = other.subExpressions().size() - intersection.size();
+            return thisUnmatchedSubExpressions <= intersection.size() && otherUnmatchedSubExpressions <= intersection.size();
+        }
+        return true;
     }
 
     private Set<String> subExpressions() {
@@ -415,9 +424,7 @@ public class OperationInvocation extends AbstractCall {
                 if (!subExpressions.contains(subString) && !dotInsideArguments(indexOfDot, thisExpression)) {
                     subExpressions.add(subString);
                 }
-            } else if (!subExpressions.contains(thisExpression)) {
-                subExpressions.add(thisExpression);
-            }
+            } else subExpressions.add(thisExpression);
         }
         return subExpressions;
     }
@@ -537,9 +544,7 @@ public class OperationInvocation extends AbstractCall {
     }
 
     public boolean differentExpressionNameAndArguments(OperationInvocation other) {
-        boolean differentExpression = false;
-        if (this.expression == null && other.expression != null)
-            differentExpression = true;
+        boolean differentExpression = this.expression == null && other.expression != null;
         if (this.expression != null && other.expression == null)
             differentExpression = true;
         if (this.expression != null && other.expression != null)
