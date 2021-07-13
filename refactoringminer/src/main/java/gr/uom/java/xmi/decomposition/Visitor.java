@@ -177,15 +177,16 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
             }
         } else if (element instanceof PsiThisExpression) {
             String source = element.getText();
-            if (!(element.getParent() instanceof PsiField)) {
-                variables.add(source);
-                if (!stackAnonymous.isEmpty()) {
-                    stackAnonymous.getLast().getVariables().add(source);
-                }
+            //TODO: filter
+            variables.add(source);
+            if (!stackAnonymous.isEmpty()) {
+                stackAnonymous.getLast().getVariables().add(source);
             }
         } else if (element instanceof PsiIdentifier) {
-            String source = element.getText();
-            // TODO:
+            processIdentifier((PsiIdentifier) element);
+        } else if (element instanceof PsiJavaCodeReferenceElement) {
+            PsiJavaCodeReferenceElement reference = (PsiJavaCodeReferenceElement) element;
+            //TODO: qualified?
         } else if (element instanceof PsiTypeElement) {
             String source = element.getText();
             // TODO: Anonymous
@@ -234,6 +235,24 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
         }
         if (goInSubtree) {
             super.visitElement(element);
+        }
+    }
+
+    private void processIdentifier(@NotNull PsiIdentifier identifier) {
+        String source = identifier.getText();
+        PsiElement parent = identifier.getParent();
+        PsiElement pparent = parent.getParent();
+        if ((pparent instanceof PsiMethodCallExpression
+            && ((PsiMethodCallExpression) pparent).getMethodExpression().getReferenceName().equals(source))
+            || pparent instanceof PsiTypeElement
+            || (pparent instanceof PsiAnnotation
+            && ((PsiAnnotation) pparent).getNameReferenceElement().getReferenceName().equals(source))
+            || parent instanceof PsiMethod
+            || parent instanceof PsiParameter //TODO:
+            || pparent instanceof PsiReferenceExpression) {
+        } else {
+            variables.add(source);
+            // TODO: Anonymous
         }
     }
 
