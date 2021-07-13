@@ -1,9 +1,7 @@
 package gr.uom.java.xmi.decomposition;
 
-import com.intellij.psi.PsiCodeBlock;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiStatement;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.diff.CodeRange;
@@ -20,18 +18,10 @@ public class CompositeStatementObject extends AbstractStatement {
     private final List<VariableDeclaration> variableDeclarations = new ArrayList<>();
     private final LocationInfo locationInfo;
 
-    private CompositeStatementObject(PsiFile file, String filePath, PsiElement statement, int depth, CodeElementType codeElementType) {
+    public CompositeStatementObject(PsiFile file, String filePath, PsiElement statement, int depth, CodeElementType codeElementType) {
         super();
         this.setDepth(depth);
         this.locationInfo = new LocationInfo(file, filePath, statement, codeElementType);
-    }
-
-    public CompositeStatementObject(PsiFile file, String filePath, PsiStatement statement, int depth, CodeElementType codeElementType) {
-        this(file, filePath, (PsiElement) statement, depth, codeElementType);
-    }
-
-    public CompositeStatementObject(PsiFile file, String filePath, PsiCodeBlock statement, int depth, CodeElementType codeElementType) {
-        this(file, filePath, (PsiElement) statement, depth, codeElementType);
     }
 
     public void addStatement(AbstractStatement statement) {
