@@ -111,7 +111,8 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
                 stackAnonymous.getLast().getCreationMap().compute(source, createOrAppend(creation));
             }
             if (newExpression.isArrayCreation()) {
-                if (newExpression.getArrayInitializer().getInitializers().length > 10) {
+                PsiArrayInitializerExpression initializer = newExpression.getArrayInitializer();
+                if (initializer != null && initializer.getInitializers().length > 10) {
                     goInSubtree = false;
                 }
             } else {
