@@ -180,7 +180,7 @@ public class UMLModelASTReader {
         assert superInterfaceTypes.length == superInterfaceElements.length;
         List<UMLType> types = new ArrayList<>(superInterfaceTypes.length);
         for (int i = 0; i < superInterfaceTypes.length; i++) {
-            types.set(i, UMLType.extractTypeObject(file, sourceFile, superInterfaceElements[i], superInterfaceTypes[i]));
+            types.add(UMLType.extractTypeObject(file, sourceFile, superInterfaceElements[i], superInterfaceTypes[i]));
         }
         return types;
     }
