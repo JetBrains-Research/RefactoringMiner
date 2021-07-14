@@ -277,7 +277,12 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
     }
 
     private void processArgument(PsiExpression argument) {
-        //TODO
+        // TODO:
+        if (!(argument instanceof PsiLiteral
+            || argument instanceof PsiReference
+            || argument instanceof PsiThisExpression)) {
+            arguments.add(argument.getText());
+        }
     }
 
     public Map<String, List<OperationInvocation>> getMethodInvocationMap() {
