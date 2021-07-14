@@ -18,6 +18,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public abstract class UMLType implements Serializable, LocationInfoProvider {
     private LocationInfo locationInfo;
@@ -280,7 +281,11 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
             return new ListCompositeType(umlTypes, Kind.INTERSECTION);
         } else if (type instanceof PsiClassType) {
             PsiClassType classType = (PsiClassType) type;
-            return extractTypeObject(classType.getName());
+            UMLType typeObject = new LeafType(classType.getName());
+            typeObject.arrayDimension = classType.getArrayDimensions();
+            typeObject.typeArguments =
+                Arrays.stream(classType.getParameters()).map(UMLType::extractTypeObject).collect(Collectors.toList());
+            return typeObject;
         } else {
             System.out.println(type.getClass().getName());
             throw new IllegalArgumentException();
