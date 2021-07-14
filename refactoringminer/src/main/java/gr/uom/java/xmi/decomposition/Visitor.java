@@ -109,7 +109,7 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
         } else if (element instanceof PsiNewExpression) {
             PsiNewExpression newExpression = (PsiNewExpression) element;
             ObjectCreation creation = new ObjectCreation(file, filePath, newExpression);
-            String source = element.getText();
+            String source = element.getText().replace(", ", ","); // TODO: It's for debugging
             creationMap.compute(source, createOrAppend(creation));
             if (!stackAnonymous.isEmpty()) {
                 stackAnonymous.getLast().getCreationMap().compute(source, createOrAppend(creation));
