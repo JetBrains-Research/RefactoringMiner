@@ -2,7 +2,6 @@ package gr.uom.java.xmi.decomposition;
 
 import com.intellij.psi.PsiExpression;
 import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiNewExpression;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
@@ -26,7 +25,7 @@ public class ObjectCreation extends AbstractCall {
             this.arguments = new ArrayList<>();
             PsiExpression[] args = creation.getArgumentList().getExpressions();
             for (PsiExpression argument : args) {
-                this.arguments.add(argument.toString());
+                this.arguments.add(argument.getText());
             }
         /*
         if (creation.getExpression() != null) {
@@ -119,9 +118,7 @@ public class ObjectCreation extends AbstractCall {
         if (this.isArray && other.isArray) {
             if (this.anonymousClassDeclaration != null && other.anonymousClassDeclaration != null) {
                 return this.anonymousClassDeclaration.equals(other.anonymousClassDeclaration);
-            } else if (this.anonymousClassDeclaration == null && other.anonymousClassDeclaration == null) {
-                return true;
-            }
+            } else return this.anonymousClassDeclaration == null && other.anonymousClassDeclaration == null;
         }
         return false;
     }

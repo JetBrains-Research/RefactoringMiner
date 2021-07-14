@@ -55,7 +55,7 @@ public class AbstractExpression extends AbstractCodeFragment {
         this.arguments = visitor.getArguments();
         this.ternaryOperatorExpressions = visitor.getTernaryOperatorExpressions();
         this.lambdas = visitor.getLambdas();
-        this.expression = expression.toString();
+        this.expression = expression.getText();
         this.owner = null;
     }
 
