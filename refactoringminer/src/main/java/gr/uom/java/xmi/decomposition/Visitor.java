@@ -181,19 +181,34 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
             }
         } else if (element instanceof PsiThisExpression) {
             String source = element.getText();
-            //TODO: filter
+            assert !(element.getParent() instanceof PsiReference);
             variables.add(source);
             if (!stackAnonymous.isEmpty()) {
                 stackAnonymous.getLast().getVariables().add(source);
             }
         } else if (element instanceof PsiIdentifier) {
             processIdentifier((PsiIdentifier) element);
+        } else if (element instanceof PsiReferenceExpression) {
+            String source = element.getText();
+            goInSubtree = false;
+            assert !(element.getParent() instanceof PsiReference);
+            if (!(element.getParent() instanceof PsiMethodCallExpression)) {
+                variables.add(source);
+                if (source.startsWith("this.")) {
+                    variables.add(source.substring(5));
+                }
+            }
         } else if (element instanceof PsiJavaCodeReferenceElement) {
             PsiJavaCodeReferenceElement reference = (PsiJavaCodeReferenceElement) element;
-            //TODO: qualified?
+            goInSubtree = false;
+            assert !(reference.getParent() instanceof PsiReference);
+            if (!(reference.getParent() instanceof PsiTypeElement)) {
+                types.add(reference.getText());
+            }
         } else if (element instanceof PsiTypeElement) {
             String source = element.getText();
             // TODO: Anonymous
+            goInSubtree = false;
             types.add(source);
         } else if (element instanceof PsiMethodCallExpression) {
             PsiMethodCallExpression methodCall = (PsiMethodCallExpression) element;
@@ -245,15 +260,8 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
     private void processIdentifier(@NotNull PsiIdentifier identifier) {
         String source = identifier.getText();
         PsiElement parent = identifier.getParent();
-        PsiElement pparent = parent.getParent();
-        if ((pparent instanceof PsiMethodCallExpression
-            && ((PsiMethodCallExpression) pparent).getMethodExpression().getReferenceName().equals(source))
-            || pparent instanceof PsiTypeElement
-            || (pparent instanceof PsiAnnotation
-            && ((PsiAnnotation) pparent).getNameReferenceElement().getReferenceName().equals(source))
-            || parent instanceof PsiMethod
-            || parent instanceof PsiParameter //TODO:
-            || pparent instanceof PsiReferenceExpression) {
+        assert !(parent instanceof PsiReference);
+        if (parent instanceof PsiMethod || parent instanceof PsiParameter) {
         } else {
             variables.add(source);
             // TODO: Anonymous
