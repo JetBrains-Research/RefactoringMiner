@@ -102,6 +102,10 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
                 stackAnonymous.getLast().getInfixExpressions().add(source);
                 stackAnonymous.getLast().getInfixOperators().add(operation);
             }
+        } else if (element instanceof PsiPolyadicExpression) {
+            PsiPolyadicExpression polyadic = (PsiPolyadicExpression) element;
+            infixExpressions.add(polyadic.getText());
+            infixOperators.add(polyadic.getOperationTokenType().toString());
         } else if (element instanceof PsiNewExpression) {
             PsiNewExpression newExpression = (PsiNewExpression) element;
             ObjectCreation creation = new ObjectCreation(file, filePath, newExpression);
