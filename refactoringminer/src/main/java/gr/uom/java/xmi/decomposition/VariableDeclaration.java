@@ -34,7 +34,7 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
     private final boolean isFinal;
     private final List<UMLAnnotation> annotations;
 
-    public VariableDeclaration(PsiFile file, String filePath, PsiVariable variable) {
+    public VariableDeclaration(PsiFile file, String filePath, PsiVariable variable, UMLType type) {
         this.variableName = variable.getName();
 
         PsiExpression initializer = variable.getInitializer();
@@ -42,7 +42,7 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
             this.initializer = new AbstractExpression(file, filePath, initializer, CodeElementType.VARIABLE_DECLARATION_INITIALIZER);
         }
 
-        this.type = UMLType.extractTypeObject(file, filePath, variable.getTypeElement(), variable.getType());
+        this.type = type;
 
         CodeElementType declarationType = extractVariableDeclarationType(variable);
         this.locationInfo = new LocationInfo(file, filePath, variable, declarationType);
@@ -62,6 +62,11 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
         this.annotations = Arrays.stream(variable.getAnnotations())
             .map(annotation -> new UMLAnnotation(file, filePath, annotation))
             .collect(Collectors.toList());
+    }
+
+    public VariableDeclaration(PsiFile file, String filePath, PsiVariable variable) {
+        this(file, filePath, variable,
+            UMLType.extractTypeObject(file, filePath, variable.getTypeElement(), variable.getType()));
     }
 
     public VariableDeclaration(PsiFile file, String filePath, PsiVariable variable, boolean isVararg) {

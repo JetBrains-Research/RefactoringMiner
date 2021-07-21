@@ -126,13 +126,20 @@ public class UMLModelASTReader {
         if (javaDoc != null) {
             LocationInfo locationInfo = new LocationInfo(file, sourceFile, javaDoc, LocationInfo.CodeElementType.JAVADOC);
             doc = new UMLJavadoc(locationInfo);
+
+            UMLTagElement mainText = new UMLTagElement(null);
+            for (PsiElement descriptionElement : javaDoc.getDescriptionElements()) {
+                if (!(descriptionElement instanceof PsiWhiteSpace)) {
+                    mainText.addFragment(descriptionElement.getText());
+                }
+            }
+
             PsiDocTag[] tags = javaDoc.getTags();
             for (PsiDocTag tag : tags) {
                 UMLTagElement tagElement = new UMLTagElement(tag.getName());
                 PsiElement[] fragments = tag.getDataElements();
                 for (PsiElement docElement : fragments) {
-                    tagElement.addFragment(sourceFile.substring(docElement.getTextRange().getStartOffset(),
-                        docElement.getTextRange().getEndOffset()));
+                    tagElement.addFragment(docElement.getText());
                 }
                 doc.addTag(tagElement);
             }
@@ -190,7 +197,7 @@ public class UMLModelASTReader {
                                          UMLClass umlClass, List<UMLComment> comments) {
         PsiElement[] children = psiClass.getChildren();
         for (PsiElement psiElement : children) {
-            if (psiElement instanceof PsiField) {
+            if (psiElement instanceof PsiField && !(psiElement instanceof PsiEnumConstant)) {
                 PsiField psiField = (PsiField) psiElement;
                 List<UMLAttribute> attributes = processFieldDeclaration(file, psiField, sourceFile, comments);
                 for (UMLAttribute attribute : attributes) {
@@ -224,6 +231,11 @@ public class UMLModelASTReader {
 
         if (psiClass.isInterface()) {
             umlClass.setInterface(true);
+            for (UMLType umlType : getUMLTypes(file, sourceFile, psiClass.getExtendsList())) {
+                UMLRealization umlRealization = new UMLRealization(umlClass, umlType.getClassType());
+                umlClass.addImplementedInterface(umlType);
+                this.umlModel.addRealization(umlRealization);
+            }
         } else {
             List<UMLType> extendsList = getUMLTypes(file, sourceFile, psiClass.getExtendsList());
             if (!extendsList.isEmpty()) {
@@ -283,10 +295,7 @@ public class UMLModelASTReader {
     private UMLTypeParameter processTypeParameters(PsiFile file, String sourceFile, PsiTypeParameter typeParameter) {
         UMLTypeParameter umlTypeParameter = new UMLTypeParameter(typeParameter.getQualifiedName());
         List<UMLType> extendsList = getUMLTypes(file, sourceFile, typeParameter.getExtendsList());
-        if (!extendsList.isEmpty()) {
-            assert extendsList.size() == 1;
-            umlTypeParameter.addTypeBound(extendsList.get(0));
-        }
+        extendsList.forEach(umlTypeParameter::addTypeBound);
         PsiAnnotation[] typeParameterAnnotations = typeParameter.getAnnotations();
         for (PsiAnnotation psiAnnotation : typeParameterAnnotations) {
             umlTypeParameter.addAnnotation(new UMLAnnotation(file, sourceFile, psiAnnotation));
@@ -370,9 +379,9 @@ public class UMLModelASTReader {
             umlClass.setVisibility("package");
         }
 
-            for (PsiAnnotation annotation : psiClass.getAnnotations()) {
-                umlClass.addAnnotation(new UMLAnnotation(file, sourceFile, annotation));
-            }
+        for (PsiAnnotation annotation : psiClass.getAnnotations()) {
+            umlClass.addAnnotation(new UMLAnnotation(file, sourceFile, annotation));
+        }
     }
 
     private void processModifiers(PsiFile file, String sourceFile, PsiModifierList modifiers, UMLOperation umlOperation) {
@@ -428,7 +437,6 @@ public class UMLModelASTReader {
         } else {
             umlAttribute.setVisibility("package");
         }
-
     }
 
     private UMLOperation processMethodDeclaration(PsiFile file, PsiMethod psiMethod,
@@ -482,8 +490,9 @@ public class UMLModelASTReader {
                                                 UMLClass umlClass, List<UMLComment> comments) {
         UMLJavadoc javadoc = generateJavadoc(file, psiEnumConstant, sourceFile);
         LocationInfo locationInfo = new LocationInfo(file, sourceFile, psiEnumConstant, LocationInfo.CodeElementType.ENUM_CONSTANT_DECLARATION);
-        UMLEnumConstant enumConstant = new UMLEnumConstant(psiEnumConstant.getName(), UMLType.extractTypeObject(umlClass.getName()), locationInfo);
-        gr.uom.java.xmi.decomposition.VariableDeclaration variableDeclaration = new gr.uom.java.xmi.decomposition.VariableDeclaration(file, sourceFile, psiEnumConstant);
+        UMLType type = UMLType.extractTypeObject(umlClass.getName());
+        UMLEnumConstant enumConstant = new UMLEnumConstant(psiEnumConstant.getName(), type, locationInfo);
+        VariableDeclaration variableDeclaration = new VariableDeclaration(file, sourceFile, psiEnumConstant, type);
         enumConstant.setVariableDeclaration(variableDeclaration);
         enumConstant.setJavadoc(javadoc);
         distributeComments(comments, locationInfo, enumConstant.getComments());
