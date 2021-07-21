@@ -1,8 +1,6 @@
 package gr.uom.java.xmi;
 
 import com.intellij.lang.java.JavaLanguage;
-import com.intellij.openapi.project.Project;
-import com.intellij.openapi.project.ProjectManager;
 import com.intellij.psi.*;
 import com.intellij.psi.javadoc.PsiDocComment;
 import com.intellij.psi.javadoc.PsiDocTag;
@@ -24,27 +22,22 @@ public class UMLModelASTReader {
 
     public UMLModelASTReader(Map<String, String> javaFileContents, Set<String> repositoryDirectories) {
         this.umlModel = new UMLModel(repositoryDirectories);
-        processJavaFileContents(javaFileContents, ProjectManager.getInstance().getDefaultProject());
+        processJavaFileContents(javaFileContents, PsiFactoryManager.getFactory());
     }
 
     public UMLModel getUmlModel() {
         return this.umlModel;
     }
 
-    private void processJavaFileContents(Map<String, String> javaFileContents, Project project) {
+    private void processJavaFileContents(Map<String, String> javaFileContents, PsiFileFactory factory) {
         for (Map.Entry<String, String> file : javaFileContents.entrySet()) {
-            PsiFile psiFile = buildPsiFile(project, file.getValue());
+            PsiFile psiFile = factory.createFileFromText(JavaLanguage.INSTANCE, file.getValue());
             try {
                 processCompilationUnit(file.getKey(), psiFile, file.getValue());
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-    }
-
-    public PsiFile buildPsiFile(Project project, String content) {
-        PsiFileFactory factory = PsiFileFactory.getInstance(project);
-        return factory.createFileFromText(JavaLanguage.INSTANCE, content);
     }
 
     private void processCompilationUnit(String sourceFilePath, PsiFile file, String javaFileContent) {
