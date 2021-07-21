@@ -5,6 +5,7 @@ import com.intellij.psi.PsiFile;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.diff.CodeRange;
+import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.Map;
 
@@ -32,7 +33,8 @@ public class AbstractExpression extends AbstractCodeFragment {
     private final List<TernaryOperatorExpression> ternaryOperatorExpressions;
     private final List<LambdaExpressionObject> lambdas;
 
-    public AbstractExpression(PsiFile file, String filePath, PsiElement expression, CodeElementType codeElementType) {
+    public AbstractExpression(@NotNull PsiFile file, @NotNull String filePath, @NotNull PsiElement expression,
+                              @NotNull CodeElementType codeElementType) {
         this.locationInfo = new LocationInfo(file, filePath, expression, codeElementType);
         Visitor visitor = new Visitor(file, filePath);
         expression.accept(visitor);
