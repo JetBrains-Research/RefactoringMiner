@@ -1,12 +1,41 @@
 package org.refactoringminer.rm1;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import gr.uom.java.xmi.UMLModel;
 import gr.uom.java.xmi.UMLModelASTReader;
 import gr.uom.java.xmi.diff.MoveSourceFolderRefactoring;
 import gr.uom.java.xmi.diff.MovedClassToAnotherSourceFolder;
 import gr.uom.java.xmi.diff.RenamePattern;
 import gr.uom.java.xmi.diff.UMLModelDiff;
-
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.eclipse.jgit.errors.MissingObjectException;
+import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.lib.ObjectLoader;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.revwalk.RevTree;
+import org.eclipse.jgit.revwalk.RevWalk;
+import org.eclipse.jgit.treewalk.TreeWalk;
+import org.kohsuke.github.GHCommit;
+import org.kohsuke.github.GHPullRequest;
+import org.kohsuke.github.GHPullRequestCommitDetail;
+import org.kohsuke.github.GHRepository;
+import org.kohsuke.github.GHRepositoryWrapper;
+import org.kohsuke.github.GHTree;
+import org.kohsuke.github.GHTreeEntry;
+import org.kohsuke.github.GitHub;
+import org.kohsuke.github.PagedIterable;
+import org.refactoringminer.api.Churn;
+import org.refactoringminer.api.GitHistoryRefactoringMiner;
+import org.refactoringminer.api.GitService;
+import org.refactoringminer.api.Refactoring;
+import org.refactoringminer.api.RefactoringHandler;
+import org.refactoringminer.api.RefactoringMinerTimedOutException;
+import org.refactoringminer.api.RefactoringType;
+import org.refactoringminer.util.GitServiceImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -38,38 +67,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.eclipse.jgit.errors.MissingObjectException;
-import org.eclipse.jgit.lib.ObjectId;
-import org.eclipse.jgit.lib.ObjectLoader;
-import org.eclipse.jgit.lib.Repository;
-import org.eclipse.jgit.revwalk.RevCommit;
-import org.eclipse.jgit.revwalk.RevTree;
-import org.eclipse.jgit.revwalk.RevWalk;
-import org.eclipse.jgit.treewalk.TreeWalk;
-import org.kohsuke.github.GHCommit;
-import org.kohsuke.github.GHPullRequest;
-import org.kohsuke.github.GHPullRequestCommitDetail;
-import org.kohsuke.github.GHRepository;
-import org.kohsuke.github.GHRepositoryWrapper;
-import org.kohsuke.github.GHTree;
-import org.kohsuke.github.GHTreeEntry;
-import org.kohsuke.github.GitHub;
-import org.kohsuke.github.PagedIterable;
-import org.refactoringminer.api.Churn;
-import org.refactoringminer.api.GitHistoryRefactoringMiner;
-import org.refactoringminer.api.GitService;
-import org.refactoringminer.api.Refactoring;
-import org.refactoringminer.api.RefactoringHandler;
-import org.refactoringminer.api.RefactoringMinerTimedOutException;
-import org.refactoringminer.api.RefactoringType;
-import org.refactoringminer.util.GitServiceImpl;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMiner {
 
@@ -208,26 +205,26 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 
 	private void populateFileContents(Repository repository, RevCommit commit,
 			List<String> filePaths, Map<String, String> fileContents, Set<String> repositoryDirectories) throws Exception {
-		logger.info("Processing {} {} ...", repository.getDirectory().getParent().toString(), commit.getName());
-		RevTree parentTree = commit.getTree();
-		try (TreeWalk treeWalk = new TreeWalk(repository)) {
-			treeWalk.addTree(parentTree);
-			treeWalk.setRecursive(true);
-			while (treeWalk.next()) {
+        logger.info("Processing {} {} ...", repository.getDirectory().getParent(), commit.getName());
+        RevTree parentTree = commit.getTree();
+        try (TreeWalk treeWalk = new TreeWalk(repository)) {
+            treeWalk.addTree(parentTree);
+            treeWalk.setRecursive(true);
+            while (treeWalk.next()) {
 				String pathString = treeWalk.getPathString();
-				if(filePaths.contains(pathString)) {
+				if (filePaths.contains(pathString)) {
 					ObjectId objectId = treeWalk.getObjectId(0);
 					ObjectLoader loader = repository.open(objectId);
 					StringWriter writer = new StringWriter();
 					IOUtils.copy(loader.openStream(), writer);
 					fileContents.put(pathString, writer.toString());
 				}
-				if(pathString.endsWith(".java") && pathString.contains("/")) {
+				if (pathString.endsWith(".java") && pathString.contains("/")) {
 					String directory = pathString.substring(0, pathString.lastIndexOf("/"));
 					repositoryDirectories.add(directory);
 					//include sub-directories
-					String subDirectory = new String(directory);
-					while(subDirectory.contains("/")) {
+					String subDirectory = directory;
+					while (subDirectory.contains("/")) {
 						subDirectory = subDirectory.substring(0, subDirectory.lastIndexOf("/"));
 						repositoryDirectories.add(subDirectory);
 					}
@@ -282,15 +279,15 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 
 	private void populateFileContents(File projectFolder, List<String> filePaths, Map<String, String> fileContents,	Set<String> repositoryDirectories) throws IOException {
 		for(String path : filePaths) {
-			String fullPath = projectFolder + File.separator + path.replaceAll("/", systemFileSeparator);
-			String contents = FileUtils.readFileToString(new File(fullPath));
-			fileContents.put(path, contents);
-			String directory = new String(path);
-			while(directory.contains("/")) {
-				directory = directory.substring(0, directory.lastIndexOf("/"));
-				repositoryDirectories.add(directory);
-			}
-		}
+            String fullPath = projectFolder + File.separator + path.replaceAll("/", systemFileSeparator);
+            String contents = FileUtils.readFileToString(new File(fullPath));
+            fileContents.put(path, contents);
+            String directory = path;
+            while (directory.contains("/")) {
+                directory = directory.substring(0, directory.lastIndexOf("/"));
+                repositoryDirectories.add(directory);
+            }
+        }
 	}
 
 	private void downloadAndExtractZipFile(File projectFolder, String cloneURL, String commitId)

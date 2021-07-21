@@ -1,5 +1,13 @@
 package org.refactoringminer;
 
+import com.sun.net.httpserver.Headers;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
+import org.refactoringminer.api.GitHistoryRefactoringMiner;
+import org.refactoringminer.api.Refactoring;
+import org.refactoringminer.api.RefactoringHandler;
+import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,16 +23,6 @@ import java.util.Properties;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import org.refactoringminer.api.GitHistoryRefactoringMiner;
-import org.refactoringminer.api.Refactoring;
-import org.refactoringminer.api.RefactoringHandler;
-import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
-
-import com.sun.net.httpserver.Headers;
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import com.sun.net.httpserver.HttpServer;
 
 public class RefactoringMinerHttpServer {
 

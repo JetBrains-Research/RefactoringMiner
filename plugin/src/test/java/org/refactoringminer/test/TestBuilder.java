@@ -1,15 +1,5 @@
 package org.refactoringminer.test;
 
-import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.eclipse.jgit.lib.Repository;
 import org.junit.Assert;
 import org.refactoringminer.api.GitHistoryRefactoringMiner;
@@ -20,6 +10,15 @@ import org.refactoringminer.api.RefactoringType;
 import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 import org.refactoringminer.test.RefactoringPopulator.Refactorings;
 import org.refactoringminer.util.GitServiceImpl;
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class TestBuilder {
 
@@ -126,23 +125,23 @@ public class TestBuilder {
 		System.out.println(String.format("Commits: %d  Errors: %d", commitsCount, errorCommitsCount));
 
 		String mainResultMessage = buildResultMessage(c);
-		System.out.println("Total  " + mainResultMessage);
-		for (RefactoringType refType : RefactoringType.values()) {
-			Counter refTypeCounter = cMap.get(refType);
-			if (refTypeCounter != null) {
-				System.out
-						.println(String.format("%-7s", refType.getAbbreviation()) + buildResultMessage(refTypeCounter));
-			}
-		}
+        System.out.println("Total  " + mainResultMessage);
+        for (RefactoringType refType : RefactoringType.values()) {
+            Counter refTypeCounter = cMap.get(refType);
+            if (refTypeCounter != null) {
+                System.out
+                    .println(String.format("%-7s", refType.getAbbreviation()) + buildResultMessage(refTypeCounter));
+            }
+        }
 
-		boolean success = get(FP) == expectedFPs && get(FN) == expectedFNs && get(TP) == expectedTPs;
-		if (!success || verbose) {
+        boolean success = get(FP) == expectedFPs && get(FN) == expectedFNs && get(TP) == expectedTPs;
+		/*if (!success || verbose) {
 			for (ProjectMatcher m : map.values()) {
 				m.printResults();
 			}
-		}
-		Assert.assertTrue(mainResultMessage, success);
-	}
+		}*/
+        Assert.assertTrue(mainResultMessage, success);
+    }
 
 	private String buildResultMessage(Counter c) {
 		double precision = ((double) get(TP, c) / (get(TP, c) + get(FP, c)));
@@ -189,21 +188,21 @@ public class TestBuilder {
 		return sb.toString();
 	}
 
-	public class ProjectMatcher extends RefactoringHandler {
+    public class ProjectMatcher extends RefactoringHandler {
 
-		private final String cloneUrl;
-		private final String branch;
-		private Map<String, CommitMatcher> expected = new HashMap<>();
-		private boolean ignoreNonSpecifiedCommits = true;
-		private int truePositiveCount = 0;
-		private int falsePositiveCount = 0;
-		private int falseNegativeCount = 0;
-		private int trueNegativeCount = 0;
-		private int unknownCount = 0;
-		// private int errorsCount = 0;
+        private final String cloneUrl;
+        private final String branch;
+        private final Map<String, CommitMatcher> expected = new HashMap<>();
+        private boolean ignoreNonSpecifiedCommits = true;
+        private int truePositiveCount = 0;
+        private int falsePositiveCount = 0;
+        private int falseNegativeCount = 0;
+        private int trueNegativeCount = 0;
+        private int unknownCount = 0;
+        // private int errorsCount = 0;
 
-		private ProjectMatcher(String cloneUrl, String branch) {
-			this.cloneUrl = cloneUrl;
+        private ProjectMatcher(String cloneUrl, String branch) {
+            this.cloneUrl = cloneUrl;
 			this.branch = branch;
 		}
 
@@ -317,14 +316,15 @@ public class TestBuilder {
 
 		@Override
 		public void handleException(String commitId, Exception e) {
-			if (expected.containsKey(commitId)) {
-				CommitMatcher matcher = expected.get(commitId);
-				matcher.error = e.toString();
-			}
-			errorCommitsCount++;
-			// System.err.println(" error at commit " + commitId + ": " +
-			// e.getMessage());
-		}
+            if (expected.containsKey(commitId)) {
+                CommitMatcher matcher = expected.get(commitId);
+                matcher.error = e.toString();
+            }
+            errorCommitsCount++;
+            e.printStackTrace(); // TODO: debug
+            // System.err.println(" error at commit " + commitId + ": " +
+            // e.getMessage());
+        }
 
 		private void printResults() {
 			// if (verbose || this.falsePositiveCount > 0 ||
@@ -384,21 +384,21 @@ public class TestBuilder {
 		// }
 		// }
 
-		public class CommitMatcher {
-			private Set<String> expected = new HashSet<String>();
-			private Set<String> notExpected = new HashSet<String>();
-			private Set<String> truePositive = new HashSet<String>();
-			private Set<String> unknown = new HashSet<String>();
-			private boolean ignoreNonSpecified = true;
-			private boolean analyzed = false;
-			private String error = null;
+        public class CommitMatcher {
+            private Set<String> expected = new HashSet<String>();
+            private Set<String> notExpected = new HashSet<String>();
+            private final Set<String> truePositive = new HashSet<String>();
+            private final Set<String> unknown = new HashSet<String>();
+            private boolean ignoreNonSpecified = true;
+            private boolean analyzed = false;
+            private String error = null;
 
-			private CommitMatcher() {
-			}
+            private CommitMatcher() {
+            }
 
-			public ProjectMatcher contains(String... refactorings) {
-				for (String refactoring : refactorings) {
-					expected.addAll(normalize(refactoring));
+            public ProjectMatcher contains(String... refactorings) {
+                for (String refactoring : refactorings) {
+                    expected.addAll(normalize(refactoring));
 				}
 				return ProjectMatcher.this;
 			}
