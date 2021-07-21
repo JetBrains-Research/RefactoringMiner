@@ -1,10 +1,13 @@
 package gr.uom.java.xmi.decomposition;
 
+import com.intellij.psi.PsiAnonymousClass;
 import com.intellij.psi.PsiExpression;
+import com.intellij.psi.PsiExpressionList;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiNewExpression;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
+import gr.uom.java.xmi.TypeUtils;
 import gr.uom.java.xmi.UMLType;
 import gr.uom.java.xmi.diff.StringDistance;
 import java.util.ArrayList;
@@ -15,39 +18,32 @@ public class ObjectCreation extends AbstractCall {
     private boolean isArray = false;
     private volatile int hashCode = 0;
 
-    // TODO:
     public ObjectCreation(PsiFile file, String filePath, PsiNewExpression creation) {
+        this.type = TypeUtils.extractType(file, filePath, creation);
         if (!creation.isArrayCreation()) {
             this.locationInfo = new LocationInfo(file, filePath, creation, CodeElementType.CLASS_INSTANCE_CREATION);
-            // TODO: Element
-            this.type = UMLType.extractTypeObject(file, filePath, creation, creation.getType());
             this.typeArguments = creation.getTypeArguments().length;
             this.arguments = new ArrayList<>();
-            PsiExpression[] args = creation.getArgumentList().getExpressions();
-            for (PsiExpression argument : args) {
-                this.arguments.add(argument.getText());
+            PsiExpressionList argList = creation.getArgumentList();
+            if (argList != null) {
+                PsiExpression[] args = argList.getExpressions();
+                for (PsiExpression argument : args) {
+                    this.arguments.add(argument.getText());
+                }
             }
-        /*
-        if (creation.getExpression() != null) {
-            this.expression = creation.getExpression().toString();
-        }
-        if (creation.getAnonymousClassDeclaration() != null) {
-            this.anonymousClassDeclaration = creation.getAnonymousClassDeclaration().toString();
-        }*/
+            PsiAnonymousClass anonymous = creation.getAnonymousClass();
+            if (anonymous != null) {
+                anonymousClassDeclaration = anonymous.getText();
+            }
         } else {
             this.locationInfo = new LocationInfo(file, filePath, creation, CodeElementType.ARRAY_CREATION);
             this.isArray = true;
-            this.type = UMLType.extractTypeObject(file, filePath, creation, creation.getType());
             this.typeArguments = creation.getArrayDimensions().length;
             this.arguments = new ArrayList<>();
             PsiExpression[] args = creation.getArrayDimensions();
             for (PsiExpression argument : args) {
                 this.arguments.add(argument.toString());
             }
-            /*
-            if (creation.getInitializer() != null) {
-                this.anonymousClassDeclaration = creation.getInitializer().toString();
-            }*/
         }
     }
 
