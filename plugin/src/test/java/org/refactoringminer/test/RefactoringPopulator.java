@@ -9,7 +9,6 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
@@ -63,10 +62,6 @@ public class RefactoringPopulator {
         List<Root> filtered = new ArrayList<>();
         List<String> deletedCommits = getDeletedCommits();
         for (Root root : roots) {
-            var repo = root.repository.substring(root.repository.lastIndexOf('/') + 1, root.repository.length() - 4);
-            if (!Path.of("tmp1", repo).toFile().isDirectory()) {
-                continue;
-            }
             if (!deletedCommits.contains(root.sha1)) {
                 List<Refactoring> refactorings = new ArrayList<>();
 
