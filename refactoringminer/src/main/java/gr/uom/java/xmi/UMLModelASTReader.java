@@ -370,13 +370,9 @@ public class UMLModelASTReader {
             umlClass.setVisibility("package");
         }
 
-        try {
             for (PsiAnnotation annotation : psiClass.getAnnotations()) {
                 umlClass.addAnnotation(new UMLAnnotation(file, sourceFile, annotation));
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
     private void processModifiers(PsiFile file, String sourceFile, PsiModifierList modifiers, UMLOperation umlOperation) {
@@ -433,12 +429,11 @@ public class UMLModelASTReader {
             umlAttribute.setVisibility("package");
         }
 
-        //TODO: Annotations?
     }
 
     private UMLOperation processMethodDeclaration(PsiFile file, PsiMethod psiMethod,
                                                   String sourceFile, List<UMLComment> comments) {
-        String methodName = psiMethod.getName(); // TODO: Qualified
+        String methodName = psiMethod.getName();
         LocationInfo locationInfo = new LocationInfo(file, sourceFile, psiMethod, LocationInfo.CodeElementType.METHOD_DECLARATION);
         UMLOperation umlOperation = new UMLOperation(methodName, locationInfo);
         umlOperation.setJavadoc(generateJavadoc(file, psiMethod, sourceFile));
@@ -505,7 +500,6 @@ public class UMLModelASTReader {
         umlClass.addEnumConstant(enumConstant);
     }
 
-    //TODO: Some fields together?
     private List<UMLAttribute> processFieldDeclaration(PsiFile file, PsiField psiField,
                                                        String sourceFile, List<UMLComment> comments) {
         UMLJavadoc javadoc = generateJavadoc(file, psiField, sourceFile);
@@ -518,7 +512,7 @@ public class UMLModelASTReader {
         UMLAttribute umlAttribute = new UMLAttribute(fieldName, type, locationInfo);
         umlAttribute.setVariableDeclaration(variableDeclaration);
         umlAttribute.setJavadoc(javadoc);
-        distributeComments(comments, locationInfo, umlAttribute.getComments());//TODO: Empty comments??
+        distributeComments(comments, locationInfo, umlAttribute.getComments());
         processModifiers(psiField.getModifierList(), umlAttribute);
         attributes.add(umlAttribute);
         return attributes;

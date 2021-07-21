@@ -58,64 +58,6 @@ public class StatementObject extends AbstractStatement {
         this.lambdas = visitor.getLambdas();
         setDepth(depth);
         this.statement = statement.getText();
-        /* TODO: migrate
-        if (Visitor.METHOD_INVOCATION_PATTERN.matcher(statement.getText()).matches()) {
-            if (statement instanceof PsiDeclarationStatement) {
-                PsiDeclarationStatement variableDeclarationStatement = (PsiDeclarationStatement) statement;
-                StringBuilder sb = new StringBuilder();
-                List<IExtendedModifier> modifiers = variableDeclarationStatement.getDeclaredElements()[0];
-                for (IExtendedModifier modifier : modifiers) {
-                    sb.append(modifier.toString()).append(" ");
-                }
-                sb.append(variableDeclarationStatement.getType().toString());
-                List<VariableDeclarationFragment> fragments = variableDeclarationStatement.fragments();
-                for (VariableDeclarationFragment fragment : fragments) {
-                    sb.append(fragment.getName().getIdentifier());
-                    Expression initializer = fragment.getInitializer();
-                    if (initializer != null) {
-                        sb.append(" = ");
-                        if (initializer instanceof MethodInvocation) {
-                            MethodInvocation methodInvocation = (MethodInvocation) initializer;
-                            sb.append(Visitor.processMethodInvocation(methodInvocation));
-                        } else if (initializer instanceof ClassInstanceCreation) {
-                            ClassInstanceCreation classInstanceCreation = (ClassInstanceCreation) initializer;
-                            sb.append(Visitor.processClassInstanceCreation(classInstanceCreation));
-                        }
-                    }
-                }
-                this.statement = sb.toString();
-            } else if (statement instanceof ReturnStatement) {
-                ReturnStatement returnStatement = (ReturnStatement) statement;
-                StringBuilder sb = new StringBuilder();
-                sb.append("return").append(" ");
-                Expression expression = returnStatement.getExpression();
-                if (expression instanceof MethodInvocation) {
-                    MethodInvocation methodInvocation = (MethodInvocation) expression;
-                    sb.append(Visitor.processMethodInvocation(methodInvocation));
-                } else if (expression instanceof ClassInstanceCreation) {
-                    ClassInstanceCreation classInstanceCreation = (ClassInstanceCreation) expression;
-                    sb.append(Visitor.processClassInstanceCreation(classInstanceCreation));
-                }
-                this.statement = sb.toString();
-            } else if (statement instanceof ExpressionStatement) {
-                ExpressionStatement expressionStatement = (ExpressionStatement) statement;
-                StringBuilder sb = new StringBuilder();
-                Expression expression = expressionStatement.getExpression();
-                if (expression instanceof MethodInvocation) {
-                    MethodInvocation methodInvocation = (MethodInvocation) expression;
-                    sb.append(Visitor.processMethodInvocation(methodInvocation));
-                } else if (expression instanceof ClassInstanceCreation) {
-                    ClassInstanceCreation classInstanceCreation = (ClassInstanceCreation) expression;
-                    sb.append(Visitor.processClassInstanceCreation(classInstanceCreation));
-                }
-                this.statement = sb.toString();
-            } else {
-                this.statement = statement.toString();
-            }
-        } else {
-            this.statement = statement.toString();
-        }
-        */
     }
 
     @Override

@@ -3,6 +3,8 @@ package gr.uom.java.xmi.decomposition;
 import com.intellij.psi.PsiExpression;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethodCallExpression;
+import com.intellij.psi.PsiNewExpression;
+import com.intellij.psi.PsiSuperExpression;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.UMLAbstractClass;
 import gr.uom.java.xmi.UMLClass;
@@ -78,7 +80,24 @@ public class OperationInvocation extends AbstractCall {
             this.arguments.add(argument.getText());
         }
         this.expression = invocation.getMethodExpression().getText();
-        // TODO: processExpression(invocation.getExpression(), this.subExpressions);
+        processSubExpression(invocation.getMethodExpression().getQualifierExpression());
+    }
+
+    private void processSubExpression(PsiExpression expression) {
+        if (expression instanceof PsiMethodCallExpression) {
+            PsiMethodCallExpression methodCallExpression = (PsiMethodCallExpression) expression;
+            PsiExpression subExpression = methodCallExpression.getMethodExpression().getQualifierExpression();
+            if (subExpression != null) {
+                processSubExpression(subExpression);
+                subExpressions.add(expression.getText().substring(subExpression.getText().length() + 1));
+            } else {
+                subExpressions.add(expression.getText());
+            }
+        } else if (expression instanceof PsiNewExpression) {
+            subExpressions.add(expression.getText());
+        } else if (expression instanceof PsiSuperExpression) {
+            subExpressions.add(expression.getText());
+        }
     }
 
     private OperationInvocation() {}

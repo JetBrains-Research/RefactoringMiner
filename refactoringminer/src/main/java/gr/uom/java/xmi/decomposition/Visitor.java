@@ -63,7 +63,6 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
         return sb.toString();
     }
 
-    // TODO:
     @Override
     public void visitElement(@NotNull PsiElement element) {
         boolean goInSubtree = true;
@@ -109,7 +108,7 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
         } else if (element instanceof PsiNewExpression) {
             PsiNewExpression newExpression = (PsiNewExpression) element;
             ObjectCreation creation = new ObjectCreation(file, filePath, newExpression);
-            String source = element.getText().replace(", ", ","); // TODO: It's for debugging
+            String source = element.getText();
             creationMap.compute(source, createOrAppend(creation));
             if (!stackAnonymous.isEmpty()) {
                 stackAnonymous.getLast().getCreationMap().compute(source, createOrAppend(creation));
@@ -120,20 +119,29 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
                     goInSubtree = false;
                 }
             } else {
-                for (PsiExpression expression : newExpression.getArgumentList().getExpressions()) {
-                    processArgument(expression);
+                PsiExpressionList argList = newExpression.getArgumentList();
+                if (argList != null) {
+                    for (PsiExpression expression : argList.getExpressions()) {
+                        processArgument(expression);
+                    }
                 }
             }
         } else if (element instanceof PsiDeclarationStatement) {
-            var declaration = (PsiDeclarationStatement) element;
+            PsiDeclarationStatement declaration = (PsiDeclarationStatement) element;
             for (PsiElement declaredElement : declaration.getDeclaredElements()) {
-                if (!(declaredElement.getParent() instanceof PsiLambdaExpression)) {
-                    VariableDeclaration variableDeclaration =
-                        new VariableDeclaration(file, filePath, (PsiVariable) declaredElement);
-                    variableDeclarations.add(variableDeclaration);
-                    if (!stackAnonymous.isEmpty()) {
-                        stackAnonymous.getLast().getVariableDeclarations().add(variableDeclaration);
+                if (declaredElement instanceof PsiVariable) {
+                    if (!(declaredElement.getParent() instanceof PsiLambdaExpression)) {
+                        VariableDeclaration variableDeclaration =
+                            new VariableDeclaration(file, filePath, (PsiVariable) declaredElement);
+                        variableDeclarations.add(variableDeclaration);
+                        if (!stackAnonymous.isEmpty()) {
+                            stackAnonymous.getLast().getVariableDeclarations().add(variableDeclaration);
+                        }
                     }
+                } else if (declaredElement instanceof PsiClass) {
+                    // TODO:
+                } else {
+                    throw new IllegalStateException();
                 }
             }
         } else if (element instanceof PsiAnonymousClass) {
@@ -181,10 +189,11 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
             }
         } else if (element instanceof PsiThisExpression) {
             String source = element.getText();
-            assert !(element.getParent() instanceof PsiReference);
-            variables.add(source);
-            if (!stackAnonymous.isEmpty()) {
-                stackAnonymous.getLast().getVariables().add(source);
+            if (!(element.getParent() instanceof PsiReference)) {
+                variables.add(source);
+                if (!stackAnonymous.isEmpty()) {
+                    stackAnonymous.getLast().getVariables().add(source);
+                }
             }
         } else if (element instanceof PsiIdentifier) {
             processIdentifier((PsiIdentifier) element);
@@ -207,7 +216,6 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
             }
         } else if (element instanceof PsiTypeElement) {
             String source = element.getText();
-            // TODO: Anonymous
             goInSubtree = false;
             types.add(source);
         } else if (element instanceof PsiMethodCallExpression) {
@@ -217,40 +225,25 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
                 processArgument(argument);
             }
             String source = element.getText();
-            String methodInvocation;
-            if (METHOD_INVOCATION_PATTERN.matcher(source).matches()) {
-                methodInvocation = processMethodInvocation(methodCall);
-            } else {
-                methodInvocation = source;
-            }
             // TODO: adding to builder pattern chains & stopping
             OperationInvocation invocation = new OperationInvocation(file, filePath, methodCall);
-            methodInvocationMap.compute(methodInvocation, createOrAppend(invocation));
-            // TODO: Anonymous
-        } else if (element instanceof PsiSuperExpression) {
-            PsiSuperExpression superExpression = (PsiSuperExpression) element;
-            String source = element.getText();
-            // TODO: debug
+            methodInvocationMap.compute(source, createOrAppend(invocation));
+            // TODO: super, this constructor??
         } else if (element instanceof PsiQualifiedNamedElement) {
             PsiQualifiedNamedElement qualifiedNamedElement = (PsiQualifiedNamedElement) element;
             String source = element.getText();
             String qualifiedName = qualifiedNamedElement.getQualifiedName();
-            assert qualifiedName != null;
-            if (Character.isUpperCase(qualifiedName.charAt(0))) {
-                types.add(qualifiedName);
-                variables.add(source);
-                // TODO: Anonymous
-            } // TODO: big else
+            if (qualifiedName != null) {
+                if (Character.isUpperCase(qualifiedName.charAt(0))) {
+                    types.add(qualifiedName);
+                    variables.add(source);
+                } // TODO: big else
+            }
         } else if (element instanceof PsiTypeCastExpression) {
-            PsiExpression expression = ((PsiTypeCastExpression) element).getOperand();
-            // TODO: debug
+            variables.add(element.getText());
         } else if (element instanceof PsiLambdaExpression) {
             LambdaExpressionObject lambda = new LambdaExpressionObject(file, filePath, (PsiLambdaExpression) element);
             lambdas.add(lambda);
-            String source = element.getText();
-            // TODO: Anonymous
-        } else {
-            System.out.println(element.getClass().getName());
         }
         if (goInSubtree) {
             super.visitElement(element);
@@ -260,11 +253,8 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
     private void processIdentifier(@NotNull PsiIdentifier identifier) {
         String source = identifier.getText();
         PsiElement parent = identifier.getParent();
-        assert !(parent instanceof PsiReference);
-        if (parent instanceof PsiMethod || parent instanceof PsiParameter) {
-        } else {
+        if (!(parent instanceof PsiMethod || parent instanceof PsiParameter || parent instanceof PsiReference)) {
             variables.add(source);
-            // TODO: Anonymous
         }
     }
 
@@ -277,7 +267,6 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
     }
 
     private void processArgument(PsiExpression argument) {
-        // TODO:
         if (!(argument instanceof PsiLiteral
             || argument instanceof PsiReference
             || argument instanceof PsiThisExpression)) {

@@ -125,7 +125,9 @@ public class OperationBody {
             parent.addStatement(child);
 
             PsiStatement initializer = forStatement.getInitialization();
-            child.addExpression(new AbstractExpression(file, filePath, initializer, CodeElementType.FOR_STATEMENT_INITIALIZER));
+            if (initializer != null) {
+                child.addExpression(new AbstractExpression(file, filePath, initializer, CodeElementType.FOR_STATEMENT_INITIALIZER));
+            }
 
             PsiExpression expression = forStatement.getCondition();
             if (expression != null) {
@@ -133,7 +135,9 @@ public class OperationBody {
             }
 
             PsiStatement updater = forStatement.getUpdate();
-            child.addExpression(new AbstractExpression(file, filePath, updater, CodeElementType.FOR_STATEMENT_UPDATER));
+            if (updater != null) {
+                child.addExpression(new AbstractExpression(file, filePath, updater, CodeElementType.FOR_STATEMENT_UPDATER));
+            }
 
             addStatementInVariableScopes(child);
             List<VariableDeclaration> variableDeclarations = child.getVariableDeclarations();
@@ -189,15 +193,17 @@ public class OperationBody {
                 processStatement(file, filePath, child, switchStatement2);
         } else if (statement instanceof PsiSwitchLabelStatement) {
             PsiSwitchLabelStatement switchCase = (PsiSwitchLabelStatement) statement;
-            for (PsiExpression expression : switchCase.getCaseValues().getExpressions()) {
-                StatementObject child = new StatementObject(file, filePath, expression, parent.getDepth() + 1, CodeElementType.SWITCH_CASE);
-                parent.addStatement(child);
-                addStatementInVariableScopes(child);
+            PsiExpressionList caseValue = switchCase.getCaseValues();
+            if (caseValue != null) {
+                for (PsiExpression expression : caseValue.getExpressions()) {
+                    StatementObject child = new StatementObject(file, filePath, expression, parent.getDepth() + 1, CodeElementType.SWITCH_CASE);
+                    parent.addStatement(child);
+                    addStatementInVariableScopes(child);
+                }
             }
         } else if (statement instanceof PsiAssertStatement) {
             PsiAssertStatement assertStatement = (PsiAssertStatement) statement;
             StatementObject child = new StatementObject(file, filePath, assertStatement.getAssertCondition(), parent.getDepth() + 1, CodeElementType.ASSERT_STATEMENT);
-            // TODO: description?
             parent.addStatement(child);
             addStatementInVariableScopes(child);
         } else if (statement instanceof PsiLabeledStatement) {
@@ -230,9 +236,11 @@ public class OperationBody {
             TryStatementObject child = new TryStatementObject(file, filePath, tryStatement, parent.getDepth() + 1);
             parent.addStatement(child);
             PsiResourceList resources = tryStatement.getResourceList();
-            for (PsiResourceListElement resource : resources) {
-                AbstractExpression expression = new AbstractExpression(file, filePath, resource, CodeElementType.TRY_STATEMENT_RESOURCE);
-                child.addExpression(expression);
+            if (resources != null) {
+                for (PsiResourceListElement resource : resources) {
+                    AbstractExpression expression = new AbstractExpression(file, filePath, resource, CodeElementType.TRY_STATEMENT_RESOURCE);
+                    child.addExpression(expression);
+                }
             }
             addStatementInVariableScopes(child);
             List<VariableDeclaration> variableDeclarations = child.getVariableDeclarations();

@@ -6,7 +6,6 @@ import gr.uom.java.xmi.LocationInfo;
 import java.util.ArrayList;
 import java.util.List;
 
-//TODO: Big common part with LocationInfo?
 public class VariableScope {
     private final String filePath;
     private final int startOffset;
@@ -75,9 +74,7 @@ public class VariableScope {
             return false;
         if (startLine != other.startLine)
             return false;
-        if (startOffset != other.startOffset)
-            return false;
-        return true;
+        return startOffset == other.startOffset;
     }
 
     public String toString() {
