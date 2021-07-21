@@ -29,4 +29,9 @@ src/META-INF/persistence.xml
 .project
 .classpath
 /.settings/
+
 */build
+/plugin/tmp1
+/testData
+/plugin/github-oauth.properties
+/plugin/src/test/resources/log4j.properties
