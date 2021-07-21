@@ -198,13 +198,18 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
         } else if (element instanceof PsiIdentifier) {
             processIdentifier((PsiIdentifier) element);
         } else if (element instanceof PsiReferenceExpression) {
-            String source = element.getText();
-            goInSubtree = false;
-            assert !(element.getParent() instanceof PsiReference);
-            if (!(element.getParent() instanceof PsiMethodCallExpression)) {
-                variables.add(source);
-                if (source.startsWith("this.")) {
-                    variables.add(source.substring(5));
+            PsiElement firstChild = element.getFirstChild();
+            if (firstChild instanceof PsiThisExpression) {
+                variables.add(element.getText());
+            } else if (element.getChildren().length == 2) {
+                // find identifier and add to variables
+                if (firstChild instanceof PsiIdentifier) {
+                    variables.add(firstChild.getText());
+                } else {
+                    PsiElement lastChild = element.getLastChild();
+                    if (lastChild instanceof PsiIdentifier) {
+                        variables.add(lastChild.getText());
+                    }
                 }
             }
         } else if (element instanceof PsiJavaCodeReferenceElement) {
