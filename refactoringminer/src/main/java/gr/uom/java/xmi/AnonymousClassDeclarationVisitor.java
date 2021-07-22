@@ -9,6 +9,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Finds all of anonymous classes in element subtree and add them to list in the postorder
+ */
 public class AnonymousClassDeclarationVisitor extends PsiRecursiveElementWalkingVisitor {
     private final Stack<PsiAnonymousClass> stackDeclarations = new Stack<>();
     private final Stack<Integer> childCount = new Stack<>();

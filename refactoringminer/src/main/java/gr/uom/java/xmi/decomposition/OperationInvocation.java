@@ -68,6 +68,9 @@ public class OperationInvocation extends AbstractCall {
     }
 
     private String methodName;
+    /**
+     * Expressions for accessing or creating element on which function calls
+     */
     private List<String> subExpressions = new ArrayList<>();
     private volatile int hashCode = 0;
 

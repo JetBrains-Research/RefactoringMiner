@@ -30,6 +30,9 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
     protected List<UMLAnnotation> annotations = new ArrayList<>();
     protected List<UMLType> typeArguments = Collections.emptyList();
 
+    /**
+     * Parse type from qualified type string
+     */
     public static UMLType extractTypeObject(String qualifiedName) {
         qualifiedName = qualifiedName.replaceAll("\\s", "");
         if (qualifiedName.endsWith("...")) {
@@ -77,6 +80,19 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
         return typeObject;
     }
 
+    private static boolean equalOpeningClosingTags(String typeArguments) {
+        int openingTags = 0;
+        int closingTags = 0;
+        for (int i = 0; i < typeArguments.length(); i++) {
+            if (typeArguments.charAt(i) == '>') {
+                openingTags++;
+            } else if (typeArguments.charAt(i) == '<') {
+                closingTags++;
+            }
+        }
+        return openingTags == closingTags;
+    }
+
     public static UMLType extractTypeObject(PsiFile file, String filePath, PsiTypeElement typeElement, PsiType type) {
         UMLType umlType = extractType(file, filePath, typeElement, type);
         umlType.locationInfo = new LocationInfo(file, filePath, typeElement, CodeElementType.TYPE);
@@ -115,6 +131,12 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
         return null;
     }
 
+    /**
+     * Construct UMLType from Psi parameters
+     *
+     * @param typeElement Element associated with type declaration position
+     * @param type        Real type (differs from typeElement.getType() on C-style arrays)
+     */
     private static UMLType extractType(PsiFile file, String filePath, PsiTypeElement typeElement, PsiType type) {
         if (type instanceof PsiDisjunctionType) {
             List<UMLType> umlTypes = Arrays.stream(typeElement.getChildren())
@@ -133,12 +155,6 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
         }
     }
 
-    /**
-     * Construct UMLType from Psi parameters
-     *
-     * @param typeElement Element associated with type declaration position
-     * @param type        Real type (differs from typeElement.getType() on C-style arrays)
-     */
     public static UMLType extractTypeObject(PsiFile file, String filePath, PsiJavaCodeReferenceElement typeElement, PsiType type) {
         UMLType umlType = extractTypeObject(type, typeElement);
         umlType.locationInfo = new LocationInfo(file, filePath, typeElement, CodeElementType.TYPE);
@@ -149,25 +165,8 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
         return umlType;
     }
 
-    private static UMLType extractTypeObject(PsiTypeElement typeElement) {
-        return extractTypeObject(typeElement.getType(), typeElement);
-    }
-
     private static UMLType extractTypeObject(PsiType type, PsiTypeElement typeElement) {
         return extractTypeObject(type, (PsiJavaCodeReferenceElement) typeElement.getFirstChild());
-    }
-
-    private static boolean equalOpeningClosingTags(String typeArguments) {
-        int openingTags = 0;
-        int closingTags = 0;
-        for (int i = 0; i < typeArguments.length(); i++) {
-            if (typeArguments.charAt(i) == '>') {
-                openingTags++;
-            } else if (typeArguments.charAt(i) == '<') {
-                closingTags++;
-            }
-        }
-        return openingTags == closingTags;
     }
 
     /**

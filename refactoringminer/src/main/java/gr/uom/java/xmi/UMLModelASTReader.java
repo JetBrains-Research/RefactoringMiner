@@ -33,14 +33,14 @@ public class UMLModelASTReader {
         for (Map.Entry<String, String> file : javaFileContents.entrySet()) {
             PsiFile psiFile = factory.createFileFromText(JavaLanguage.INSTANCE, file.getValue());
             try {
-                processCompilationUnit(file.getKey(), psiFile, file.getValue());
+                processFile(file.getKey(), psiFile, file.getValue());
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
     }
 
-    private void processCompilationUnit(String sourceFilePath, PsiFile file, String javaFileContent) {
+    private void processFile(String sourceFilePath, PsiFile file, String javaFileContent) {
         List<UMLComment> comments = extractInternalComments(file, sourceFilePath, javaFileContent);
         String packageName = getPackageName(file);
         Collection<PsiImportStatement> imports = PsiTreeUtil.findChildrenOfType(file, PsiImportStatement.class);
@@ -74,6 +74,9 @@ public class UMLModelASTReader {
         return packageName;
     }
 
+    /**
+     * Parse all comments in file
+     */
     @NotNull
     private List<UMLComment> extractInternalComments(@NotNull PsiFile file,
                                                      @NotNull String sourceFile,
@@ -149,29 +152,20 @@ public class UMLModelASTReader {
         umlClass.setJavadoc(generateJavadoc(file, psiEnumClass, sourceFile));
         umlClass.setEnum(true);
 
-        for (UMLType umlType : getUMLTypes(file, sourceFile, psiEnumClass.getImplementsList())) {
+        for (UMLType umlType : getUMLTypesOfReferenceList(file, sourceFile, psiEnumClass.getImplementsList())) {
             UMLRealization umlRealization = new UMLRealization(umlClass, umlType.getClassType());
             umlClass.addImplementedInterface(umlType);
             this.umlModel.addRealization(umlRealization);
         }
 
-        for (PsiElement enumElement : psiEnumClass.getChildren()) {
-            if (enumElement instanceof PsiEnumConstant) {
-                processEnumConstantDeclaration(file, (PsiEnumConstant) enumElement, sourceFile, umlClass, comments);
-            }
-        }
-
         processModifiers(file, sourceFile, psiEnumClass, umlClass);
-
-        processBodyDeclarations(file, psiEnumClass, packageName, sourceFile, importedTypes, umlClass, comments);
-
+        processBodyDeclarations(file, psiEnumClass, sourceFile, importedTypes, umlClass, comments);
         processAnonymousClassDeclarations(file, psiEnumClass, packageName, sourceFile, className, umlClass);
-
-        this.umlModel.addClass(umlClass);
         distributeComments(comments, locationInfo, umlClass.getComments());
+        this.umlModel.addClass(umlClass);
     }
 
-    private List<UMLType> getUMLTypes(PsiFile file, String sourceFile, @Nullable PsiReferenceList list) {
+    private List<UMLType> getUMLTypesOfReferenceList(PsiFile file, String sourceFile, @Nullable PsiReferenceList list) {
         if (list == null) {
             return Collections.emptyList();
         }
@@ -185,12 +179,16 @@ public class UMLModelASTReader {
         return types;
     }
 
-    private void processBodyDeclarations(PsiFile file, PsiClass psiClass, String packageName,
+    /**
+     * Process body of class or enum
+     */
+    private void processBodyDeclarations(PsiFile file, PsiClass psiClass,
                                          String sourceFile, List<String> importedTypes,
                                          UMLClass umlClass, List<UMLComment> comments) {
-        PsiElement[] children = psiClass.getChildren();
-        for (PsiElement psiElement : children) {
-            if (psiElement instanceof PsiField && !(psiElement instanceof PsiEnumConstant)) {
+        for (PsiElement psiElement : psiClass.getChildren()) {
+            if (psiElement instanceof PsiEnumConstant) {
+                processEnumConstantDeclaration(file, (PsiEnumConstant) psiElement, sourceFile, umlClass, comments);
+            } else if (psiElement instanceof PsiField) {
                 PsiField psiField = (PsiField) psiElement;
                 List<UMLAttribute> attributes = processFieldDeclaration(file, psiField, sourceFile, comments);
                 for (UMLAttribute attribute : attributes) {
@@ -224,13 +222,13 @@ public class UMLModelASTReader {
 
         if (psiClass.isInterface()) {
             umlClass.setInterface(true);
-            for (UMLType umlType : getUMLTypes(file, sourceFile, psiClass.getExtendsList())) {
+            for (UMLType umlType : getUMLTypesOfReferenceList(file, sourceFile, psiClass.getExtendsList())) {
                 UMLRealization umlRealization = new UMLRealization(umlClass, umlType.getClassType());
                 umlClass.addImplementedInterface(umlType);
                 this.umlModel.addRealization(umlRealization);
             }
         } else {
-            List<UMLType> extendsList = getUMLTypes(file, sourceFile, psiClass.getExtendsList());
+            List<UMLType> extendsList = getUMLTypesOfReferenceList(file, sourceFile, psiClass.getExtendsList());
             if (!extendsList.isEmpty()) {
                 assert extendsList.size() == 1;
                 UMLType umlType = extendsList.get(0);
@@ -239,7 +237,7 @@ public class UMLModelASTReader {
                 this.umlModel.addGeneralization(umlGeneralization);
             }
 
-            for (UMLType umlType : getUMLTypes(file, sourceFile, psiClass.getImplementsList())) {
+            for (UMLType umlType : getUMLTypesOfReferenceList(file, sourceFile, psiClass.getImplementsList())) {
                 UMLRealization umlRealization = new UMLRealization(umlClass, umlType.getClassType());
                 umlClass.addImplementedInterface(umlType);
                 this.umlModel.addRealization(umlRealization);
@@ -250,44 +248,19 @@ public class UMLModelASTReader {
 
         PsiTypeParameter[] typeParameters = psiClass.getTypeParameters();
         for (PsiTypeParameter typeParameter : typeParameters) {
-            umlClass.addTypeParameter(processTypeParameters(file, sourceFile, typeParameter));
+            umlClass.addTypeParameter(processTypeParameter(file, sourceFile, typeParameter));
         }
 
-        PsiField[] fieldDeclarations = psiClass.getFields();
-        for (PsiField fieldDeclaration : fieldDeclarations) {
-            List<UMLAttribute> attributes = processFieldDeclaration(file, fieldDeclaration, sourceFile, comments);
-            for (UMLAttribute attribute : attributes) {
-                attribute.setClassName(umlClass.getName());
-                umlClass.addAttribute(attribute);
-            }
-        }
-
-        PsiMethod[] methodDeclarations = psiClass.getMethods();
-        for (PsiMethod methodDeclaration : methodDeclarations) {
-            UMLOperation operation = processMethodDeclaration(file, methodDeclaration, sourceFile, comments);
-            operation.setClassName(umlClass.getName());
-            umlClass.addOperation(operation);
-        }
-
+        processBodyDeclarations(file, psiClass, sourceFile, importedTypes, umlClass, comments);
         processAnonymousClassDeclarations(file, psiClass, packageName, sourceFile, className, umlClass);
-
-        this.umlModel.addClass(umlClass);
-
-        PsiClass[] types = psiClass.getInnerClasses();
-        for (PsiClass type : types) {
-            if (type.isEnum()) {
-                processEnumDeclaration(file, type, umlClass.getName(), sourceFile, importedTypes, comments);
-            } else {
-                processTypeDeclaration(file, type, umlClass.getName(), sourceFile, importedTypes, comments);
-            }
-        }
         distributeComments(comments, locationInfo, umlClass.getComments());
+        this.umlModel.addClass(umlClass);
     }
 
     @NotNull
-    private UMLTypeParameter processTypeParameters(PsiFile file, String sourceFile, PsiTypeParameter typeParameter) {
+    private UMLTypeParameter processTypeParameter(PsiFile file, String sourceFile, PsiTypeParameter typeParameter) {
         UMLTypeParameter umlTypeParameter = new UMLTypeParameter(typeParameter.getQualifiedName());
-        List<UMLType> extendsList = getUMLTypes(file, sourceFile, typeParameter.getExtendsList());
+        List<UMLType> extendsList = getUMLTypesOfReferenceList(file, sourceFile, typeParameter.getExtendsList());
         extendsList.forEach(umlTypeParameter::addTypeBound);
         PsiAnnotation[] typeParameterAnnotations = typeParameter.getAnnotations();
         for (PsiAnnotation psiAnnotation : typeParameterAnnotations) {
@@ -445,7 +418,7 @@ public class UMLModelASTReader {
 
         PsiTypeParameter[] typeParameters = psiMethod.getTypeParameters();
         for (PsiTypeParameter typeParameter : typeParameters) {
-            umlOperation.addTypeParameter(processTypeParameters(file, sourceFile, typeParameter));
+            umlOperation.addTypeParameter(processTypeParameter(file, sourceFile, typeParameter));
         }
 
         PsiCodeBlock block = psiMethod.getBody();
@@ -457,12 +430,12 @@ public class UMLModelASTReader {
             umlOperation.setBody(null);
         }
 
-
         if (!psiMethod.isConstructor()) {
             UMLType type = UMLType.extractTypeObject(file, sourceFile, psiMethod.getReturnTypeElement(), psiMethod.getReturnType());
             UMLParameter returnParameter = new UMLParameter("return", type, "return", false);
             umlOperation.addParameter(returnParameter);
         }
+
         PsiParameter[] parameters = psiMethod.getParameterList().getParameters();
         for (PsiParameter parameter : parameters) {
             UMLType type = UMLType.extractTypeObject(file, sourceFile, parameter.getTypeElement(), parameter.getType());
@@ -473,7 +446,8 @@ public class UMLModelASTReader {
             umlParameter.setVariableDeclaration(variableDeclaration);
             umlOperation.addParameter(umlParameter);
         }
-        for (UMLType umlType : getUMLTypes(file, sourceFile, psiMethod.getThrowsList())) {
+
+        for (UMLType umlType : getUMLTypesOfReferenceList(file, sourceFile, psiMethod.getThrowsList())) {
             umlOperation.addThrownExceptionType(umlType);
         }
         return umlOperation;
