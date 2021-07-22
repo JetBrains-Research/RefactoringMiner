@@ -7,10 +7,10 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Hashtable;
 import java.util.List;
 
 public class RefactoringPopulator {
+    static final ObjectMapper mapper = new ObjectMapper();
 
     public static void feedRefactoringsInstances(BigInteger refactoringsFlag, int systemsFlag, TestBuilder test)
         throws IOException {
@@ -22,7 +22,7 @@ public class RefactoringPopulator {
 
     private static void prepareFSERefactorings(TestBuilder test, BigInteger flag)
         throws IOException {
-        List<Root> roots = getFSERefactorings(flag);
+        List<Root> roots = getFSERefactorings(flag, test.dataFile);
 
         for (Root root : roots) {
             test.project(root.repository, "master").atCommit(root.sha1)
@@ -30,12 +30,8 @@ public class RefactoringPopulator {
         }
     }
 
-    public static List<Root> getFSERefactorings(BigInteger flag) throws IOException {
-        ObjectMapper mapper = new ObjectMapper();
-
-        String jsonFile = "src/test/resources/data.json";
-
-        List<Root> roots = mapper.readValue(new File(jsonFile),
+    public static List<Root> getFSERefactorings(BigInteger flag, String dataFile) throws IOException {
+        List<Root> roots = mapper.readValue(new File(dataFile),
             mapper.getTypeFactory().constructCollectionType(List.class, Root.class));
 
         List<Root> filtered = new ArrayList<>();
@@ -78,7 +74,7 @@ public class RefactoringPopulator {
     private static boolean isAdded(Refactoring refactoring, BigInteger flag) {
         try {
             BigInteger value = Enum.valueOf(Refactorings.class, refactoring.type.replace(" ", "")).getValue();
-            return value.and(flag).compareTo(BigInteger.ZERO) == 1;
+            return value.and(flag).compareTo(BigInteger.ZERO) > 0;
 
         } catch (Exception e) {
             return false;
@@ -100,38 +96,6 @@ public class RefactoringPopulator {
             }
         }
         return refactorings;
-    }
-
-    public static void printRefDiffResults(BigInteger flag) {
-        Hashtable<String, Tuple> result = new Hashtable<>();
-        try {
-            List<Root> roots = getFSERefactorings(flag);
-            for (Refactorings ref : Refactorings.values()) {
-                if (ref == Refactorings.All)
-                    continue;
-                result.put(ref.toString(), new Tuple());
-            }
-            for (Root root : roots) {
-                for (Refactoring ref : root.refactorings) {
-                    Tuple tuple = result.get(ref.type.replace(" ", ""));
-                    tuple.totalTruePositives += ref.validation.contains("TP") ? 1 : 0;
-                    tuple.unknown += ref.validation.equals("UKN") ? 1 : 0;
-
-                    if (ref.detectionTools.contains("RefDiff")) {
-                        tuple.refDiffTruePositives += ref.validation.contains("TP") ? 1 : 0;
-                        tuple.refDiffFalsePositives += ref.validation.equals("FP") ? 1 : 0;
-                    }
-
-                }
-            }
-            Tuple[] tmp = {};
-            System.out.println("Total\t" + buildResultMessage(result.values().toArray(tmp)));
-            for (String key : result.keySet()) {
-                System.out.println(getInitials(key) + "\t" + buildResultMessage(result.get(key)));
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     private static String buildResultMessage(Tuple... result) {

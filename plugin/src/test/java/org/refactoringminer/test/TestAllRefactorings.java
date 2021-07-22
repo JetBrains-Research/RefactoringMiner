@@ -1,16 +1,20 @@
 package org.refactoringminer.test;
 
-import org.junit.Test;
+import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase;
 import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 import org.refactoringminer.test.RefactoringPopulator.Refactorings;
 import org.refactoringminer.test.RefactoringPopulator.Systems;
+import java.math.BigInteger;
 
-public class TestAllRefactorings {
+public class TestAllRefactorings extends LightJavaCodeInsightFixtureTestCase {
 
-    @Test
+    public final String dataFile = "dataSmall.json";
+    public final BigInteger refactoringsToTest = Refactorings.All.getValue();
+    public final String dataDirectory = "tmp1";
+
     public void testAllRefactorings() throws Exception {
         GitHistoryRefactoringMinerImpl detector = new GitHistoryRefactoringMinerImpl();
-        TestBuilder test = new TestBuilder(detector, "tmp1", Refactorings.All.getValue());
+        TestBuilder test = new TestBuilder(detector, dataDirectory, refactoringsToTest, "src/test/resources/" + dataFile);
         RefactoringPopulator.feedRefactoringsInstances(Refactorings.All.getValue(), Systems.FSE.getValue(), test);
         test.assertExpectations(10474, 36, 383);
     }

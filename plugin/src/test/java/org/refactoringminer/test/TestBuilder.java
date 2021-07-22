@@ -37,23 +37,25 @@ public class TestBuilder {
     private Counter c;// = new Counter();
     private Map<RefactoringType, Counter> cMap;
     private BigInteger refactoringFilter;
+    public final String dataFile;
 
-    public TestBuilder(GitHistoryRefactoringMiner detector, String tempDir, BigInteger refactorings) {
-        this(detector, tempDir);
+    public TestBuilder(GitHistoryRefactoringMiner detector, String tempDir, BigInteger refactorings, String dataFile) {
+        this(detector, tempDir, dataFile);
 
         this.refactoringFilter = refactorings;
     }
 
-    public TestBuilder(GitHistoryRefactoringMiner detector, String tempDir) {
+    public TestBuilder(GitHistoryRefactoringMiner detector, String tempDir, String dataFile) {
         this.map = new HashMap<>();
         this.refactoringDetector = detector;
         this.tempDir = tempDir;
         this.verbose = false;
         this.aggregate = false;
+        this.dataFile = dataFile;
     }
 
     public TestBuilder() {
-        this(new GitHistoryRefactoringMinerImpl(), "tmp");
+        this(new GitHistoryRefactoringMinerImpl(), "tmp", "data.json");
     }
 
     /**
