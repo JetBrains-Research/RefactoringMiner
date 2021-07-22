@@ -5,5 +5,5 @@ dependencies {
 runIde {
     runIde.args "RefactoringMiner"
     runIde.jvmArgs "-Djava.awt.headless=true"
-    maxHeapSize = "2g"
+    maxHeapSize = "6g"
 }

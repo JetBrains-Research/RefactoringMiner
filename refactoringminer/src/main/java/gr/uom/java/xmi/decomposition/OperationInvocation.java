@@ -70,8 +70,8 @@ public class OperationInvocation extends AbstractCall {
         PRIMITIVE_TYPE_NARROWING_MAP = Collections.unmodifiableMap(PRIMITIVE_TYPE_NARROWING_MAP);
     }
 
-    public OperationInvocation(PsiFile cu, String filePath, PsiMethodCallExpression invocation) {
-        this.locationInfo = new LocationInfo(cu, filePath, invocation, LocationInfo.CodeElementType.METHOD_INVOCATION);
+    public OperationInvocation(PsiFile file, String filePath, PsiMethodCallExpression invocation) {
+        this.locationInfo = new LocationInfo(file, filePath, invocation, LocationInfo.CodeElementType.METHOD_INVOCATION);
         this.methodName = invocation.getMethodExpression().getReferenceName();
         this.typeArguments = invocation.getTypeArguments().length;
         this.arguments = new ArrayList<>();
