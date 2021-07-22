@@ -33,7 +33,7 @@ public class RefactoringPopulator {
     public static List<Root> getFSERefactorings(BigInteger flag) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
 
-        String jsonFile = System.getProperty("user.dir") + "/src-test/Data/data.json";
+        String jsonFile = "src/test/resources/data.json";
 
         List<Root> roots = mapper.readValue(new File(jsonFile),
             mapper.getTypeFactory().constructCollectionType(List.class, Root.class));
@@ -61,7 +61,7 @@ public class RefactoringPopulator {
 
     private static List<String> getDeletedCommits() {
         List<String> deletedCommits = new ArrayList<>();
-        String file = System.getProperty("user.dir") + "/src-test/Data/deleted_commits.txt";
+        String file = "src/test/resources/deleted_commits.txt";
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = br.readLine()) != null) {

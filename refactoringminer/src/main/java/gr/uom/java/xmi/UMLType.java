@@ -1,41 +1,55 @@
 package gr.uom.java.xmi;
 
+import com.intellij.psi.PsiAnnotation;
+import com.intellij.psi.PsiArrayType;
+import com.intellij.psi.PsiClassType;
+import com.intellij.psi.PsiDisjunctionType;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiJavaCodeReferenceElement;
+import com.intellij.psi.PsiMethod;
+import com.intellij.psi.PsiModifierList;
+import com.intellij.psi.PsiPrimitiveType;
+import com.intellij.psi.PsiType;
+import com.intellij.psi.PsiTypeElement;
+import com.intellij.psi.PsiWildcardType;
 import gr.uom.java.xmi.ListCompositeType.Kind;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.diff.CodeRange;
 import gr.uom.java.xmi.diff.StringDistance;
-import org.eclipse.jdt.core.dom.AnnotatableType;
-import org.eclipse.jdt.core.dom.Annotation;
-import org.eclipse.jdt.core.dom.ArrayType;
-import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.IntersectionType;
-import org.eclipse.jdt.core.dom.NameQualifiedType;
-import org.eclipse.jdt.core.dom.ParameterizedType;
-import org.eclipse.jdt.core.dom.QualifiedType;
-import org.eclipse.jdt.core.dom.Type;
-import org.eclipse.jdt.core.dom.UnionType;
-import org.eclipse.jdt.core.dom.WildcardType;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public abstract class UMLType implements Serializable, LocationInfoProvider {
-    protected final List<UMLAnnotation> annotations = new ArrayList<>();
-    private LocationInfo locationInfo;
-    private int arrayDimension;
-    private List<UMLType> typeArguments = new ArrayList<>();
+    protected LocationInfo locationInfo;
+    protected int arrayDimension;
+    protected List<UMLAnnotation> annotations = new ArrayList<>();
+    protected List<UMLType> typeArguments = Collections.emptyList();
 
-    public static LeafType extractTypeObject(String qualifiedName) {
-        int arrayDimension = 0;
-        List<UMLType> typeArgumentDecomposition = new ArrayList<>();
-        if (qualifiedName.endsWith("[]")) {
-            while (qualifiedName.endsWith("[]")) {
-                qualifiedName = qualifiedName.substring(0, qualifiedName.lastIndexOf("[]"));
-                arrayDimension++;
-            }
+    public static UMLType extractTypeObject(String qualifiedName) {
+        qualifiedName = qualifiedName.replaceAll("\\s", "");
+        if (qualifiedName.endsWith("...")) {
+            // TODO: remove setVararg and do arrayDimension++
+            qualifiedName = qualifiedName.substring(0, qualifiedName.length() - 3);
         }
-        if (qualifiedName.contains("<") && qualifiedName.contains(">") &&
-            !closingTagBeforeOpeningTag(qualifiedName.substring(qualifiedName.indexOf("<") + 1, qualifiedName.lastIndexOf(">")))) {
+
+        if (qualifiedName.contains(".")) {
+            // TODO: parse as Composite type
+            qualifiedName = qualifiedName.substring(qualifiedName.lastIndexOf('.'));
+        }
+
+        int arrayDimension = 0;
+        while (qualifiedName.endsWith("[]")) {
+            qualifiedName = qualifiedName.substring(0, qualifiedName.length() - 2);
+            arrayDimension++;
+        }
+
+        List<UMLType> typeArgumentDecomposition = new ArrayList<>();
+        if (qualifiedName.contains("<")) {
             String typeArguments = qualifiedName.substring(qualifiedName.indexOf("<") + 1, qualifiedName.lastIndexOf(">"));
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < typeArguments.length(); i++) {
@@ -56,93 +70,91 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
             }
             qualifiedName = qualifiedName.substring(0, qualifiedName.indexOf("<"));
         }
-        UMLType typeObject = new LeafType(qualifiedName);
+
+        LeafType typeObject = new LeafType(qualifiedName);
         typeObject.arrayDimension = arrayDimension;
         typeObject.typeArguments = typeArgumentDecomposition;
-        return (LeafType) typeObject;
+        return typeObject;
     }
 
-    private static UMLType extractTypeObject(CompilationUnit cu, String filePath, Type type) {
-        if (type.isPrimitiveType() || type.isSimpleType()) {
-            LeafType leafType = extractTypeObject(type.toString());
-            AnnotatableType annotatableType = (AnnotatableType) type;
-            List<Annotation> annotations = annotatableType.annotations();
-            for (Annotation annotation : annotations) {
-                leafType.annotations.add(new UMLAnnotation(cu, filePath, annotation));
-            }
-            return leafType;
-        } else if (type instanceof QualifiedType) {
-            QualifiedType qualified = (QualifiedType) type;
-            UMLType leftType = extractTypeObject(cu, filePath, qualified.getQualifier());
-            LeafType rightType = extractTypeObject(qualified.getName().getFullyQualifiedName());
-            AnnotatableType annotatableType = qualified;
-            List<Annotation> annotations = annotatableType.annotations();
-            for (Annotation annotation : annotations) {
-                rightType.annotations.add(new UMLAnnotation(cu, filePath, annotation));
-            }
-            return new CompositeType(leftType, rightType);
-        } else if (type instanceof NameQualifiedType) {
-            NameQualifiedType nameQualified = (NameQualifiedType) type;
-            LeafType leftType = extractTypeObject(nameQualified.getQualifier().getFullyQualifiedName());
-            LeafType rightType = extractTypeObject(nameQualified.getName().getFullyQualifiedName());
-            AnnotatableType annotatableType = nameQualified;
-            List<Annotation> annotations = annotatableType.annotations();
-            for (Annotation annotation : annotations) {
-                rightType.annotations.add(new UMLAnnotation(cu, filePath, annotation));
-            }
-            return new CompositeType(leftType, rightType);
-        } else if (type instanceof WildcardType) {
-            WildcardType wildcard = (WildcardType) type;
-            gr.uom.java.xmi.WildcardType myWildcardType;
-            if (wildcard.getBound() != null) {
-                UMLType bound = extractTypeObject(cu, filePath, wildcard.getBound());
-                myWildcardType = new gr.uom.java.xmi.WildcardType(bound, wildcard.isUpperBound());
+    public static UMLType extractTypeObject(PsiFile file, String filePath, PsiTypeElement typeElement, PsiType type) {
+        UMLType umlType = extractType(file, filePath, typeElement, type);
+        umlType.locationInfo = new LocationInfo(file, filePath, typeElement, CodeElementType.TYPE);
+        addAnnotations(file, filePath, typeElement, umlType);
+        return umlType;
+    }
+
+    private static void addAnnotations(PsiFile file, String filePath, PsiTypeElement typeElement, UMLType umlType) {
+        if (typeElement.getParent() instanceof PsiMethod) {
+            // TODO: return type annotations attached only to method?
+        } else {
+            PsiModifierList modifierList = getPreventingModifiersList(typeElement);
+            if (modifierList != null) {
+                Arrays.stream(modifierList.getChildren())
+                    .filter(element -> element instanceof PsiAnnotation)
+                    .map(annotation -> new UMLAnnotation(file, filePath, (PsiAnnotation) annotation))
+                    .forEach(umlType.annotations::add);
             } else {
-                myWildcardType = new gr.uom.java.xmi.WildcardType(null, false);
+                if (typeElement.getParent() instanceof PsiTypeElement) {
+                    // parts of DisjunctionType
+                } else {
+                    throw new IllegalStateException();
+                }
             }
-            AnnotatableType annotatableType = wildcard;
-            List<Annotation> annotations = annotatableType.annotations();
-            for (Annotation annotation : annotations) {
-                myWildcardType.annotations.add(new UMLAnnotation(cu, filePath, annotation));
+        }
+    }
+
+    private static PsiModifierList getPreventingModifiersList(PsiTypeElement typeElement) {
+        PsiElement prev = typeElement;
+        while (prev != null) {
+            prev = prev.getPrevSibling();
+            if (prev instanceof PsiModifierList) {
+                return (PsiModifierList) prev;
             }
-            return myWildcardType;
-        } else if (type instanceof ArrayType) {
-            ArrayType array = (ArrayType) type;
-            UMLType arrayType = extractTypeObject(cu, filePath, array.getElementType());
-            arrayType.arrayDimension = array.getDimensions();
-            return arrayType;
-        } else if (type instanceof ParameterizedType) {
-            ParameterizedType parameterized = (ParameterizedType) type;
-            UMLType container = extractTypeObject(cu, filePath, parameterized.getType());
-            List<Type> typeArguments = parameterized.typeArguments();
-            for (Type argument : typeArguments) {
-                container.typeArguments.add(extractTypeObject(cu, filePath, argument));
-            }
-            return container;
-        } else if (type instanceof UnionType) {
-            UnionType union = (UnionType) type;
-            List<Type> types = union.types();
-            List<UMLType> umlTypes = new ArrayList<>();
-            for (Type unionType : types) {
-                umlTypes.add(extractTypeObject(cu, filePath, unionType));
-            }
-            return new ListCompositeType(umlTypes, Kind.UNION);
-        } else if (type instanceof IntersectionType) {
-            IntersectionType intersection = (IntersectionType) type;
-            List<Type> types = intersection.types();
-            List<UMLType> umlTypes = new ArrayList<>();
-            for (Type unionType : types) {
-                umlTypes.add(extractTypeObject(cu, filePath, unionType));
-            }
-            return new ListCompositeType(umlTypes, Kind.INTERSECTION);
         }
         return null;
     }
 
-    private static boolean closingTagBeforeOpeningTag(String typeArguments) {
-        int indexOfOpeningTag = typeArguments.indexOf("<");
-        int indexOfClosingTag = typeArguments.lastIndexOf(">");
-        return indexOfClosingTag < indexOfOpeningTag;
+    private static UMLType extractType(PsiFile file, String filePath, PsiTypeElement typeElement, PsiType type) {
+        if (type instanceof PsiDisjunctionType) {
+            List<UMLType> umlTypes = Arrays.stream(typeElement.getChildren())
+                .filter(element -> element instanceof PsiTypeElement)
+                .map(element -> (PsiTypeElement) element)
+                .map(dTypeElement -> extractTypeObject(file, filePath, dTypeElement, dTypeElement.getType()))
+                .collect(Collectors.toList());
+            return new ListCompositeType(umlTypes, Kind.UNION);
+        } else {
+            PsiJavaCodeReferenceElement innermostType = typeElement.getInnermostComponentReferenceElement();
+            if (innermostType != null) {
+                return extractTypeObject(file, filePath, innermostType, type);
+            } else {
+                return extractTypeObject(typeElement.getText());
+            }
+        }
+    }
+
+    /**
+     * Construct UMLType from Psi parameters
+     *
+     * @param typeElement Element associated with type declaration position
+     * @param type        Real type (differs from typeElement.getType() on C-style arrays)
+     */
+    public static UMLType extractTypeObject(PsiFile file, String filePath, PsiJavaCodeReferenceElement typeElement, PsiType type) {
+        UMLType umlType = extractTypeObject(type, typeElement);
+        umlType.locationInfo = new LocationInfo(file, filePath, typeElement, CodeElementType.TYPE);
+        Arrays.stream(typeElement.getChildren())
+            .filter(element -> element instanceof PsiAnnotation)
+            .map(annotation -> new UMLAnnotation(file, filePath, (PsiAnnotation) annotation))
+            .forEach(umlType.annotations::add);
+        return umlType;
+    }
+
+    private static UMLType extractTypeObject(PsiTypeElement typeElement) {
+        return extractTypeObject(typeElement.getType(), typeElement);
+    }
+
+    private static UMLType extractTypeObject(PsiType type, PsiTypeElement typeElement) {
+        return extractTypeObject(type, (PsiJavaCodeReferenceElement) typeElement.getFirstChild());
     }
 
     private static boolean equalOpeningClosingTags(String typeArguments) {
@@ -158,11 +170,33 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
         return openingTags == closingTags;
     }
 
-    public static UMLType extractTypeObject(CompilationUnit cu, String filePath, Type type, int extraDimensions) {
-        UMLType umlType = extractTypeObject(cu, filePath, type);
-        umlType.locationInfo = new LocationInfo(cu, filePath, type, CodeElementType.TYPE);
-        umlType.arrayDimension += extraDimensions;
-        return umlType;
+    /**
+     * @param type        Exact type. Not all functionality available because of index requirement.
+     * @param typeElement Element of type. Ignoring array dimensions
+     */
+    private static UMLType extractTypeObject(PsiType type, PsiJavaCodeReferenceElement typeElement) {
+        if (type instanceof PsiPrimitiveType) {
+            PsiPrimitiveType primitiveType = (PsiPrimitiveType) type;
+            return extractTypeObject(primitiveType.getName());
+        } else if (type instanceof PsiWildcardType) {
+            PsiWildcardType wildcardType = (PsiWildcardType) type;
+            if (wildcardType.isBounded()) {
+                PsiTypeElement bound = (PsiTypeElement) typeElement.getLastChild();
+                return new WildcardType(extractTypeObject(wildcardType.getBound(), bound), wildcardType.isSuper());
+            } else {
+                return new WildcardType(null, false);
+            }
+        } else if (type instanceof PsiArrayType) {
+            PsiArrayType arrayType = (PsiArrayType) type;
+            UMLType myArrayType = extractTypeObject(arrayType.getDeepComponentType(), typeElement);
+            myArrayType.arrayDimension = arrayType.getArrayDimensions();
+            return myArrayType;
+        } else if (type instanceof PsiClassType) {
+            return extractTypeObject(typeElement.getText());
+        } else {
+            System.out.println(type.getClass().getName());
+            throw new IllegalStateException();
+        }
     }
 
     public LocationInfo getLocationInfo() {
@@ -217,6 +251,8 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
         return true;
     }
 
+    public abstract boolean equals(Object o);
+
     protected String typeArgumentsToString() {
         StringBuilder sb = new StringBuilder();
         if (typeArguments.isEmpty()) {
@@ -233,8 +269,6 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
     }
 
     public abstract String toQualifiedString();
-
-    public abstract boolean equals(Object o);
 
     public boolean isParameterized() {
         return typeArguments.size() > 0;
@@ -295,14 +329,6 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
         return false;
     }
 
-    public double normalizedNameDistance(UMLType type) {
-        String s1 = this.toString();
-        String s2 = type.toString();
-        int distance = StringDistance.editDistance(s1, s2);
-        double normalized = (double) distance / (double) Math.max(s1.length(), s2.length());
-        return normalized;
-    }
-
     protected String typeArgumentsAndArrayDimensionToString() {
         StringBuilder sb = new StringBuilder();
         if (isParameterized())
@@ -313,5 +339,12 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
 
     public int getArrayDimension() {
         return this.arrayDimension;
+    }
+
+    public double normalizedNameDistance(UMLType type) {
+        String s1 = this.toString();
+        String s2 = type.toString();
+        int distance = StringDistance.editDistance(s1, s2);
+        return (double) distance / (double) Math.max(s1.length(), s2.length());
     }
 }

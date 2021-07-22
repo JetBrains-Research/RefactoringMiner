@@ -1,8 +1,8 @@
 package gr.uom.java.xmi.decomposition;
 
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiTryStatement;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
-import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,8 +10,8 @@ public class TryStatementObject extends CompositeStatementObject {
     private final List<CompositeStatementObject> catchClauses;
     private CompositeStatementObject finallyClause;
 
-    public TryStatementObject(CompilationUnit cu, String filePath, Statement statement, int depth) {
-        super(cu, filePath, statement, depth, CodeElementType.TRY_STATEMENT);
+    public TryStatementObject(PsiFile file, String filePath, PsiTryStatement statement, int depth) {
+        super(file, filePath, statement, depth, CodeElementType.TRY_STATEMENT);
         this.catchClauses = new ArrayList<>();
     }
 
