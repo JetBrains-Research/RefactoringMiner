@@ -15,7 +15,7 @@ public class SplitPackageRefactoring implements Refactoring {
 
 	public SplitPackageRefactoring(Set<RenamePackageRefactoring> renamePackageRefactorings) {
 		this.renamePackageRefactorings = renamePackageRefactorings;
-		this.splitPackages = new LinkedHashSet<String>();
+		this.splitPackages = new LinkedHashSet<>();
 		for (RenamePackageRefactoring refactoring : renamePackageRefactorings) {
 			RenamePattern pattern = refactoring.getPattern();
 			if (originalPackage == null) {
@@ -39,12 +39,12 @@ public class SplitPackageRefactoring implements Refactoring {
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
-		for(RenamePackageRefactoring renamePackage : renamePackageRefactorings) {
-			for(PackageLevelRefactoring ref : renamePackage.getMoveClassRefactorings()) {
+		List<CodeRange> ranges = new ArrayList<>();
+		for (RenamePackageRefactoring renamePackage : renamePackageRefactorings) {
+			for (PackageLevelRefactoring ref : renamePackage.getMoveClassRefactorings()) {
 				ranges.add(ref.getOriginalClass().codeRange()
-						.setDescription("original type declaration")
-						.setCodeElement(ref.getOriginalClass().getName()));
+					.setDescription("original type declaration")
+					.setCodeElement(ref.getOriginalClass().getName()));
 			}
 		}
 		return ranges;
@@ -52,12 +52,12 @@ public class SplitPackageRefactoring implements Refactoring {
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
-		for(RenamePackageRefactoring renamePackage : renamePackageRefactorings) {
-			for(PackageLevelRefactoring ref : renamePackage.getMoveClassRefactorings()) {
+		List<CodeRange> ranges = new ArrayList<>();
+		for (RenamePackageRefactoring renamePackage : renamePackageRefactorings) {
+			for (PackageLevelRefactoring ref : renamePackage.getMoveClassRefactorings()) {
 				ranges.add(ref.getMovedClass().codeRange()
-						.setDescription("moved type declaration")
-						.setCodeElement(ref.getMovedClass().getName()));
+					.setDescription("moved type declaration")
+					.setCodeElement(ref.getMovedClass().getName()));
 			}
 		}
 		return ranges;
@@ -75,10 +75,10 @@ public class SplitPackageRefactoring implements Refactoring {
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		for(RenamePackageRefactoring renamePackage : renamePackageRefactorings) {
-			for(PackageLevelRefactoring ref : renamePackage.getMoveClassRefactorings()) {
-				pairs.add(new ImmutablePair<String, String>(ref.getOriginalClass().getLocationInfo().getFilePath(), ref.getOriginalClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		for (RenamePackageRefactoring renamePackage : renamePackageRefactorings) {
+			for (PackageLevelRefactoring ref : renamePackage.getMoveClassRefactorings()) {
+				pairs.add(new ImmutablePair<>(ref.getOriginalClass().getLocationInfo().getFilePath(), ref.getOriginalClassName()));
 			}
 		}
 		return pairs;
@@ -86,10 +86,10 @@ public class SplitPackageRefactoring implements Refactoring {
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		for(RenamePackageRefactoring renamePackage : renamePackageRefactorings) {
-			for(PackageLevelRefactoring ref : renamePackage.getMoveClassRefactorings()) {
-				pairs.add(new ImmutablePair<String, String>(ref.getMovedClass().getLocationInfo().getFilePath(), ref.getMovedClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		for (RenamePackageRefactoring renamePackage : renamePackageRefactorings) {
+			for (PackageLevelRefactoring ref : renamePackage.getMoveClassRefactorings()) {
+				pairs.add(new ImmutablePair<>(ref.getMovedClass().getLocationInfo().getFilePath(), ref.getMovedClassName()));
 			}
 		}
 		return pairs;
@@ -98,12 +98,12 @@ public class SplitPackageRefactoring implements Refactoring {
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		sb.append(getName()).append("\t");
-		String originalPath = originalPackage.endsWith(".") ? originalPackage.substring(0, originalPackage.length()-1) : originalPackage;
+		String originalPath = originalPackage.endsWith(".") ? originalPackage.substring(0, originalPackage.length() - 1) : originalPackage;
 		sb.append(originalPath);
 		sb.append(" to ");
-		Set<String> splitPaths = new LinkedHashSet<String>();
-		for(String splitPackage : splitPackages) {
-			String splitPath = splitPackage.endsWith(".") ? splitPackage.substring(0, splitPackage.length()-1) : splitPackage;
+		Set<String> splitPaths = new LinkedHashSet<>();
+		for (String splitPackage : splitPackages) {
+			String splitPath = splitPackage.endsWith(".") ? splitPackage.substring(0, splitPackage.length() - 1) : splitPackage;
 			splitPaths.add(splitPath);
 		}
 		sb.append(splitPaths);

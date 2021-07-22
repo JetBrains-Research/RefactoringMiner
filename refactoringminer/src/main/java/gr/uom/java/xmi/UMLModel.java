@@ -6,7 +6,6 @@ import org.refactoringminer.api.RefactoringMinerTimedOutException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -17,11 +16,11 @@ public class UMLModel {
     private final List<UMLRealization> realizationList;
 
     public UMLModel(Set<String> repositoryDirectories) {
-        this.repositoryDirectories = repositoryDirectories;
-        classList = new ArrayList<UMLClass>();
-        generalizationList = new ArrayList<UMLGeneralization>();
-        realizationList = new ArrayList<UMLRealization>();
-    }
+		this.repositoryDirectories = repositoryDirectories;
+		classList = new ArrayList<>();
+		generalizationList = new ArrayList<>();
+		realizationList = new ArrayList<>();
+	}
 
     public void addClass(UMLClass umlClass) {
         classList.add(umlClass);
@@ -36,14 +35,12 @@ public class UMLModel {
     }
 
     public UMLClass getClass(UMLClass umlClassFromOtherModel) {
-    	ListIterator<UMLClass> it = classList.listIterator();
-        while(it.hasNext()) {
-            UMLClass umlClass = it.next();
-            if(umlClass.equals(umlClassFromOtherModel))
-                return umlClass;
-        }
-        return null;
-    }
+		for (UMLClass umlClass : classList) {
+			if (umlClass.equals(umlClassFromOtherModel))
+				return umlClass;
+		}
+		return null;
+	}
 
     public List<UMLClass> getClassList() {
         return this.classList;
@@ -58,52 +55,48 @@ public class UMLModel {
 	}
 
 	public UMLGeneralization matchGeneralization(UMLGeneralization otherGeneralization) {
-    	ListIterator<UMLGeneralization> generalizationIt = generalizationList.listIterator();
-    	while(generalizationIt.hasNext()) {
-    		UMLGeneralization generalization = generalizationIt.next();
-    		if(generalization.getChild().equals(otherGeneralization.getChild())) {
-    			String thisParent = generalization.getParent();
-    			String otherParent = otherGeneralization.getParent();
-    			String thisParentComparedString = null;
-    			if(thisParent.contains("."))
-    				thisParentComparedString = thisParent.substring(thisParent.lastIndexOf(".")+1);
-    			else
-    				thisParentComparedString = thisParent;
-    			String otherParentComparedString = null;
-    			if(otherParent.contains("."))
-    				otherParentComparedString = otherParent.substring(otherParent.lastIndexOf(".")+1);
-    			else
-    				otherParentComparedString = otherParent;
-    			if(thisParentComparedString.equals(otherParentComparedString))
-    				return generalization;
-    		}
-    	}
-    	return null;
-    }
+		for (UMLGeneralization generalization : generalizationList) {
+			if (generalization.getChild().equals(otherGeneralization.getChild())) {
+				String thisParent = generalization.getParent();
+				String otherParent = otherGeneralization.getParent();
+				String thisParentComparedString;
+				if (thisParent.contains("."))
+					thisParentComparedString = thisParent.substring(thisParent.lastIndexOf(".") + 1);
+				else
+					thisParentComparedString = thisParent;
+				String otherParentComparedString;
+				if (otherParent.contains("."))
+					otherParentComparedString = otherParent.substring(otherParent.lastIndexOf(".") + 1);
+				else
+					otherParentComparedString = otherParent;
+				if (thisParentComparedString.equals(otherParentComparedString))
+					return generalization;
+			}
+		}
+		return null;
+	}
 
     public UMLRealization matchRealization(UMLRealization otherRealization) {
-    	ListIterator<UMLRealization> realizationIt = realizationList.listIterator();
-    	while(realizationIt.hasNext()) {
-    		UMLRealization realization = realizationIt.next();
-    		if(realization.getClient().equals(otherRealization.getClient())) {
-    			String thisSupplier = realization.getSupplier();
-    			String otherSupplier = otherRealization.getSupplier();
-    			String thisSupplierComparedString = null;
-    			if(thisSupplier.contains("."))
-    				thisSupplierComparedString = thisSupplier.substring(thisSupplier.lastIndexOf(".")+1);
-    			else
-    				thisSupplierComparedString = thisSupplier;
-    			String otherSupplierComparedString = null;
-    			if(otherSupplier.contains("."))
-    				otherSupplierComparedString = otherSupplier.substring(otherSupplier.lastIndexOf(".")+1);
-    			else
-    				otherSupplierComparedString = otherSupplier;
-    			if(thisSupplierComparedString.equals(otherSupplierComparedString))
-    				return realization;
-    		}
-    	}
-    	return null;
-    }
+		for (UMLRealization realization : realizationList) {
+			if (realization.getClient().equals(otherRealization.getClient())) {
+				String thisSupplier = realization.getSupplier();
+				String otherSupplier = otherRealization.getSupplier();
+				String thisSupplierComparedString;
+				if (thisSupplier.contains("."))
+					thisSupplierComparedString = thisSupplier.substring(thisSupplier.lastIndexOf(".") + 1);
+				else
+					thisSupplierComparedString = thisSupplier;
+				String otherSupplierComparedString;
+				if (otherSupplier.contains("."))
+					otherSupplierComparedString = otherSupplier.substring(otherSupplier.lastIndexOf(".") + 1);
+				else
+					otherSupplierComparedString = otherSupplier;
+				if (thisSupplierComparedString.equals(otherSupplierComparedString))
+					return realization;
+			}
+		}
+		return null;
+	}
 
     public UMLModelDiff diff(UMLModel umlModel) throws RefactoringMinerTimedOutException {
         return this.diff(umlModel, Collections.emptyMap());

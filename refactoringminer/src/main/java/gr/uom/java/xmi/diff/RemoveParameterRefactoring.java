@@ -36,22 +36,22 @@ public class RemoveParameterRefactoring implements Refactoring {
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(parameter.getVariableDeclaration().codeRange()
-				.setDescription("removed parameter")
-				.setCodeElement(parameter.getVariableDeclaration().toString()));
+			.setDescription("removed parameter")
+			.setCodeElement(parameter.getVariableDeclaration().toString()));
 		ranges.add(operationBefore.codeRange()
-				.setDescription("original method declaration")
-				.setCodeElement(operationBefore.toString()));
+			.setDescription("original method declaration")
+			.setCodeElement(operationBefore.toString()));
 		return ranges;
 	}
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(operationAfter.codeRange()
-				.setDescription("method declaration with removed parameter")
-				.setCodeElement(operationAfter.toString()));
+			.setDescription("method declaration with removed parameter")
+			.setCodeElement(operationAfter.toString()));
 		return ranges;
 	}
 
@@ -67,27 +67,26 @@ public class RemoveParameterRefactoring implements Refactoring {
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOperationBefore().getLocationInfo().getFilePath(), getOperationBefore().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOperationBefore().getLocationInfo().getFilePath(), getOperationBefore().getClassName()));
 		return pairs;
 	}
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOperationAfter().getLocationInfo().getFilePath(), getOperationAfter().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOperationAfter().getLocationInfo().getFilePath(), getOperationAfter().getClassName()));
 		return pairs;
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(getName()).append("\t");
-		sb.append(parameter.getVariableDeclaration());
-		sb.append(" in method ");
-		sb.append(operationBefore);
-		sb.append(" from class ");
-		sb.append(operationBefore.getClassName());
-		return sb.toString();
+		String sb = getName() + "\t" +
+			parameter.getVariableDeclaration() +
+			" in method " +
+			operationBefore +
+			" from class " +
+			operationBefore.getClassName();
+		return sb;
 	}
 
 	@Override

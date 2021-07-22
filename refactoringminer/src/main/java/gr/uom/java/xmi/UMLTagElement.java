@@ -9,7 +9,7 @@ public class UMLTagElement {
 
     public UMLTagElement(String tagName) {
         this.tagName = tagName;
-        this.fragments = new ArrayList<String>();
+        this.fragments = new ArrayList<>();
     }
 
     public void addFragment(String fragment) {

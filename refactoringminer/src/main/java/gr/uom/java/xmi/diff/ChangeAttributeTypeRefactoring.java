@@ -26,7 +26,7 @@ public class ChangeAttributeTypeRefactoring implements Refactoring {
 		this.classNameBefore = originalAttribute.getClassName();
 		this.classNameAfter = changedTypeAttribute.getClassName();
 		this.attributeReferences = attributeReferences;
-		this.relatedRefactorings = new LinkedHashSet<Refactoring>();
+		this.relatedRefactorings = new LinkedHashSet<>();
 	}
 
 	public void addRelatedRefactoring(Refactoring refactoring) {
@@ -128,33 +128,33 @@ public class ChangeAttributeTypeRefactoring implements Refactoring {
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOriginalAttribute().getLocationInfo().getFilePath(), getClassNameBefore()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOriginalAttribute().getLocationInfo().getFilePath(), getClassNameBefore()));
 		return pairs;
 	}
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getChangedTypeAttribute().getLocationInfo().getFilePath(), getClassNameAfter()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getChangedTypeAttribute().getLocationInfo().getFilePath(), getClassNameAfter()));
 		return pairs;
 	}
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(originalAttribute.getVariableDeclaration().codeRange()
-				.setDescription("original attribute declaration")
-				.setCodeElement(originalAttribute.getVariableDeclaration().toString()));
+			.setDescription("original attribute declaration")
+			.setCodeElement(originalAttribute.getVariableDeclaration().toString()));
 		return ranges;
 	}
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(changedTypeAttribute.getVariableDeclaration().codeRange()
-				.setDescription("changed-type attribute declaration")
-				.setCodeElement(changedTypeAttribute.getVariableDeclaration().toString()));
+			.setDescription("changed-type attribute declaration")
+			.setCodeElement(changedTypeAttribute.getVariableDeclaration().toString()));
 		return ranges;
 	}
 }

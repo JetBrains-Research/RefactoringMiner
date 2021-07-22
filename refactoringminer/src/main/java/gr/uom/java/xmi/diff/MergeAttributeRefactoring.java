@@ -56,13 +56,12 @@ public class MergeAttributeRefactoring implements Refactoring {
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(getName()).append("\t");
-		sb.append(getMergedVariables());
-		sb.append(" to ");
-		sb.append(newAttribute.getVariableDeclaration());
-		sb.append(" in class ").append(classNameAfter);
-		return sb.toString();
+		String sb = getName() + "\t" +
+			getMergedVariables() +
+			" to " +
+			newAttribute.getVariableDeclaration() +
+			" in class " + classNameAfter;
+		return sb;
 	}
 
 	@Override
@@ -106,36 +105,36 @@ public class MergeAttributeRefactoring implements Refactoring {
 	}
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		for(UMLAttribute mergedAttribute : this.mergedAttributes) {
-			pairs.add(new ImmutablePair<String, String>(mergedAttribute.getLocationInfo().getFilePath(), getClassNameBefore()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		for (UMLAttribute mergedAttribute : this.mergedAttributes) {
+			pairs.add(new ImmutablePair<>(mergedAttribute.getLocationInfo().getFilePath(), getClassNameBefore()));
 		}
 		return pairs;
 	}
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getNewAttribute().getLocationInfo().getFilePath(), getClassNameAfter()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getNewAttribute().getLocationInfo().getFilePath(), getClassNameAfter()));
 		return pairs;
 	}
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
-		for(VariableDeclaration mergedAttribute : getMergedVariables()) {
+		List<CodeRange> ranges = new ArrayList<>();
+		for (VariableDeclaration mergedAttribute : getMergedVariables()) {
 			ranges.add(mergedAttribute.codeRange()
-					.setDescription("merged attribute declaration")
-					.setCodeElement(mergedAttribute.toString()));
+				.setDescription("merged attribute declaration")
+				.setCodeElement(mergedAttribute.toString()));
 		}
 		return ranges;
 	}
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(newAttribute.getVariableDeclaration().codeRange()
-				.setDescription("new attribute declaration")
-				.setCodeElement(newAttribute.getVariableDeclaration().toString()));
+			.setDescription("new attribute declaration")
+			.setCodeElement(newAttribute.getVariableDeclaration().toString()));
 		return ranges;
 	}
 

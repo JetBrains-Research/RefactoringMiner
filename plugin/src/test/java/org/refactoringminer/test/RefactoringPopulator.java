@@ -1,11 +1,8 @@
 package org.refactoringminer.test;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.math.BigInteger;
@@ -63,7 +60,7 @@ public class RefactoringPopulator {
 	}
 
 	private static List<String> getDeletedCommits() {
-		List<String> deletedCommits = new ArrayList<String>();
+		List<String> deletedCommits = new ArrayList<>();
 		String file = System.getProperty("user.dir") + "/src-test/Data/deleted_commits.txt";
 		try (BufferedReader br = new BufferedReader(new FileReader(file))) {
 			String line;
@@ -71,8 +68,6 @@ public class RefactoringPopulator {
 				String sha1 = line.substring(line.lastIndexOf("/") + 1);
 				deletedCommits.add(sha1);
 			}
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -170,20 +165,16 @@ public class RefactoringPopulator {
 			for (String key : result.keySet()) {
 				System.out.println(getInitials(key) + "\t" + buildResultMessage(result.get(key)));
 			}
-		} catch (JsonParseException e) {
-			e.printStackTrace();
-		} catch (JsonMappingException e) {
-			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}
 
 	private static String getInitials(String str) {
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < str.length(); i++) {
 			String character = str.substring(i, i + 1);
-			if (character == character.toUpperCase())
+			if (character.equals(character.toUpperCase()))
 				sb.append(character);
 		}
 		return sb.toString();

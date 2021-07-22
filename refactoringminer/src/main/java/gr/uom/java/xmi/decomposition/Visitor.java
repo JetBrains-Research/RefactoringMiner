@@ -2,6 +2,7 @@ package gr.uom.java.xmi.decomposition;
 
 import org.eclipse.jdt.core.dom.*;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreeNode;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.LinkedHashMap;
@@ -13,29 +14,29 @@ import java.util.regex.Pattern;
 
 public class Visitor extends ASTVisitor {
 	public static final Pattern METHOD_INVOCATION_PATTERN = Pattern.compile("!(\\w|\\.)*@\\w*");
-	public static final Pattern METHOD_SIGNATURE_PATTERN = Pattern.compile("(public|protected|private|static|\\s) +[\\w\\<\\>\\[\\]]+\\s+(\\w+) *\\([^\\)]*\\) *(\\{?|[^;])");
+	public static final Pattern METHOD_SIGNATURE_PATTERN = Pattern.compile("(public|protected|private|static|\\s) +[\\w<>\\[\\]]+\\s+(\\w+) *\\([^)]*\\) *(\\{?|[^;])");
 	private final CompilationUnit cu;
 	private final String filePath;
-	private final List<String> variables = new ArrayList<String>();
-	private final List<String> types = new ArrayList<String>();
-	private final Map<String, List<OperationInvocation>> methodInvocationMap = new LinkedHashMap<String, List<OperationInvocation>>();
-	private final List<VariableDeclaration> variableDeclarations = new ArrayList<VariableDeclaration>();
-	private final List<AnonymousClassDeclarationObject> anonymousClassDeclarations = new ArrayList<AnonymousClassDeclarationObject>();
-	private final List<String> stringLiterals = new ArrayList<String>();
-	private final List<String> numberLiterals = new ArrayList<String>();
-	private final List<String> nullLiterals = new ArrayList<String>();
-	private final List<String> booleanLiterals = new ArrayList<String>();
-	private final List<String> typeLiterals = new ArrayList<String>();
-	private final Map<String, List<ObjectCreation>> creationMap = new LinkedHashMap<String, List<ObjectCreation>>();
-	private final List<String> infixExpressions = new ArrayList<String>();
-	private final List<String> infixOperators = new ArrayList<String>();
-	private final List<String> arrayAccesses = new ArrayList<String>();
-	private final List<String> prefixExpressions = new ArrayList<String>();
-	private final List<String> postfixExpressions = new ArrayList<String>();
-	private final List<String> arguments = new ArrayList<String>();
-	private final List<TernaryOperatorExpression> ternaryOperatorExpressions = new ArrayList<TernaryOperatorExpression>();
-	private final List<LambdaExpressionObject> lambdas = new ArrayList<LambdaExpressionObject>();
-	private final Set<ASTNode> builderPatternChains = new LinkedHashSet<ASTNode>();
+	private final List<String> variables = new ArrayList<>();
+	private final List<String> types = new ArrayList<>();
+	private final Map<String, List<OperationInvocation>> methodInvocationMap = new LinkedHashMap<>();
+	private final List<VariableDeclaration> variableDeclarations = new ArrayList<>();
+	private final List<AnonymousClassDeclarationObject> anonymousClassDeclarations = new ArrayList<>();
+	private final List<String> stringLiterals = new ArrayList<>();
+	private final List<String> numberLiterals = new ArrayList<>();
+	private final List<String> nullLiterals = new ArrayList<>();
+	private final List<String> booleanLiterals = new ArrayList<>();
+	private final List<String> typeLiterals = new ArrayList<>();
+	private final Map<String, List<ObjectCreation>> creationMap = new LinkedHashMap<>();
+	private final List<String> infixExpressions = new ArrayList<>();
+	private final List<String> infixOperators = new ArrayList<>();
+	private final List<String> arrayAccesses = new ArrayList<>();
+	private final List<String> prefixExpressions = new ArrayList<>();
+	private final List<String> postfixExpressions = new ArrayList<>();
+	private final List<String> arguments = new ArrayList<>();
+	private final List<TernaryOperatorExpression> ternaryOperatorExpressions = new ArrayList<>();
+	private final List<LambdaExpressionObject> lambdas = new ArrayList<>();
+	private final Set<ASTNode> builderPatternChains = new LinkedHashSet<>();
 	private final DefaultMutableTreeNode root = new DefaultMutableTreeNode();
 	private DefaultMutableTreeNode current = root;
 
@@ -103,7 +104,7 @@ public class Visitor extends ASTVisitor {
 			creationMap.get(nodeAsString).add(creation);
 		}
 		else {
-			List<ObjectCreation> list = new ArrayList<ObjectCreation>();
+			List<ObjectCreation> list = new ArrayList<>();
 			list.add(creation);
 			creationMap.put(nodeAsString, list);
 		}
@@ -114,7 +115,7 @@ public class Visitor extends ASTVisitor {
 				anonymousCreationMap.get(nodeAsString).add(creation);
 			}
 			else {
-				List<ObjectCreation> list = new ArrayList<ObjectCreation>();
+				List<ObjectCreation> list = new ArrayList<>();
 				list.add(creation);
 				anonymousCreationMap.put(nodeAsString, list);
 			}
@@ -129,7 +130,7 @@ public class Visitor extends ASTVisitor {
 			creationMap.get(nodeAsString).add(creation);
 		}
 		else {
-			List<ObjectCreation> list = new ArrayList<ObjectCreation>();
+			List<ObjectCreation> list = new ArrayList<>();
 			list.add(creation);
 			creationMap.put(nodeAsString, list);
 		}
@@ -140,7 +141,7 @@ public class Visitor extends ASTVisitor {
 				anonymousCreationMap.get(nodeAsString).add(creation);
 			}
 			else {
-				List<ObjectCreation> list = new ArrayList<ObjectCreation>();
+				List<ObjectCreation> list = new ArrayList<>();
 				list.add(creation);
 				anonymousCreationMap.put(nodeAsString, list);
 			}
@@ -231,53 +232,53 @@ public class Visitor extends ASTVisitor {
 	}
 
 	private DefaultMutableTreeNode deleteNode(AnonymousClassDeclaration childAnonymous) {
-		Enumeration enumeration = root.postorderEnumeration();
+		Enumeration<TreeNode> enumeration = root.postorderEnumeration();
 		DefaultMutableTreeNode childNode = findNode(childAnonymous);
-		
+
 		DefaultMutableTreeNode parentNode = root;
-		while(enumeration.hasMoreElements()) {
-			DefaultMutableTreeNode currentNode = (DefaultMutableTreeNode)enumeration.nextElement();
-			AnonymousClassDeclarationObject currentAnonymous = (AnonymousClassDeclarationObject)currentNode.getUserObject();
-			if(currentAnonymous != null && isParent(childAnonymous, currentAnonymous.getAstNode())) {
+		while (enumeration.hasMoreElements()) {
+			DefaultMutableTreeNode currentNode = (DefaultMutableTreeNode) enumeration.nextElement();
+			AnonymousClassDeclarationObject currentAnonymous = (AnonymousClassDeclarationObject) currentNode.getUserObject();
+			if (currentAnonymous != null && isParent(childAnonymous, currentAnonymous.getAstNode())) {
 				parentNode = currentNode;
 				break;
 			}
 		}
 		parentNode.remove(childNode);
-		AnonymousClassDeclarationObject childAnonymousObject = (AnonymousClassDeclarationObject)childNode.getUserObject();
+		AnonymousClassDeclarationObject childAnonymousObject = (AnonymousClassDeclarationObject) childNode.getUserObject();
 		childAnonymousObject.setAstNode(null);
 		return parentNode;
 	}
 
+	private DefaultMutableTreeNode findNode(AnonymousClassDeclaration anonymous) {
+		Enumeration<TreeNode> enumeration = root.postorderEnumeration();
+
+		while (enumeration.hasMoreElements()) {
+			DefaultMutableTreeNode currentNode = (DefaultMutableTreeNode) enumeration.nextElement();
+			AnonymousClassDeclarationObject currentAnonymous = (AnonymousClassDeclarationObject) currentNode.getUserObject();
+			if (currentAnonymous != null && currentAnonymous.getAstNode().equals(anonymous)) {
+				return currentNode;
+			}
+		}
+		return null;
+	}
+
 	private DefaultMutableTreeNode insertNode(AnonymousClassDeclaration childAnonymous) {
-		Enumeration enumeration = root.postorderEnumeration();
+		Enumeration<TreeNode> enumeration = root.postorderEnumeration();
 		AnonymousClassDeclarationObject anonymousObject = new AnonymousClassDeclarationObject(cu, filePath, childAnonymous);
 		DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(anonymousObject);
-		
+
 		DefaultMutableTreeNode parentNode = root;
-		while(enumeration.hasMoreElements()) {
-			DefaultMutableTreeNode currentNode = (DefaultMutableTreeNode)enumeration.nextElement();
-			AnonymousClassDeclarationObject currentAnonymous = (AnonymousClassDeclarationObject)currentNode.getUserObject();
-			if(currentAnonymous != null && isParent(childAnonymous, currentAnonymous.getAstNode())) {
+		while (enumeration.hasMoreElements()) {
+			DefaultMutableTreeNode currentNode = (DefaultMutableTreeNode) enumeration.nextElement();
+			AnonymousClassDeclarationObject currentAnonymous = (AnonymousClassDeclarationObject) currentNode.getUserObject();
+			if (currentAnonymous != null && isParent(childAnonymous, currentAnonymous.getAstNode())) {
 				parentNode = currentNode;
 				break;
 			}
 		}
 		parentNode.add(childNode);
 		return childNode;
-	}
-
-	private DefaultMutableTreeNode findNode(AnonymousClassDeclaration anonymous) {
-		Enumeration enumeration = root.postorderEnumeration();
-		
-		while(enumeration.hasMoreElements()) {
-			DefaultMutableTreeNode currentNode = (DefaultMutableTreeNode)enumeration.nextElement();
-			AnonymousClassDeclarationObject currentAnonymous = (AnonymousClassDeclarationObject)currentNode.getUserObject();
-			if(currentAnonymous != null && currentAnonymous.getAstNode().equals(anonymous)) {
-				return currentNode;
-			}
-		}
-		return null;
 	}
 
 	private boolean isParent(ASTNode child, ASTNode parent) {
@@ -456,18 +457,17 @@ public class Visitor extends ASTVisitor {
 	
 	public boolean visit(MethodInvocation node) {
 		List<Expression> arguments = node.arguments();
-		for(Expression argument : arguments) {
+		for (Expression argument : arguments) {
 			processArgument(argument);
 		}
-		String methodInvocation = null;
-		if(METHOD_INVOCATION_PATTERN.matcher(node.toString()).matches()) {
+		String methodInvocation;
+		if (METHOD_INVOCATION_PATTERN.matcher(node.toString()).matches()) {
 			methodInvocation = processMethodInvocation(node);
-		}
-		else {
+		} else {
 			methodInvocation = node.toString();
 		}
-		if(methodInvocationMap.isEmpty() && node.getExpression() instanceof MethodInvocation &&
-				!(node.getName().getIdentifier().equals("length") && node.arguments().size() == 0)) {
+		if (methodInvocationMap.isEmpty() && node.getExpression() instanceof MethodInvocation &&
+			!(node.getName().getIdentifier().equals("length") && node.arguments().size() == 0)) {
 			builderPatternChains.add(node);
 		}
 		boolean builderPatternChain = false;
@@ -490,7 +490,7 @@ public class Visitor extends ASTVisitor {
 			methodInvocationMap.get(methodInvocation).add(invocation);
 		}
 		else {
-			List<OperationInvocation> list = new ArrayList<OperationInvocation>();
+			List<OperationInvocation> list = new ArrayList<>();
 			list.add(invocation);
 			methodInvocationMap.put(methodInvocation, list);
 		}
@@ -501,7 +501,7 @@ public class Visitor extends ASTVisitor {
 				anonymousMethodInvocationMap.get(methodInvocation).add(invocation);
 			}
 			else {
-				List<OperationInvocation> list = new ArrayList<OperationInvocation>();
+				List<OperationInvocation> list = new ArrayList<>();
 				list.add(invocation);
 				anonymousMethodInvocationMap.put(methodInvocation, list);
 			}
@@ -553,7 +553,7 @@ public class Visitor extends ASTVisitor {
 			methodInvocationMap.get(nodeAsString).add(invocation);
 		}
 		else {
-			List<OperationInvocation> list = new ArrayList<OperationInvocation>();
+			List<OperationInvocation> list = new ArrayList<>();
 			list.add(invocation);
 			methodInvocationMap.put(nodeAsString, list);
 		}
@@ -564,7 +564,7 @@ public class Visitor extends ASTVisitor {
 				anonymousMethodInvocationMap.get(nodeAsString).add(invocation);
 			}
 			else {
-				List<OperationInvocation> list = new ArrayList<OperationInvocation>();
+				List<OperationInvocation> list = new ArrayList<>();
 				list.add(invocation);
 				anonymousMethodInvocationMap.put(nodeAsString, list);
 			}
@@ -583,7 +583,7 @@ public class Visitor extends ASTVisitor {
 			methodInvocationMap.get(nodeAsString).add(invocation);
 		}
 		else {
-			List<OperationInvocation> list = new ArrayList<OperationInvocation>();
+			List<OperationInvocation> list = new ArrayList<>();
 			list.add(invocation);
 			methodInvocationMap.put(nodeAsString, list);
 		}
@@ -594,7 +594,7 @@ public class Visitor extends ASTVisitor {
 				anonymousMethodInvocationMap.get(nodeAsString).add(invocation);
 			}
 			else {
-				List<OperationInvocation> list = new ArrayList<OperationInvocation>();
+				List<OperationInvocation> list = new ArrayList<>();
 				list.add(invocation);
 				anonymousMethodInvocationMap.put(nodeAsString, list);
 			}
@@ -613,7 +613,7 @@ public class Visitor extends ASTVisitor {
 			methodInvocationMap.get(nodeAsString).add(invocation);
 		}
 		else {
-			List<OperationInvocation> list = new ArrayList<OperationInvocation>();
+			List<OperationInvocation> list = new ArrayList<>();
 			list.add(invocation);
 			methodInvocationMap.put(nodeAsString, list);
 		}
@@ -624,7 +624,7 @@ public class Visitor extends ASTVisitor {
 				anonymousMethodInvocationMap.get(nodeAsString).add(invocation);
 			}
 			else {
-				List<OperationInvocation> list = new ArrayList<OperationInvocation>();
+				List<OperationInvocation> list = new ArrayList<>();
 				list.add(invocation);
 				anonymousMethodInvocationMap.put(nodeAsString, list);
 			}

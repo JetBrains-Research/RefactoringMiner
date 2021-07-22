@@ -42,25 +42,25 @@ public class EncapsulateAttributeRefactoring implements Refactoring {
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(attributeBefore.codeRange()
-				.setDescription("original attribute declaration")
-				.setCodeElement(attributeBefore.toString()));
+			.setDescription("original attribute declaration")
+			.setCodeElement(attributeBefore.toString()));
 		return ranges;
 	}
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(attributeAfter.codeRange()
-				.setDescription("encapsulated attribute declaration")
-				.setCodeElement(attributeAfter.toString()));
-		if(addedGetter != null) {
+			.setDescription("encapsulated attribute declaration")
+			.setCodeElement(attributeAfter.toString()));
+		if (addedGetter != null) {
 			ranges.add(addedGetter.codeRange()
-					.setDescription("added getter method")
-					.setCodeElement(addedGetter.toString()));
+				.setDescription("added getter method")
+				.setCodeElement(addedGetter.toString()));
 		}
-		if(addedSetter != null) {
+		if (addedSetter != null) {
 			ranges.add(addedSetter.codeRange()
 					.setDescription("added setter method")
 					.setCodeElement(addedSetter.toString()));
@@ -80,25 +80,24 @@ public class EncapsulateAttributeRefactoring implements Refactoring {
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getAttributeBefore().getLocationInfo().getFilePath(), getAttributeBefore().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getAttributeBefore().getLocationInfo().getFilePath(), getAttributeBefore().getClassName()));
 		return pairs;
 	}
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getAttributeAfter().getLocationInfo().getFilePath(), getAttributeAfter().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getAttributeAfter().getLocationInfo().getFilePath(), getAttributeAfter().getClassName()));
 		return pairs;
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(getName()).append("\t");
-		sb.append(attributeAfter);
-		sb.append(" from class ");
-		sb.append(attributeAfter.getClassName());
-		return sb.toString();
+		String sb = getName() + "\t" +
+			attributeAfter +
+			" from class " +
+			attributeAfter.getClassName();
+		return sb;
 	}
 
 	@Override

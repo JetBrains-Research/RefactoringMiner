@@ -97,7 +97,7 @@ public enum RefactoringType {
     private final String displayName;
     private final Pattern regex;
     private final int[] aggregateGroups;
-    public static RefactoringType[] ALL = {
+    public static final RefactoringType[] ALL = {
         RENAME_CLASS,
         MOVE_CLASS,
         MOVE_SOURCE_FOLDER,
@@ -107,7 +107,7 @@ public enum RefactoringType {
         MOVE_OPERATION,
         PULL_UP_OPERATION,
         PUSH_DOWN_OPERATION,
-		MOVE_ATTRIBUTE,
+        MOVE_ATTRIBUTE,
 		MOVE_RENAME_ATTRIBUTE,
 		REPLACE_ATTRIBUTE,
 		PULL_UP_ATTRIBUTE,

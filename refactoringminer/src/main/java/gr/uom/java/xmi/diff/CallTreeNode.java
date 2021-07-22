@@ -10,7 +10,7 @@ public class CallTreeNode {
 	private final UMLOperation invokedOperation;
 	private final OperationInvocation invocation;
 	private CallTreeNode parent;
-	private final List<CallTreeNode> children = new ArrayList<CallTreeNode>();
+	private final List<CallTreeNode> children = new ArrayList<>();
 
 	public CallTreeNode(CallTreeNode parent, UMLOperation originalOperation, UMLOperation invokedOperation,
 						OperationInvocation invocation) {
@@ -84,10 +84,9 @@ public class CallTreeNode {
 	}
 	
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(invokedOperation);
-		sb.append(" called from ");
-		sb.append(originalOperation);
-		return sb.toString();
+		String sb = invokedOperation +
+			" called from " +
+			originalOperation;
+		return sb;
 	}
 }

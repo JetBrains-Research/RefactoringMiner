@@ -34,8 +34,8 @@ public class InlineOperationRefactoring implements Refactoring {
         this.targetOperationBeforeInline = targetOperationBeforeInline;
         this.inlinedOperationInvocations = operationInvocations;
         this.replacements = bodyMapper.getReplacements();
-        this.inlinedCodeFragmentsFromInlinedOperation = new LinkedHashSet<AbstractCodeFragment>();
-        this.inlinedCodeFragmentsInTargetOperation = new LinkedHashSet<AbstractCodeFragment>();
+        this.inlinedCodeFragmentsFromInlinedOperation = new LinkedHashSet<>();
+        this.inlinedCodeFragmentsInTargetOperation = new LinkedHashSet<>();
         for (AbstractCodeMapping mapping : bodyMapper.getMappings()) {
             this.inlinedCodeFragmentsFromInlinedOperation.add(mapping.getFragment1());
             this.inlinedCodeFragmentsInTargetOperation.add(mapping.getFragment2());
@@ -144,39 +144,39 @@ public class InlineOperationRefactoring implements Refactoring {
 	 * @return the code range(s) of the invocation(s) to the inlined method inside the target method in the <b>parent</b> commit
 	 */
 	public Set<CodeRange> getInlinedOperationInvocationCodeRanges() {
-		Set<CodeRange> codeRanges = new LinkedHashSet<CodeRange>();
-		for(OperationInvocation invocation : inlinedOperationInvocations) {
-			codeRanges.add(invocation.codeRange());
-		}
-		return codeRanges;
-	}
+        Set<CodeRange> codeRanges = new LinkedHashSet<>();
+        for (OperationInvocation invocation : inlinedOperationInvocations) {
+            codeRanges.add(invocation.codeRange());
+        }
+        return codeRanges;
+    }
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getInlinedOperation().getLocationInfo().getFilePath(), getInlinedOperation().getClassName()));
-		pairs.add(new ImmutablePair<String, String>(getTargetOperationBeforeInline().getLocationInfo().getFilePath(), getTargetOperationBeforeInline().getClassName()));
-		return pairs;
-	}
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        pairs.add(new ImmutablePair<>(getInlinedOperation().getLocationInfo().getFilePath(), getInlinedOperation().getClassName()));
+        pairs.add(new ImmutablePair<>(getTargetOperationBeforeInline().getLocationInfo().getFilePath(), getTargetOperationBeforeInline().getClassName()));
+        return pairs;
+    }
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getTargetOperationAfterInline().getLocationInfo().getFilePath(), getTargetOperationAfterInline().getClassName()));
-		return pairs;
-	}
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        pairs.add(new ImmutablePair<>(getTargetOperationAfterInline().getLocationInfo().getFilePath(), getTargetOperationAfterInline().getClassName()));
+        return pairs;
+    }
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
-		ranges.add(getInlinedOperationCodeRange()
-				.setDescription("inlined method declaration")
-				.setCodeElement(inlinedOperation.toString()));
-		//ranges.add(getInlinedCodeRangeFromInlinedOperation().setDescription("inlined code from inlined method declaration"));
-		for(AbstractCodeFragment inlinedCodeFragment : inlinedCodeFragmentsFromInlinedOperation) {
-			ranges.add(inlinedCodeFragment.codeRange().setDescription("inlined code from inlined method declaration"));
-		}
-		ranges.add(getTargetOperationCodeRangeBeforeInline()
-				.setDescription("target method declaration before inline")
-				.setCodeElement(targetOperationBeforeInline.toString()));
+        List<CodeRange> ranges = new ArrayList<>();
+        ranges.add(getInlinedOperationCodeRange()
+            .setDescription("inlined method declaration")
+            .setCodeElement(inlinedOperation.toString()));
+        //ranges.add(getInlinedCodeRangeFromInlinedOperation().setDescription("inlined code from inlined method declaration"));
+        for (AbstractCodeFragment inlinedCodeFragment : inlinedCodeFragmentsFromInlinedOperation) {
+            ranges.add(inlinedCodeFragment.codeRange().setDescription("inlined code from inlined method declaration"));
+        }
+        ranges.add(getTargetOperationCodeRangeBeforeInline()
+            .setDescription("target method declaration before inline")
+            .setCodeElement(targetOperationBeforeInline.toString()));
 		for(OperationInvocation invocation : inlinedOperationInvocations) {
 			ranges.add(invocation.codeRange()
 					.setDescription("inlined method invocation")
@@ -195,13 +195,13 @@ public class InlineOperationRefactoring implements Refactoring {
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
-		ranges.add(getTargetOperationCodeRangeAfterInline()
-				.setDescription("target method declaration after inline")
-				.setCodeElement(targetOperationAfterInline.toString()));
-		for(AbstractCodeFragment inlinedCodeFragment : inlinedCodeFragmentsInTargetOperation) {
-			ranges.add(inlinedCodeFragment.codeRange().setDescription("inlined code in target method declaration"));
-		}
+        List<CodeRange> ranges = new ArrayList<>();
+        ranges.add(getTargetOperationCodeRangeAfterInline()
+            .setDescription("target method declaration after inline")
+            .setCodeElement(targetOperationAfterInline.toString()));
+        for (AbstractCodeFragment inlinedCodeFragment : inlinedCodeFragmentsInTargetOperation) {
+            ranges.add(inlinedCodeFragment.codeRange().setDescription("inlined code in target method declaration"));
+        }
 		/*
 		CodeRange inlinedCodeRangeInTargetOperation = getInlinedCodeRangeInTargetOperation();
 		ranges.add(inlinedCodeRangeInTargetOperation.setDescription("inlined code in target method declaration"));

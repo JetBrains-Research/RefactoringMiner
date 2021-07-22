@@ -73,8 +73,8 @@ public class RefactoringMiner {
 
 				@Override
 				public void onFinish(int refactoringsCount, int commitsCount, int errorCommitsCount) {
-					System.out.println(String.format("Total count: [Commits: %d, Errors: %d, Refactorings: %d]",
-							commitsCount, errorCommitsCount, refactoringsCount));
+					System.out.printf("Total count: [Commits: %d, Errors: %d, Refactorings: %d]%n",
+						commitsCount, errorCommitsCount, refactoringsCount);
 				}
 
 				@Override
@@ -117,8 +117,8 @@ public class RefactoringMiner {
 
 				@Override
 				public void onFinish(int refactoringsCount, int commitsCount, int errorCommitsCount) {
-					System.out.println(String.format("Total count: [Commits: %d, Errors: %d, Refactorings: %d]",
-							commitsCount, errorCommitsCount, refactoringsCount));
+					System.out.printf("Total count: [Commits: %d, Errors: %d, Refactorings: %d]%n",
+						commitsCount, errorCommitsCount, refactoringsCount);
 				}
 
 				@Override
@@ -157,8 +157,8 @@ public class RefactoringMiner {
 
 				@Override
 				public void onFinish(int refactoringsCount, int commitsCount, int errorCommitsCount) {
-					System.out.println(String.format("Total count: [Commits: %d, Errors: %d, Refactorings: %d]",
-							commitsCount, errorCommitsCount, refactoringsCount));
+					System.out.printf("Total count: [Commits: %d, Errors: %d, Refactorings: %d]%n",
+						commitsCount, errorCommitsCount, refactoringsCount);
 				}
 
 				@Override

@@ -10,26 +10,25 @@ import java.util.List;
 import java.util.Set;
 
 public class MoveAttributeRefactoring implements Refactoring {
-	protected UMLAttribute originalAttribute;
-	protected UMLAttribute movedAttribute;
+	protected final UMLAttribute originalAttribute;
+	protected final UMLAttribute movedAttribute;
 	private volatile int hashCode = 0;
-	
+
 	public MoveAttributeRefactoring(UMLAttribute originalAttribute, UMLAttribute movedAttribute) {
 		this.originalAttribute = originalAttribute;
 		this.movedAttribute = movedAttribute;
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(getName()).append("\t");
-		sb.append(getOriginalAttribute().toQualifiedString());
-		sb.append(" from class ");
-		sb.append(getSourceClassName());
-		sb.append(" to ");
-		sb.append(getMovedAttribute().toQualifiedString());
-		sb.append(" from class ");
-		sb.append(getTargetClassName());
-		return sb.toString();
+		String sb = getName() + "\t" +
+			getOriginalAttribute().toQualifiedString() +
+			" from class " +
+			getSourceClassName() +
+			" to " +
+			getMovedAttribute().toQualifiedString() +
+			" from class " +
+			getTargetClassName();
+		return sb;
 	}
 
 	public String getName() {
@@ -102,32 +101,32 @@ public class MoveAttributeRefactoring implements Refactoring {
 	}
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOriginalAttribute().getLocationInfo().getFilePath(), getOriginalAttribute().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOriginalAttribute().getLocationInfo().getFilePath(), getOriginalAttribute().getClassName()));
 		return pairs;
 	}
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getMovedAttribute().getLocationInfo().getFilePath(), getMovedAttribute().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getMovedAttribute().getLocationInfo().getFilePath(), getMovedAttribute().getClassName()));
 		return pairs;
 	}
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(originalAttribute.codeRange()
-				.setDescription("original attribute declaration")
-				.setCodeElement(originalAttribute.toString()));
+			.setDescription("original attribute declaration")
+			.setCodeElement(originalAttribute.toString()));
 		return ranges;
 	}
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(movedAttribute.codeRange()
-				.setDescription("moved attribute declaration")
-				.setCodeElement(movedAttribute.toString()));
+			.setDescription("moved attribute declaration")
+			.setCodeElement(movedAttribute.toString()));
 		return ranges;
 	}
 }

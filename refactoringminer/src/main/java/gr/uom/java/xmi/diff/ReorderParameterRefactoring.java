@@ -20,11 +20,11 @@ public class ReorderParameterRefactoring implements Refactoring {
 	public ReorderParameterRefactoring(UMLOperation operationBefore, UMLOperation operationAfter) {
 		this.operationBefore = operationBefore;
 		this.operationAfter = operationAfter;
-		this.parametersBefore = new ArrayList<VariableDeclaration>();
+		this.parametersBefore = new ArrayList<>();
 		for (UMLParameter parameter : operationBefore.getParametersWithoutReturnType()) {
 			parametersBefore.add(parameter.getVariableDeclaration());
 		}
-		this.parametersAfter = new ArrayList<VariableDeclaration>();
+		this.parametersAfter = new ArrayList<>();
 		for (UMLParameter parameter : operationAfter.getParametersWithoutReturnType()) {
 			parametersAfter.add(parameter.getVariableDeclaration());
 		}
@@ -48,29 +48,29 @@ public class ReorderParameterRefactoring implements Refactoring {
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
-		for(VariableDeclaration parameter : parametersBefore) {
+		List<CodeRange> ranges = new ArrayList<>();
+		for (VariableDeclaration parameter : parametersBefore) {
 			ranges.add(parameter.codeRange()
-					.setDescription("original parameter declaration")
-					.setCodeElement(parameter.toString()));
+				.setDescription("original parameter declaration")
+				.setCodeElement(parameter.toString()));
 		}
 		ranges.add(operationBefore.codeRange()
-				.setDescription("original method declaration")
-				.setCodeElement(operationBefore.toString()));
+			.setDescription("original method declaration")
+			.setCodeElement(operationBefore.toString()));
 		return ranges;
 	}
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
-		for(VariableDeclaration parameter : parametersAfter) {
+		List<CodeRange> ranges = new ArrayList<>();
+		for (VariableDeclaration parameter : parametersAfter) {
 			ranges.add(parameter.codeRange()
-					.setDescription("reordered parameter declaration")
-					.setCodeElement(parameter.toString()));
+				.setDescription("reordered parameter declaration")
+				.setCodeElement(parameter.toString()));
 		}
 		ranges.add(operationAfter.codeRange()
-				.setDescription("method declaration with reordered parameters")
-				.setCodeElement(operationAfter.toString()));
+			.setDescription("method declaration with reordered parameters")
+			.setCodeElement(operationAfter.toString()));
 		return ranges;
 	}
 
@@ -86,28 +86,27 @@ public class ReorderParameterRefactoring implements Refactoring {
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOperationBefore().getLocationInfo().getFilePath(), getOperationBefore().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOperationBefore().getLocationInfo().getFilePath(), getOperationBefore().getClassName()));
 		return pairs;
 	}
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOperationAfter().getLocationInfo().getFilePath(), getOperationAfter().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOperationAfter().getLocationInfo().getFilePath(), getOperationAfter().getClassName()));
 		return pairs;
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(getName()).append("\t");
-		sb.append(parametersBefore);
-		sb.append(" to ");
-		sb.append(parametersAfter);
-		sb.append(" in method ");
-		sb.append(operationAfter);
-		sb.append(" from class ").append(operationAfter.getClassName());
-		return sb.toString();
+		String sb = getName() + "\t" +
+			parametersBefore +
+			" to " +
+			parametersAfter +
+			" in method " +
+			operationAfter +
+			" from class " + operationAfter.getClassName();
+		return sb;
 	}
 
 	@Override

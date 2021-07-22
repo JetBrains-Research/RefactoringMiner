@@ -81,17 +81,15 @@ public class AstUtils {
 	}
 	
 	public static String normalizeTypeName(Type type, int extraDimensions, boolean varargs) {
-	    StringBuilder sb = new StringBuilder();
-//	    String rawTypeName = stripQualifiedTypeName(stripTypeParamsFromTypeName(type.toString()));
-	    String rawTypeName = stripTypeParamsFromTypeName(type.toString());
-        sb.append(rawTypeName);
-        for (int i = extraDimensions; i > 0; i--) {
-            sb.append("[]");
-        }
-        if (varargs) {
-            sb.append("[]");
-        }
-        return sb.toString();
+		StringBuilder sb = new StringBuilder();
+		//	    String rawTypeName = stripQualifiedTypeName(stripTypeParamsFromTypeName(type.toString()));
+		String rawTypeName = stripTypeParamsFromTypeName(type.toString());
+		sb.append(rawTypeName);
+		sb.append("[]".repeat(Math.max(0, extraDimensions)));
+		if (varargs) {
+			sb.append("[]");
+		}
+		return sb.toString();
 	}
 	
 	public static String stripTypeParamsFromTypeName(String typeNameWithGenerics) {

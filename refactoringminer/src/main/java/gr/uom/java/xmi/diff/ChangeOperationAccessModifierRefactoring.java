@@ -41,19 +41,19 @@ public class ChangeOperationAccessModifierRefactoring implements Refactoring {
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(operationBefore.codeRange()
-				.setDescription("original method declaration")
-				.setCodeElement(operationBefore.toString()));
+			.setDescription("original method declaration")
+			.setCodeElement(operationBefore.toString()));
 		return ranges;
 	}
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(operationAfter.codeRange()
-				.setDescription("method declaration with changed access modifier")
-				.setCodeElement(operationAfter.toString()));
+			.setDescription("method declaration with changed access modifier")
+			.setCodeElement(operationAfter.toString()));
 		return ranges;
 	}
 
@@ -69,28 +69,27 @@ public class ChangeOperationAccessModifierRefactoring implements Refactoring {
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOperationBefore().getLocationInfo().getFilePath(), getOperationBefore().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOperationBefore().getLocationInfo().getFilePath(), getOperationBefore().getClassName()));
 		return pairs;
 	}
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOperationAfter().getLocationInfo().getFilePath(), getOperationAfter().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOperationAfter().getLocationInfo().getFilePath(), getOperationAfter().getClassName()));
 		return pairs;
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(getName()).append("\t");
-		sb.append(originalAccessModifier);
-		sb.append(" to ");
-		sb.append(changedAccessModifier);
-		sb.append(" in method ");
-		sb.append(operationAfter);
-		sb.append(" from class ").append(operationAfter.getClassName());
-		return sb.toString();
+		String sb = getName() + "\t" +
+			originalAccessModifier +
+			" to " +
+			changedAccessModifier +
+			" in method " +
+			operationAfter +
+			" from class " + operationAfter.getClassName();
+		return sb;
 	}
 
 	@Override

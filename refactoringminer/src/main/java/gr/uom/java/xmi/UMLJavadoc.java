@@ -10,7 +10,7 @@ public class UMLJavadoc implements LocationInfoProvider {
 
     public UMLJavadoc(LocationInfo locationInfo) {
         this.locationInfo = locationInfo;
-        this.tags = new ArrayList<UMLTagElement>();
+        this.tags = new ArrayList<>();
     }
 
     public LocationInfo getLocationInfo() {

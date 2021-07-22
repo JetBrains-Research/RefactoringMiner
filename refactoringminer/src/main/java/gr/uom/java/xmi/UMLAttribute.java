@@ -28,8 +28,8 @@ public class UMLAttribute implements Comparable<UMLAttribute>, Serializable, Loc
 		this.locationInfo = locationInfo;
 		this.name = name;
 		this.type = type;
-		this.anonymousClassList = new ArrayList<UMLAnonymousClass>();
-		this.comments = new ArrayList<UMLComment>();
+		this.anonymousClassList = new ArrayList<>();
+		this.comments = new ArrayList<>();
 	}
 
 	public LocationInfo getLocationInfo() {
@@ -188,23 +188,21 @@ public class UMLAttribute implements Comparable<UMLAttribute>, Serializable, Loc
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(visibility);
-		sb.append(" ");
-		sb.append(name);
-		sb.append(" : ");
-		sb.append(type);
-		return sb.toString();
+		String sb = visibility +
+			" " +
+			name +
+			" : " +
+			type;
+		return sb;
 	}
 
 	public String toQualifiedString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(visibility);
-		sb.append(" ");
-		sb.append(name);
-		sb.append(" : ");
-		sb.append(type.toQualifiedString());
-		return sb.toString();
+		String sb = visibility +
+			" " +
+			name +
+			" : " +
+			type.toQualifiedString();
+		return sb;
 	}
 
 	public int compareTo(UMLAttribute attribute) {

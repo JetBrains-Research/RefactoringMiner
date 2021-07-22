@@ -54,13 +54,12 @@ public class RenameAttributeRefactoring implements Refactoring {
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(getName()).append("\t");
-		sb.append(originalAttribute.getVariableDeclaration());
-		sb.append(" to ");
-		sb.append(renamedAttribute.getVariableDeclaration());
-		sb.append(" in class ").append(classNameAfter);
-		return sb.toString();
+		String sb = getName() + "\t" +
+			originalAttribute.getVariableDeclaration() +
+			" to " +
+			renamedAttribute.getVariableDeclaration() +
+			" in class " + classNameAfter;
+		return sb;
 	}
 
 	@Override
@@ -109,32 +108,32 @@ public class RenameAttributeRefactoring implements Refactoring {
 	}
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOriginalAttribute().getLocationInfo().getFilePath(), getClassNameBefore()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOriginalAttribute().getLocationInfo().getFilePath(), getClassNameBefore()));
 		return pairs;
 	}
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getRenamedAttribute().getLocationInfo().getFilePath(), getClassNameAfter()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getRenamedAttribute().getLocationInfo().getFilePath(), getClassNameAfter()));
 		return pairs;
 	}
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(originalAttribute.getVariableDeclaration().codeRange()
-				.setDescription("original attribute declaration")
-				.setCodeElement(originalAttribute.getVariableDeclaration().toString()));
+			.setDescription("original attribute declaration")
+			.setCodeElement(originalAttribute.getVariableDeclaration().toString()));
 		return ranges;
 	}
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(renamedAttribute.getVariableDeclaration().codeRange()
-				.setDescription("renamed attribute declaration")
-				.setCodeElement(renamedAttribute.getVariableDeclaration().toString()));
+			.setDescription("renamed attribute declaration")
+			.setCodeElement(renamedAttribute.getVariableDeclaration().toString()));
 		return ranges;
 	}
 }

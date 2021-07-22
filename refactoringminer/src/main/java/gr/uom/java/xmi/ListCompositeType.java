@@ -1,11 +1,10 @@
 package gr.uom.java.xmi;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class ListCompositeType extends UMLType {
 	private final Kind kind;
-	private List<UMLType> types = new ArrayList<UMLType>();
+	private final List<UMLType> types;
 
 	@Override
 	public boolean equals(Object obj) {

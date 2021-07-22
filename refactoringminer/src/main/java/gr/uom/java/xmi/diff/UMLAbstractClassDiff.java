@@ -7,32 +7,31 @@ import gr.uom.java.xmi.decomposition.UMLOperationBodyMapper;
 import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringMinerTimedOutException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
 public abstract class UMLAbstractClassDiff {
-	protected List<UMLOperation> addedOperations;
-	protected List<UMLOperation> removedOperations;
-	protected List<UMLAttribute> addedAttributes;
-	protected List<UMLAttribute> removedAttributes;
-	protected List<UMLOperationBodyMapper> operationBodyMapperList;
-	protected List<UMLOperationDiff> operationDiffList;
-	protected List<UMLAttributeDiff> attributeDiffList;
-	protected List<Refactoring> refactorings;
-	protected UMLModelDiff modelDiff;
-	
+	protected final List<UMLOperation> addedOperations;
+	protected final List<UMLOperation> removedOperations;
+	protected final List<UMLAttribute> addedAttributes;
+	protected final List<UMLAttribute> removedAttributes;
+	protected final List<UMLOperationBodyMapper> operationBodyMapperList;
+	protected final List<UMLOperationDiff> operationDiffList;
+	protected final List<UMLAttributeDiff> attributeDiffList;
+	protected final List<Refactoring> refactorings;
+	protected final UMLModelDiff modelDiff;
+
 	public UMLAbstractClassDiff(UMLModelDiff modelDiff) {
-		this.addedOperations = new ArrayList<UMLOperation>();
-		this.removedOperations = new ArrayList<UMLOperation>();
-		this.addedAttributes = new ArrayList<UMLAttribute>();
-		this.removedAttributes = new ArrayList<UMLAttribute>();
-		this.operationBodyMapperList = new ArrayList<UMLOperationBodyMapper>();
-		this.operationDiffList = new ArrayList<UMLOperationDiff>();
-		this.attributeDiffList = new ArrayList<UMLAttributeDiff>();
-		this.refactorings = new ArrayList<Refactoring>();
-		this.modelDiff = modelDiff;		
+		this.addedOperations = new ArrayList<>();
+		this.removedOperations = new ArrayList<>();
+		this.addedAttributes = new ArrayList<>();
+		this.removedAttributes = new ArrayList<>();
+		this.operationBodyMapperList = new ArrayList<>();
+		this.operationDiffList = new ArrayList<>();
+		this.attributeDiffList = new ArrayList<>();
+		this.refactorings = new ArrayList<>();
+		this.modelDiff = modelDiff;
 	}
 
 	public List<UMLOperation> getAddedOperations() {
@@ -72,16 +71,16 @@ public abstract class UMLAbstractClassDiff {
 	protected boolean isPartOfMethodExtracted(UMLOperation removedOperation, UMLOperation addedOperation) {
 		List<OperationInvocation> removedOperationInvocations = removedOperation.getAllOperationInvocations();
 		List<OperationInvocation> addedOperationInvocations = addedOperation.getAllOperationInvocations();
-		Set<OperationInvocation> intersection = new LinkedHashSet<OperationInvocation>(removedOperationInvocations);
+		Set<OperationInvocation> intersection = new LinkedHashSet<>(removedOperationInvocations);
 		intersection.retainAll(addedOperationInvocations);
-		int numberOfInvocationsMissingFromRemovedOperation = new LinkedHashSet<OperationInvocation>(removedOperationInvocations).size() - intersection.size();
-		
-		Set<OperationInvocation> operationInvocationsInMethodsCalledByAddedOperation = new LinkedHashSet<OperationInvocation>();
-		for(OperationInvocation addedOperationInvocation : addedOperationInvocations) {
-			if(!intersection.contains(addedOperationInvocation)) {
-				for(UMLOperation operation : addedOperations) {
-					if(!operation.equals(addedOperation) && operation.getBody() != null) {
-						if(addedOperationInvocation.matchesOperation(operation, addedOperation, modelDiff)) {
+		int numberOfInvocationsMissingFromRemovedOperation = new LinkedHashSet<>(removedOperationInvocations).size() - intersection.size();
+
+		Set<OperationInvocation> operationInvocationsInMethodsCalledByAddedOperation = new LinkedHashSet<>();
+		for (OperationInvocation addedOperationInvocation : addedOperationInvocations) {
+			if (!intersection.contains(addedOperationInvocation)) {
+				for (UMLOperation operation : addedOperations) {
+					if (!operation.equals(addedOperation) && operation.getBody() != null) {
+						if (addedOperationInvocation.matchesOperation(operation, addedOperation, modelDiff)) {
 							//addedOperation calls another added method
 							operationInvocationsInMethodsCalledByAddedOperation.addAll(operation.getAllOperationInvocations());
 						}
@@ -89,37 +88,32 @@ public abstract class UMLAbstractClassDiff {
 				}
 			}
 		}
-		Set<OperationInvocation> newIntersection = new LinkedHashSet<OperationInvocation>(removedOperationInvocations);
+		Set<OperationInvocation> newIntersection = new LinkedHashSet<>(removedOperationInvocations);
 		newIntersection.retainAll(operationInvocationsInMethodsCalledByAddedOperation);
-		
-		Set<OperationInvocation> removedOperationInvocationsWithIntersectionsAndGetterInvocationsSubtracted = new LinkedHashSet<OperationInvocation>(removedOperationInvocations);
+
+		Set<OperationInvocation> removedOperationInvocationsWithIntersectionsAndGetterInvocationsSubtracted = new LinkedHashSet<>(removedOperationInvocations);
 		removedOperationInvocationsWithIntersectionsAndGetterInvocationsSubtracted.removeAll(intersection);
 		removedOperationInvocationsWithIntersectionsAndGetterInvocationsSubtracted.removeAll(newIntersection);
-		for(Iterator<OperationInvocation> operationInvocationIterator = removedOperationInvocationsWithIntersectionsAndGetterInvocationsSubtracted.iterator(); operationInvocationIterator.hasNext();) {
-			OperationInvocation invocation = operationInvocationIterator.next();
-			if(invocation.getMethodName().startsWith("get")) {
-				operationInvocationIterator.remove();
-			}
-		}
+		removedOperationInvocationsWithIntersectionsAndGetterInvocationsSubtracted.removeIf(invocation -> invocation.getMethodName().startsWith("get"));
 		int numberOfInvocationsOriginallyCalledByRemovedOperationFoundInOtherAddedOperations = newIntersection.size();
 		int numberOfInvocationsMissingFromRemovedOperationWithoutThoseFoundInOtherAddedOperations = numberOfInvocationsMissingFromRemovedOperation - numberOfInvocationsOriginallyCalledByRemovedOperationFoundInOtherAddedOperations;
 		return numberOfInvocationsOriginallyCalledByRemovedOperationFoundInOtherAddedOperations > numberOfInvocationsMissingFromRemovedOperationWithoutThoseFoundInOtherAddedOperations ||
-				numberOfInvocationsOriginallyCalledByRemovedOperationFoundInOtherAddedOperations > removedOperationInvocationsWithIntersectionsAndGetterInvocationsSubtracted.size();
+			numberOfInvocationsOriginallyCalledByRemovedOperationFoundInOtherAddedOperations > removedOperationInvocationsWithIntersectionsAndGetterInvocationsSubtracted.size();
 	}
 
 	protected boolean isPartOfMethodInlined(UMLOperation removedOperation, UMLOperation addedOperation) {
 		List<OperationInvocation> removedOperationInvocations = removedOperation.getAllOperationInvocations();
 		List<OperationInvocation> addedOperationInvocations = addedOperation.getAllOperationInvocations();
-		Set<OperationInvocation> intersection = new LinkedHashSet<OperationInvocation>(removedOperationInvocations);
+		Set<OperationInvocation> intersection = new LinkedHashSet<>(removedOperationInvocations);
 		intersection.retainAll(addedOperationInvocations);
-		int numberOfInvocationsMissingFromAddedOperation = new LinkedHashSet<OperationInvocation>(addedOperationInvocations).size() - intersection.size();
-		
-		Set<OperationInvocation> operationInvocationsInMethodsCalledByRemovedOperation = new LinkedHashSet<OperationInvocation>();
-		for(OperationInvocation removedOperationInvocation : removedOperationInvocations) {
-			if(!intersection.contains(removedOperationInvocation)) {
-				for(UMLOperation operation : removedOperations) {
-					if(!operation.equals(removedOperation) && operation.getBody() != null) {
-						if(removedOperationInvocation.matchesOperation(operation, removedOperation, modelDiff)) {
+		int numberOfInvocationsMissingFromAddedOperation = new LinkedHashSet<>(addedOperationInvocations).size() - intersection.size();
+
+		Set<OperationInvocation> operationInvocationsInMethodsCalledByRemovedOperation = new LinkedHashSet<>();
+		for (OperationInvocation removedOperationInvocation : removedOperationInvocations) {
+			if (!intersection.contains(removedOperationInvocation)) {
+				for (UMLOperation operation : removedOperations) {
+					if (!operation.equals(removedOperation) && operation.getBody() != null) {
+						if (removedOperationInvocation.matchesOperation(operation, removedOperation, modelDiff)) {
 							//removedOperation calls another removed method
 							operationInvocationsInMethodsCalledByRemovedOperation.addAll(operation.getAllOperationInvocations());
 						}
@@ -127,9 +121,9 @@ public abstract class UMLAbstractClassDiff {
 				}
 			}
 		}
-		Set<OperationInvocation> newIntersection = new LinkedHashSet<OperationInvocation>(addedOperationInvocations);
+		Set<OperationInvocation> newIntersection = new LinkedHashSet<>(addedOperationInvocations);
 		newIntersection.retainAll(operationInvocationsInMethodsCalledByRemovedOperation);
-		
+
 		int numberOfInvocationsCalledByAddedOperationFoundInOtherRemovedOperations = newIntersection.size();
 		int numberOfInvocationsMissingFromAddedOperationWithoutThoseFoundInOtherRemovedOperations = numberOfInvocationsMissingFromAddedOperation - numberOfInvocationsCalledByAddedOperationFoundInOtherRemovedOperations;
 		return numberOfInvocationsCalledByAddedOperationFoundInOtherRemovedOperations > numberOfInvocationsMissingFromAddedOperationWithoutThoseFoundInOtherRemovedOperations;

@@ -8,7 +8,7 @@ public class UMLEnumConstant extends UMLAttribute {
 
 	public UMLEnumConstant(String name, UMLType type, LocationInfo locationInfo) {
 		super(name, type, locationInfo);
-		this.arguments = new ArrayList<String>();
+		this.arguments = new ArrayList<>();
 	}
 
 	public void addArgument(String argument) {

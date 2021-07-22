@@ -87,17 +87,17 @@ public class UMLAttributeDiff {
 		this.removedAttribute = removedAttribute;
 		this.addedAttribute = addedAttribute;
 		this.operationBodyMapperList = operationBodyMapperList;
-		this.anonymousClassDiffList = new ArrayList<UMLAnonymousClassDiff>();
+		this.anonymousClassDiffList = new ArrayList<>();
 		this.visibilityChanged = false;
 		this.typeChanged = false;
 		this.renamed = false;
 		this.staticChanged = false;
 		this.finalChanged = false;
-		if(!removedAttribute.getName().equals(addedAttribute.getName()))
+		if (!removedAttribute.getName().equals(addedAttribute.getName()))
 			renamed = true;
-		if(!removedAttribute.getVisibility().equals(addedAttribute.getVisibility()))
+		if (!removedAttribute.getVisibility().equals(addedAttribute.getVisibility()))
 			visibilityChanged = true;
-		if(!removedAttribute.getType().equals(addedAttribute.getType()))
+		if (!removedAttribute.getType().equals(addedAttribute.getType()))
 			typeChanged = true;
 		else if(!removedAttribute.getType().equalsQualified(addedAttribute.getType()))
 			qualifiedTypeChanged = true;
@@ -142,62 +142,35 @@ public class UMLAttributeDiff {
 
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		if(!isEmpty())
+		if (!isEmpty())
 			sb.append("\t").append(removedAttribute).append("\n");
-		if(renamed)
-			sb.append("\t").append("renamed from " + removedAttribute.getName() + " to " + addedAttribute.getName()).append("\n");
-		if(visibilityChanged)
-			sb.append("\t").append("visibility changed from " + removedAttribute.getVisibility() + " to " + addedAttribute.getVisibility()).append("\n");
-		if(typeChanged || qualifiedTypeChanged)
-			sb.append("\t").append("type changed from " + removedAttribute.getType() + " to " + addedAttribute.getType()).append("\n");
-		if(staticChanged)
-			sb.append("\t").append("modifier changed from " + (removedAttribute.isStatic() ? "static" : "non-static") + " to " +
-					(addedAttribute.isStatic() ? "static" : "non-static")).append("\n");
-		if(finalChanged)
-			sb.append("\t").append("modifier changed from " + (removedAttribute.isFinal() ? "final" : "non-final") + " to " +
-					(addedAttribute.isFinal() ? "final" : "non-final")).append("\n");
+		if (renamed)
+			sb.append("\t").append("renamed from ").append(removedAttribute.getName()).append(" to ").append(addedAttribute.getName()).append("\n");
+		if (visibilityChanged)
+			sb.append("\t").append("visibility changed from ").append(removedAttribute.getVisibility()).append(" to ").append(addedAttribute.getVisibility()).append("\n");
+		if (typeChanged || qualifiedTypeChanged)
+			sb.append("\t").append("type changed from ").append(removedAttribute.getType()).append(" to ").append(addedAttribute.getType()).append("\n");
+		if (staticChanged)
+			sb.append("\t").append("modifier changed from ").append(removedAttribute.isStatic() ? "static" : "non-static").append(" to ").append(addedAttribute.isStatic() ? "static" : "non-static").append("\n");
+		if (finalChanged)
+			sb.append("\t").append("modifier changed from ").append(removedAttribute.isFinal() ? "final" : "non-final").append(" to ").append(addedAttribute.isFinal() ? "final" : "non-final").append("\n");
 		for(UMLAnnotation annotation : annotationListDiff.getRemovedAnnotations()) {
-			sb.append("\t").append("annotation " + annotation + " removed").append("\n");
+			sb.append("\t").append("annotation ").append(annotation).append(" removed").append("\n");
 		}
-		for(UMLAnnotation annotation : annotationListDiff.getAddedAnnotations()) {
-			sb.append("\t").append("annotation " + annotation + " added").append("\n");
+		for (UMLAnnotation annotation : annotationListDiff.getAddedAnnotations()) {
+			sb.append("\t").append("annotation ").append(annotation).append(" added").append("\n");
 		}
-		for(UMLAnnotationDiff annotationDiff : annotationListDiff.getAnnotationDiffList()) {
-			sb.append("\t").append("annotation " + annotationDiff.getRemovedAnnotation() + " modified to " + annotationDiff.getAddedAnnotation()).append("\n");
+		for (UMLAnnotationDiff annotationDiff : annotationListDiff.getAnnotationDiffList()) {
+			sb.append("\t").append("annotation ").append(annotationDiff.getRemovedAnnotation()).append(" modified to ").append(annotationDiff.getAddedAnnotation()).append("\n");
 		}
 		return sb.toString();
 	}
 
-	private Set<Refactoring> getAnnotationRefactorings() {
-		Set<Refactoring> refactorings = new LinkedHashSet<Refactoring>();
-		for(UMLAnnotation annotation : annotationListDiff.getAddedAnnotations()) {
-			AddAttributeAnnotationRefactoring refactoring = new AddAttributeAnnotationRefactoring(annotation, removedAttribute, addedAttribute);
-			refactorings.add(refactoring);
-		}
-		for(UMLAnnotation annotation : annotationListDiff.getRemovedAnnotations()) {
-			RemoveAttributeAnnotationRefactoring refactoring = new RemoveAttributeAnnotationRefactoring(annotation, removedAttribute, addedAttribute);
-			refactorings.add(refactoring);
-		}
-		for(UMLAnnotationDiff annotationDiff : annotationListDiff.getAnnotationDiffList()) {
-			ModifyAttributeAnnotationRefactoring refactoring = new ModifyAttributeAnnotationRefactoring(annotationDiff.getRemovedAnnotation(), annotationDiff.getAddedAnnotation(), removedAttribute, addedAttribute);
-			refactorings.add(refactoring);
-		}
-		return refactorings;
-	}
-
-	private Set<Refactoring> getAnonymousClassRefactorings() {
-		Set<Refactoring> refactorings = new LinkedHashSet<Refactoring>();
-		for(UMLAnonymousClassDiff anonymousClassDiff : anonymousClassDiffList) {
-			refactorings.addAll(anonymousClassDiff.getRefactorings());
-		}
-		return refactorings;
-	}
-
 	public Set<Refactoring> getRefactorings() {
-		Set<Refactoring> refactorings = new LinkedHashSet<Refactoring>();
-		if(changeTypeCondition()) {
+		Set<Refactoring> refactorings = new LinkedHashSet<>();
+		if (changeTypeCondition()) {
 			ChangeAttributeTypeRefactoring ref = new ChangeAttributeTypeRefactoring(removedAttribute, addedAttribute,
-					VariableReferenceExtractor.findReferences(removedAttribute.getVariableDeclaration(), addedAttribute.getVariableDeclaration(), operationBodyMapperList));
+				VariableReferenceExtractor.findReferences(removedAttribute.getVariableDeclaration(), addedAttribute.getVariableDeclaration(), operationBodyMapperList));
 			refactorings.add(ref);
 		}
 		refactorings.addAll(getModifierRefactorings());
@@ -206,18 +179,43 @@ public class UMLAttributeDiff {
 		return refactorings;
 	}
 
+	private Set<Refactoring> getAnnotationRefactorings() {
+		Set<Refactoring> refactorings = new LinkedHashSet<>();
+		for (UMLAnnotation annotation : annotationListDiff.getAddedAnnotations()) {
+			AddAttributeAnnotationRefactoring refactoring = new AddAttributeAnnotationRefactoring(annotation, removedAttribute, addedAttribute);
+			refactorings.add(refactoring);
+		}
+		for (UMLAnnotation annotation : annotationListDiff.getRemovedAnnotations()) {
+			RemoveAttributeAnnotationRefactoring refactoring = new RemoveAttributeAnnotationRefactoring(annotation, removedAttribute, addedAttribute);
+			refactorings.add(refactoring);
+		}
+		for (UMLAnnotationDiff annotationDiff : annotationListDiff.getAnnotationDiffList()) {
+			ModifyAttributeAnnotationRefactoring refactoring = new ModifyAttributeAnnotationRefactoring(annotationDiff.getRemovedAnnotation(), annotationDiff.getAddedAnnotation(), removedAttribute, addedAttribute);
+			refactorings.add(refactoring);
+		}
+		return refactorings;
+	}
+
+	private Set<Refactoring> getAnonymousClassRefactorings() {
+		Set<Refactoring> refactorings = new LinkedHashSet<>();
+		for (UMLAnonymousClassDiff anonymousClassDiff : anonymousClassDiffList) {
+			refactorings.addAll(anonymousClassDiff.getRefactorings());
+		}
+		return refactorings;
+	}
+
 	private Set<Refactoring> getModifierRefactorings() {
-		Set<Refactoring> refactorings = new LinkedHashSet<Refactoring>();
-		if(isVisibilityChanged()) {
+		Set<Refactoring> refactorings = new LinkedHashSet<>();
+		if (isVisibilityChanged()) {
 			ChangeAttributeAccessModifierRefactoring ref = new ChangeAttributeAccessModifierRefactoring(removedAttribute.getVisibility(), addedAttribute.getVisibility(), removedAttribute, addedAttribute);
 			refactorings.add(ref);
 		}
-		if(encapsulationCondition()) {
+		if (encapsulationCondition()) {
 			EncapsulateAttributeRefactoring ref = new EncapsulateAttributeRefactoring(removedAttribute, addedAttribute, addedGetter, addedSetter);
 			refactorings.add(ref);
 		}
-		if(finalChanged) {
-			if(addedAttribute.isFinal()) {
+		if (finalChanged) {
+			if (addedAttribute.isFinal()) {
 				AddAttributeModifierRefactoring ref = new AddAttributeModifierRefactoring("final", removedAttribute, addedAttribute);
 				refactorings.add(ref);
 			}
@@ -260,17 +258,17 @@ public class UMLAttributeDiff {
 	}
 	
 	public Set<Refactoring> getRefactorings(Set<CandidateAttributeRefactoring> set) {
-		Set<Refactoring> refactorings = new LinkedHashSet<Refactoring>();
+		Set<Refactoring> refactorings = new LinkedHashSet<>();
 		RenameAttributeRefactoring rename = null;
-		if(isRenamed()) {
+		if (isRenamed()) {
 			rename = new RenameAttributeRefactoring(removedAttribute, addedAttribute, set);
 			refactorings.add(rename);
 		}
-		if(changeTypeCondition()) {
+		if (changeTypeCondition()) {
 			ChangeAttributeTypeRefactoring ref = new ChangeAttributeTypeRefactoring(removedAttribute, addedAttribute,
-					VariableReferenceExtractor.findReferences(removedAttribute.getVariableDeclaration(), addedAttribute.getVariableDeclaration(), operationBodyMapperList));
+				VariableReferenceExtractor.findReferences(removedAttribute.getVariableDeclaration(), addedAttribute.getVariableDeclaration(), operationBodyMapperList));
 			refactorings.add(ref);
-			if(rename != null) {
+			if (rename != null) {
 				ref.addRelatedRefactoring(rename);
 			}
 		}

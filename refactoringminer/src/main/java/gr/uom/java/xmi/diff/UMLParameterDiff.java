@@ -84,36 +84,35 @@ public class UMLParameterDiff {
 
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		if(typeChanged || nameChanged || qualifiedTypeChanged)
-			sb.append("\t\t").append("parameter ").append(removedParameter).append(":").append("\n");
-		if(typeChanged || qualifiedTypeChanged)
-			sb.append("\t\t").append("type changed from " + removedParameter.getType() + " to " + addedParameter.getType()).append("\n");
-		if(nameChanged)
-			sb.append("\t\t").append("name changed from " + removedParameter.getName() + " to " + addedParameter.getName()).append("\n");
+		if (typeChanged || nameChanged || qualifiedTypeChanged)
+            sb.append("\t\t").append("parameter ").append(removedParameter).append(":").append("\n");
+        if (typeChanged || qualifiedTypeChanged)
+            sb.append("\t\t").append("type changed from ").append(removedParameter.getType()).append(" to ").append(addedParameter.getType()).append("\n");
+        if (nameChanged)
+            sb.append("\t\t").append("name changed from ").append(removedParameter.getName()).append(" to ").append(addedParameter.getName()).append("\n");
 		for(UMLAnnotation annotation : annotationListDiff.getRemovedAnnotations()) {
-			sb.append("\t").append("annotation " + annotation + " removed").append("\n");
-		}
+            sb.append("\t").append("annotation ").append(annotation).append(" removed").append("\n");
+        }
 		for(UMLAnnotation annotation : annotationListDiff.getAddedAnnotations()) {
-			sb.append("\t").append("annotation " + annotation + " added").append("\n");
-		}
+            sb.append("\t").append("annotation ").append(annotation).append(" added").append("\n");
+        }
 		for(UMLAnnotationDiff annotationDiff : annotationListDiff.getAnnotationDiffList()) {
-			sb.append("\t").append("annotation " + annotationDiff.getRemovedAnnotation() + " modified to " + annotationDiff.getAddedAnnotation()).append("\n");
-		}
+            sb.append("\t").append("annotation ").append(annotationDiff.getRemovedAnnotation()).append(" modified to ").append(annotationDiff.getAddedAnnotation()).append("\n");
+        }
 		return sb.toString();
 	}
 
 	public Set<Refactoring> getRefactorings() {
-		Set<Refactoring> refactorings = new LinkedHashSet<Refactoring>();
-		VariableDeclaration originalVariable = getRemovedParameter().getVariableDeclaration();
-		VariableDeclaration newVariable = getAddedParameter().getVariableDeclaration();
-		Set<AbstractCodeMapping> references = VariableReferenceExtractor.findReferences(originalVariable, newVariable, mappings);
-		RenameVariableRefactoring renameRefactoring = null;
-		if(isNameChanged()) {
-			if(!inconsistentReplacement(originalVariable, newVariable)) {
-				renameRefactoring = new RenameVariableRefactoring(originalVariable, newVariable, removedOperation, addedOperation, references);
-				refactorings.add(renameRefactoring);
-			}
-			else {
+        Set<Refactoring> refactorings = new LinkedHashSet<>();
+        VariableDeclaration originalVariable = getRemovedParameter().getVariableDeclaration();
+        VariableDeclaration newVariable = getAddedParameter().getVariableDeclaration();
+        Set<AbstractCodeMapping> references = VariableReferenceExtractor.findReferences(originalVariable, newVariable, mappings);
+        RenameVariableRefactoring renameRefactoring = null;
+        if (isNameChanged()) {
+            if (!inconsistentReplacement(originalVariable, newVariable)) {
+                renameRefactoring = new RenameVariableRefactoring(originalVariable, newVariable, removedOperation, addedOperation, references);
+                refactorings.add(renameRefactoring);
+            } else {
 				RemoveParameterRefactoring removeParameter = new RemoveParameterRefactoring(removedParameter, removedOperation, addedOperation);
 				AddParameterRefactoring addParameter = new AddParameterRefactoring(addedParameter, removedOperation, addedOperation);
 				refactorings.add(removeParameter);

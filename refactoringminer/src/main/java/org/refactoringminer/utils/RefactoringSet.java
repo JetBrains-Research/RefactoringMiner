@@ -53,11 +53,7 @@ public class RefactoringSet {
     public RefactoringSet add(RefactoringRelationship r) {
         this.refactorings.add(r);
         GroupKey groupKey = r.getGroupKey();
-        Set<RefactoringRelationship> group = refactoringGroups.get(groupKey);
-        if (group == null) {
-            group = new HashSet<>();
-            refactoringGroups.put(groupKey, group);
-        }
+        Set<RefactoringRelationship> group = refactoringGroups.computeIfAbsent(groupKey, k -> new HashSet<>());
         group.add(r);
         return this;
     }

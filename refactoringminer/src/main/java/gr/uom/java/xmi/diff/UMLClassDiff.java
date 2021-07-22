@@ -6,7 +6,6 @@ import gr.uom.java.xmi.UMLClass;
 import gr.uom.java.xmi.UMLOperation;
 import gr.uom.java.xmi.UMLType;
 import gr.uom.java.xmi.decomposition.UMLOperationBodyMapper;
-import gr.uom.java.xmi.decomposition.replacement.MethodInvocationReplacement;
 import org.refactoringminer.api.RefactoringMinerTimedOutException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -126,21 +125,21 @@ public class UMLClassDiff extends UMLClassBaseDiff {
 	    				double d1 = operation.getReturnParameter().getType().normalizedNameDistance(nextClass.getOperations().get(index).getReturnParameter().getType());
 	    				double d2 = operation.getReturnParameter().getType().normalizedNameDistance(nextClass.getOperations().get(lastIndex).getReturnParameter().getType());
 	    				if(d2 < d1) {
-	    					finalIndex = lastIndex;
-	    				}
-    				}
-    			}
-    			UMLOperationBodyMapper operationBodyMapper = new UMLOperationBodyMapper(operation, nextClass.getOperations().get(finalIndex), this);
-    			UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(operation, nextClass.getOperations().get(finalIndex), operationBodyMapper.getMappings());
-    			refactorings.addAll(operationSignatureDiff.getRefactorings());
-    			this.addOperationBodyMapper(operationBodyMapper);
-    		}
-    	}
-		List<UMLOperation> removedOperationsToBeRemoved = new ArrayList<UMLOperation>();
-		List<UMLOperation> addedOperationsToBeRemoved = new ArrayList<UMLOperation>();
-		for(UMLOperation removedOperation : removedOperations) {
-			for(UMLOperation addedOperation : addedOperations) {
-				if(removedOperation.equalsIgnoringVisibility(addedOperation)) {
+							finalIndex = lastIndex;
+						}
+					}
+				}
+				UMLOperationBodyMapper operationBodyMapper = new UMLOperationBodyMapper(operation, nextClass.getOperations().get(finalIndex), this);
+				UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(operation, nextClass.getOperations().get(finalIndex), operationBodyMapper.getMappings());
+				refactorings.addAll(operationSignatureDiff.getRefactorings());
+				this.addOperationBodyMapper(operationBodyMapper);
+			}
+		}
+		List<UMLOperation> removedOperationsToBeRemoved = new ArrayList<>();
+		List<UMLOperation> addedOperationsToBeRemoved = new ArrayList<>();
+		for (UMLOperation removedOperation : removedOperations) {
+			for (UMLOperation addedOperation : addedOperations) {
+				if (removedOperation.equalsIgnoringVisibility(addedOperation)) {
 					UMLOperationBodyMapper operationBodyMapper = new UMLOperationBodyMapper(removedOperation, addedOperation, this);
 					UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(removedOperation, addedOperation, operationBodyMapper.getMappings());
 					refactorings.addAll(operationSignatureDiff.getRefactorings());
@@ -154,7 +153,7 @@ public class UMLClassDiff extends UMLClassBaseDiff {
 					refactorings.addAll(operationSignatureDiff.getRefactorings());
 					if(!removedOperation.getName().equals(addedOperation.getName()) &&
 							!(removedOperation.isConstructor() && addedOperation.isConstructor())) {
-						RenameOperationRefactoring rename = new RenameOperationRefactoring(operationBodyMapper, new HashSet<MethodInvocationReplacement>());
+						RenameOperationRefactoring rename = new RenameOperationRefactoring(operationBodyMapper, new HashSet<>());
 						refactorings.add(rename);
 					}
 					this.addOperationBodyMapper(operationBodyMapper);

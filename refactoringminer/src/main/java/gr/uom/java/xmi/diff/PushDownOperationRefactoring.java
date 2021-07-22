@@ -22,10 +22,10 @@ public class PushDownOperationRefactoring extends MoveOperationRefactoring {
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
-		ranges.add(movedOperation.codeRange()
-				.setDescription("pushed down method declaration")
-				.setCodeElement(movedOperation.toString()));
-		return ranges;
-	}
+        List<CodeRange> ranges = new ArrayList<>();
+        ranges.add(movedOperation.codeRange()
+            .setDescription("pushed down method declaration")
+            .setCodeElement(movedOperation.toString()));
+        return ranges;
+    }
 }

@@ -33,7 +33,7 @@ public abstract class AbstractCodeMapping {
 		this.fragment2 = fragment2;
 		this.operation1 = operation1;
 		this.operation2 = operation2;
-		this.replacements = new LinkedHashSet<Replacement>();
+		this.replacements = new LinkedHashSet<>();
 	}
 
 	public AbstractCodeFragment getFragment1() {
@@ -154,8 +154,8 @@ public abstract class AbstractCodeMapping {
 	}
 
 	public Set<ReplacementType> getReplacementTypes() {
-		Set<ReplacementType> types = new LinkedHashSet<ReplacementType>();
-		for(Replacement replacement : replacements) {
+		Set<ReplacementType> types = new LinkedHashSet<>();
+		for (Replacement replacement : replacements) {
 			types.add(replacement.getType());
 		}
 		return types;
@@ -244,18 +244,17 @@ public abstract class AbstractCodeMapping {
 		if(argumentizedString.contains("=")) {
 			String beforeAssignment = argumentizedString.substring(0, argumentizedString.indexOf("="));
 			String[] tokens = beforeAssignment.split("\\s");
-			String variable = tokens[tokens.length-1];
-			String initializer = null;
-			if(argumentizedString.endsWith(";\n")) {
-				initializer = argumentizedString.substring(argumentizedString.indexOf("=")+1, argumentizedString.length()-2);
-			}
-			else {
+			String variable = tokens[tokens.length - 1];
+			String initializer;
+			if (argumentizedString.endsWith(";\n")) {
+				initializer = argumentizedString.substring(argumentizedString.indexOf("=") + 1, argumentizedString.length() - 2);
+			} else {
 				initializer = argumentizedString.substring(argumentizedString.indexOf("=") + 1);
 			}
-			for(Replacement replacement : getReplacements()) {
-				if(variable.endsWith(replacement.getAfter()) &&	initializer.equals(replacement.getBefore())) {
+			for (Replacement replacement : getReplacements()) {
+				if (variable.endsWith(replacement.getAfter()) && initializer.equals(replacement.getBefore())) {
 					List<VariableDeclaration> variableDeclarations = operation2.getVariableDeclarationsInScope(fragment2.getLocationInfo());
-					for(VariableDeclaration declaration : variableDeclarations) {
+					for (VariableDeclaration declaration : variableDeclarations) {
 						if(declaration.getVariableName().equals(variable)) {
 							ExtractVariableRefactoring ref = new ExtractVariableRefactoring(declaration, operation1, operation2);
 							processExtractVariableRefactoring(ref, refactorings);
@@ -310,18 +309,17 @@ public abstract class AbstractCodeMapping {
 		if(argumentizedString.contains("=")) {
 			String beforeAssignment = argumentizedString.substring(0, argumentizedString.indexOf("="));
 			String[] tokens = beforeAssignment.split("\\s");
-			String variable = tokens[tokens.length-1];
-			String initializer = null;
-			if(argumentizedString.endsWith(";\n")) {
-				initializer = argumentizedString.substring(argumentizedString.indexOf("=")+1, argumentizedString.length()-2);
-			}
-			else {
+			String variable = tokens[tokens.length - 1];
+			String initializer;
+			if (argumentizedString.endsWith(";\n")) {
+				initializer = argumentizedString.substring(argumentizedString.indexOf("=") + 1, argumentizedString.length() - 2);
+			} else {
 				initializer = argumentizedString.substring(argumentizedString.indexOf("=") + 1);
 			}
-			for(Replacement replacement : getReplacements()) {
-				if(variable.endsWith(replacement.getBefore()) && initializer.equals(replacement.getAfter())) {
+			for (Replacement replacement : getReplacements()) {
+				if (variable.endsWith(replacement.getBefore()) && initializer.equals(replacement.getAfter())) {
 					List<VariableDeclaration> variableDeclarations = operation1.getVariableDeclarationsInScope(fragment1.getLocationInfo());
-					for(VariableDeclaration declaration : variableDeclarations) {
+					for (VariableDeclaration declaration : variableDeclarations) {
 						if(declaration.getVariableName().equals(variable)) {
 							InlineVariableRefactoring ref = new InlineVariableRefactoring(declaration, operation1, operation2);
 							processInlineVariableRefactoring(ref, refactorings);
@@ -457,7 +455,7 @@ public abstract class AbstractCodeMapping {
 	}
 
 	public Set<Replacement> commonReplacements(AbstractCodeMapping other) {
-		Set<Replacement> intersection = new LinkedHashSet<Replacement>(this.replacements);
+		Set<Replacement> intersection = new LinkedHashSet<>(this.replacements);
 		intersection.retainAll(other.replacements);
 		return intersection;
 	}

@@ -109,39 +109,39 @@ public class ChangeReturnTypeRefactoring implements Refactoring {
 	}
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOperationBefore().getLocationInfo().getFilePath(), getOperationBefore().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOperationBefore().getLocationInfo().getFilePath(), getOperationBefore().getClassName()));
 		return pairs;
 	}
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOperationAfter().getLocationInfo().getFilePath(), getOperationAfter().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOperationAfter().getLocationInfo().getFilePath(), getOperationAfter().getClassName()));
 		return pairs;
 	}
 
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(originalType.codeRange()
-				.setDescription("original return type")
-				.setCodeElement(originalType.toString()));
+			.setDescription("original return type")
+			.setCodeElement(originalType.toString()));
 		ranges.add(operationBefore.codeRange()
-				.setDescription("original method declaration")
-				.setCodeElement(operationBefore.toString()));
+			.setDescription("original method declaration")
+			.setCodeElement(operationBefore.toString()));
 		return ranges;
 	}
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(changedType.codeRange()
-				.setDescription("changed return type")
-				.setCodeElement(changedType.toString()));
+			.setDescription("changed return type")
+			.setCodeElement(changedType.toString()));
 		ranges.add(operationAfter.codeRange()
-				.setDescription("method declaration with changed return type")
-				.setCodeElement(operationAfter.toString()));
+			.setDescription("method declaration with changed return type")
+			.setCodeElement(operationAfter.toString()));
 		return ranges;
 	}
 }

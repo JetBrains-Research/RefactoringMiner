@@ -39,10 +39,10 @@ import java.util.stream.StreamSupport;
 public class GitServiceImpl implements GitService {
 
 	private static final String REMOTE_REFS_PREFIX = "refs/remotes/origin/";
-	Logger logger = LoggerFactory.getLogger(GitServiceImpl.class);
+	final Logger logger = LoggerFactory.getLogger(GitServiceImpl.class);
 
-	DefaultCommitsFilter commitsFilter = new DefaultCommitsFilter();
-	
+	final DefaultCommitsFilter commitsFilter = new DefaultCommitsFilter();
+
 	@Override
 	public Repository cloneIfNotExists(String projectPath, String cloneUrl/*, String branch*/) throws Exception {
 		File folder = new File(projectPath);
@@ -50,8 +50,8 @@ public class GitServiceImpl implements GitService {
 		if (folder.exists()) {
 			RepositoryBuilder builder = new RepositoryBuilder();
 			repository = builder
-					.setGitDir(new File(folder, ".git"))
-					.readEnvironment()
+				.setGitDir(new File(folder, ".git"))
+				.readEnvironment()
 					.findGitDir()
 					.build();
 			
@@ -148,43 +148,17 @@ public class GitServiceImpl implements GitService {
 		}
 	}
 
-	private List<TrackingRefUpdate> fetch(Repository repository) throws Exception {
-        logger.info("Fetching changes of repository {}", repository.getDirectory().toString());
-        try (Git git = new Git(repository)) {
-    		FetchResult result = git.fetch().call();
-    		
-    		Collection<TrackingRefUpdate> updates = result.getTrackingRefUpdates();
-    		List<TrackingRefUpdate> remoteRefsChanges = new ArrayList<TrackingRefUpdate>();
-    		for (TrackingRefUpdate update : updates) {
-    			String refName = update.getLocalName();
-    			if (refName.startsWith(REMOTE_REFS_PREFIX)) {
-    				ObjectId newObjectId = update.getNewObjectId();
-    				logger.info("{} is now at {}", refName, newObjectId.getName());
-    				remoteRefsChanges.add(update);
-    			}
-    		}
-    		if (updates.isEmpty()) {
-    			logger.info("Nothing changed");
-    		}
-    		return remoteRefsChanges;
-        }
-	}
-
-	public RevWalk fetchAndCreateNewRevsWalk(Repository repository) throws Exception {
-		return this.fetchAndCreateNewRevsWalk(repository, null);
-	}
-
 	public RevWalk fetchAndCreateNewRevsWalk(Repository repository, String branch) throws Exception {
-		List<ObjectId> currentRemoteRefs = new ArrayList<ObjectId>(); 
+		List<ObjectId> currentRemoteRefs = new ArrayList<>();
 		for (Ref ref : repository.getRefDatabase().getRefs()) {
 			String refName = ref.getName();
 			if (refName.startsWith(REMOTE_REFS_PREFIX)) {
 				currentRemoteRefs.add(ref.getObjectId());
 			}
 		}
-		
+
 		List<TrackingRefUpdate> newRemoteRefs = this.fetch(repository);
-		
+
 		RevWalk walk = new RevWalk(repository);
 		for (TrackingRefUpdate newRef : newRemoteRefs) {
 			if (branch == null || newRef.getLocalName().endsWith("/" + branch)) {
@@ -198,12 +172,38 @@ public class GitServiceImpl implements GitService {
 		return walk;
 	}
 
+	public RevWalk fetchAndCreateNewRevsWalk(Repository repository) throws Exception {
+		return this.fetchAndCreateNewRevsWalk(repository, null);
+	}
+
+	private List<TrackingRefUpdate> fetch(Repository repository) throws Exception {
+		logger.info("Fetching changes of repository {}", repository.getDirectory().toString());
+		try (Git git = new Git(repository)) {
+			FetchResult result = git.fetch().call();
+
+			Collection<TrackingRefUpdate> updates = result.getTrackingRefUpdates();
+			List<TrackingRefUpdate> remoteRefsChanges = new ArrayList<>();
+			for (TrackingRefUpdate update : updates) {
+				String refName = update.getLocalName();
+				if (refName.startsWith(REMOTE_REFS_PREFIX)) {
+					ObjectId newObjectId = update.getNewObjectId();
+					logger.info("{} is now at {}", refName, newObjectId.getName());
+					remoteRefsChanges.add(update);
+				}
+			}
+			if (updates.isEmpty()) {
+				logger.info("Nothing changed");
+			}
+			return remoteRefsChanges;
+		}
+	}
+
 	public RevWalk createAllRevsWalk(Repository repository) throws Exception {
 		return this.createAllRevsWalk(repository, null);
 	}
 
 	public RevWalk createAllRevsWalk(Repository repository, String branch) throws Exception {
-		List<ObjectId> currentRemoteRefs = new ArrayList<ObjectId>(); 
+		List<ObjectId> currentRemoteRefs = new ArrayList<>();
 		for (Ref ref : repository.getRefDatabase().getRefs()) {
 			String refName = ref.getName();
 			if (refName.startsWith(REMOTE_REFS_PREFIX)) {
@@ -212,7 +212,7 @@ public class GitServiceImpl implements GitService {
 				}
 			}
 		}
-		
+
 		RevWalk walk = new RevWalk(repository);
 		for (ObjectId newRef : currentRemoteRefs) {
 			walk.markStart(walk.parseCommit(newRef));

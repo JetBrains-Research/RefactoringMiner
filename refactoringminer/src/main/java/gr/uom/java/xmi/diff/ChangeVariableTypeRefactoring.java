@@ -26,7 +26,7 @@ public class ChangeVariableTypeRefactoring implements Refactoring {
 		this.operationBefore = operationBefore;
 		this.operationAfter = operationAfter;
 		this.variableReferences = variableReferences;
-		this.relatedRefactorings = new LinkedHashSet<Refactoring>();
+		this.relatedRefactorings = new LinkedHashSet<>();
 	}
 
 	public void addRelatedRefactoring(Refactoring refactoring) {
@@ -121,38 +121,38 @@ public class ChangeVariableTypeRefactoring implements Refactoring {
 	}
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOperationBefore().getLocationInfo().getFilePath(), getOperationBefore().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOperationBefore().getLocationInfo().getFilePath(), getOperationBefore().getClassName()));
 		return pairs;
 	}
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOperationAfter().getLocationInfo().getFilePath(), getOperationAfter().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOperationAfter().getLocationInfo().getFilePath(), getOperationAfter().getClassName()));
 		return pairs;
 	}
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(originalVariable.codeRange()
-				.setDescription("original variable declaration")
-				.setCodeElement(originalVariable.toString()));
+			.setDescription("original variable declaration")
+			.setCodeElement(originalVariable.toString()));
 		ranges.add(operationBefore.codeRange()
-				.setDescription("original method declaration")
-				.setCodeElement(operationBefore.toString()));
+			.setDescription("original method declaration")
+			.setCodeElement(operationBefore.toString()));
 		return ranges;
 	}
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(changedTypeVariable.codeRange()
-				.setDescription("changed-type variable declaration")
-				.setCodeElement(changedTypeVariable.toString()));
+			.setDescription("changed-type variable declaration")
+			.setCodeElement(changedTypeVariable.toString()));
 		ranges.add(operationAfter.codeRange()
-				.setDescription("method declaration with changed variable type")
-				.setCodeElement(operationAfter.toString()));
+			.setDescription("method declaration with changed variable type")
+			.setCodeElement(operationAfter.toString()));
 		return ranges;
 	}
 }

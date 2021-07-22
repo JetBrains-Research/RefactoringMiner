@@ -74,43 +74,43 @@ public class RefactoringMinerHttpsServer {
 					params.setProtocols(engine.getEnabledProtocols());
 
 					// Set the SSL parameters
-					SSLParameters sslParameters = context.getSupportedSSLParameters();
-					params.setSSLParameters(sslParameters);
+                    SSLParameters sslParameters = context.getSupportedSSLParameters();
+                    params.setSSLParameters(sslParameters);
 
-				} catch (Exception ex) {
-					System.out.println("Failed to create HTTPS port");
-				}
-			}
-		});
-		
-		server.createContext("/RefactoringMiner", new MyHandler());
-		server.setExecutor(new ThreadPoolExecutor(4, 8, 60, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(100)));
-		server.start();
-		System.out.println(InetAddress.getLocalHost());
-	}
+                } catch (Exception ex) {
+                    System.out.println("Failed to create HTTPS port");
+                }
+            }
+        });
+
+        server.createContext("/RefactoringMiner", new MyHandler());
+        server.setExecutor(new ThreadPoolExecutor(4, 8, 60, TimeUnit.SECONDS, new ArrayBlockingQueue<>(100)));
+        server.start();
+        System.out.println(InetAddress.getLocalHost());
+    }
 
 	static class MyHandler implements HttpHandler {
 		@Override
 		public void handle(HttpExchange exchange) throws IOException {
-			printRequestInfo(exchange);
-			URI requestURI = exchange.getRequestURI();
-			String query = requestURI.getQuery();
-			Map<String, String> queryToMap = queryToMap(query);
+            printRequestInfo(exchange);
+            URI requestURI = exchange.getRequestURI();
+            String query = requestURI.getQuery();
+            Map<String, String> queryToMap = queryToMap(query);
 
-			String gitURL = queryToMap.get("gitURL");
-			String commitId = queryToMap.get("commitId");
-			int timeout = Integer.parseInt(queryToMap.get("timeout"));
-			List<Refactoring> detectedRefactorings = new ArrayList<Refactoring>();
+            String gitURL = queryToMap.get("gitURL");
+            String commitId = queryToMap.get("commitId");
+            int timeout = Integer.parseInt(queryToMap.get("timeout"));
+            List<Refactoring> detectedRefactorings = new ArrayList<>();
 
-			GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
-			miner.detectAtCommit(gitURL, commitId, new RefactoringHandler() {
-				@Override
-				public void handle(String commitId, List<Refactoring> refactorings) {
-					detectedRefactorings.addAll(refactorings);
-				}
-			}, timeout);
+            GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
+            miner.detectAtCommit(gitURL, commitId, new RefactoringHandler() {
+                @Override
+                public void handle(String commitId, List<Refactoring> refactorings) {
+                    detectedRefactorings.addAll(refactorings);
+                }
+            }, timeout);
 
-			String response = JSON(gitURL, commitId, detectedRefactorings);
+            String response = JSON(gitURL, commitId, detectedRefactorings);
 			System.out.println(response);
 			exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
 			exchange.sendResponseHeaders(200, response.length());

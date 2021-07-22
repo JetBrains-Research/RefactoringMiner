@@ -31,18 +31,17 @@ public class RenameOperationRefactoring implements Refactoring {
 	public RenameOperationRefactoring(UMLOperation originalOperation, UMLOperation renamedOperation) {
 		this.originalOperation = originalOperation;
 		this.renamedOperation = renamedOperation;
-		this.replacements = new HashSet<Replacement>();
-		this.callReferences = new HashSet<MethodInvocationReplacement>();
+		this.replacements = new HashSet<>();
+		this.callReferences = new HashSet<>();
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(getName()).append("\t");
-		sb.append(originalOperation);
-		sb.append(" renamed to ");
-		sb.append(renamedOperation);
-		sb.append(" in class ").append(getClassName());
-		return sb.toString();
+		String sb = getName() + "\t" +
+			originalOperation +
+			" renamed to " +
+			renamedOperation +
+			" in class " + getClassName();
+		return sb;
 	}
 
 	private String getClassName() {
@@ -106,32 +105,32 @@ public class RenameOperationRefactoring implements Refactoring {
 	}
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOriginalOperation().getLocationInfo().getFilePath(), getOriginalOperation().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOriginalOperation().getLocationInfo().getFilePath(), getOriginalOperation().getClassName()));
 		return pairs;
 	}
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getRenamedOperation().getLocationInfo().getFilePath(), getRenamedOperation().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getRenamedOperation().getLocationInfo().getFilePath(), getRenamedOperation().getClassName()));
 		return pairs;
 	}
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(originalOperation.codeRange()
-				.setDescription("original method declaration")
-				.setCodeElement(originalOperation.toString()));
+			.setDescription("original method declaration")
+			.setCodeElement(originalOperation.toString()));
 		return ranges;
 	}
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(renamedOperation.codeRange()
-				.setDescription("renamed method declaration")
-				.setCodeElement(renamedOperation.toString()));
+			.setDescription("renamed method declaration")
+			.setCodeElement(renamedOperation.toString()));
 		return ranges;
 	}
 

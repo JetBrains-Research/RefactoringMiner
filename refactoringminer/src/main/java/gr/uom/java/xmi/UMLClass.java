@@ -4,7 +4,6 @@ import gr.uom.java.xmi.diff.StringDistance;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.ListIterator;
 import java.util.Set;
 
 public class UMLClass extends UMLAbstractClass implements Comparable<UMLClass>, Serializable, LocationInfoProvider {
@@ -51,37 +50,36 @@ public class UMLClass extends UMLAbstractClass implements Comparable<UMLClass>, 
         		}
         	}
         	else {
-        		int index = -1;
-        		if(packageName.contains(".")) {
-        			String realPackageName = packageName.substring(0, packageName.lastIndexOf('.'));
-        			index = sourceFile.indexOf(realPackageName.replace('.', '/'));
-        		}
-        		else {
-        			index = sourceFile.indexOf(packageName);
-        		}
-        		if(index != -1) {
-        			this.sourceFolder = sourceFile.substring(0, index);
-        		}
-        	}
-        }
-        this.isAbstract = false;
-        this.isInterface = false;
-        this.topLevel = topLevel;
-        this.superclass = null;
-        this.implementedInterfaces = new ArrayList<UMLType>();
-        this.importedTypes = importedTypes;
-        this.typeParameters = new ArrayList<UMLTypeParameter>();
-        this.annotations = new ArrayList<UMLAnnotation>();
-        this.enumConstants = new ArrayList<UMLEnumConstant>();
-    }
+				int index;
+				if (packageName.contains(".")) {
+					String realPackageName = packageName.substring(0, packageName.lastIndexOf('.'));
+					index = sourceFile.indexOf(realPackageName.replace('.', '/'));
+				} else {
+					index = sourceFile.indexOf(packageName);
+				}
+				if (index != -1) {
+					this.sourceFolder = sourceFile.substring(0, index);
+				}
+			}
+		}
+		this.isAbstract = false;
+		this.isInterface = false;
+		this.topLevel = topLevel;
+		this.superclass = null;
+		this.implementedInterfaces = new ArrayList<>();
+		this.importedTypes = importedTypes;
+		this.typeParameters = new ArrayList<>();
+		this.annotations = new ArrayList<>();
+		this.enumConstants = new ArrayList<>();
+	}
 
     public List<UMLTypeParameter> getTypeParameters() {
 		return typeParameters;
 	}
 
     public List<String> getTypeParameterNames() {
-    	List<String> typeParameterNames = new ArrayList<String>();
-		for(UMLTypeParameter typeParameter : typeParameters) {
+		List<String> typeParameterNames = new ArrayList<>();
+		for (UMLTypeParameter typeParameter : typeParameters) {
 			typeParameterNames.add(typeParameter.getName());
 		}
 		return typeParameterNames;
@@ -196,53 +194,49 @@ public class UMLClass extends UMLAbstractClass implements Comparable<UMLClass>, 
 	}
 
     public UMLEnumConstant containsEnumConstant(UMLEnumConstant otherEnumConstant) {
-    	ListIterator<UMLEnumConstant> enumConstantIt = enumConstants.listIterator();
-    	while(enumConstantIt.hasNext()) {
-    		UMLEnumConstant enumConstant = enumConstantIt.next();
-    		if(enumConstant.equals(otherEnumConstant)) {
-    			return enumConstant;
-    		}
-    	}
-    	return null;
-    }
+		for (UMLEnumConstant enumConstant : enumConstants) {
+			if (enumConstant.equals(otherEnumConstant)) {
+				return enumConstant;
+			}
+		}
+		return null;
+	}
 
     public UMLOperation matchOperation(UMLOperation otherOperation) {
-    	ListIterator<UMLOperation> operationIt = operations.listIterator();
-    	while(operationIt.hasNext()) {
-    		UMLOperation operation = operationIt.next();
-    		if(operation.getName().equals(otherOperation.getName())) {
-    			if(operation.getParameters().size() == otherOperation.getParameters().size()) {
-    				boolean match = true;
-    				int i = 0;
-    				for(UMLParameter parameter : operation.getParameters()) {
-    					UMLParameter otherParameter = otherOperation.getParameters().get(i);
-    					String thisParameterType = parameter.getType().getClassType();
-    					String otherParameterType = otherParameter.getType().getClassType();
-    					int thisArrayDimension = parameter.getType().getArrayDimension();
-    					int otherArrayDimension = otherParameter.getType().getArrayDimension();
-    					String thisParameterTypeComparedString = null;
-    	    			if(thisParameterType.contains("."))
-    	    				thisParameterTypeComparedString = thisParameterType.substring(thisParameterType.lastIndexOf(".")+1);
-    	    			else
-    	    				thisParameterTypeComparedString = thisParameterType;
-    	    			String otherParameterTypeComparedString = null;
-    	    			if(otherParameterType.contains("."))
-    	    				otherParameterTypeComparedString = otherParameterType.substring(otherParameterType.lastIndexOf(".")+1);
-    	    			else
-    	    				otherParameterTypeComparedString = otherParameterType;
-    	    			if(!thisParameterTypeComparedString.equals(otherParameterTypeComparedString) || thisArrayDimension != otherArrayDimension) {
-    						match = false;
-    						break;
-    					}
-    					i++;
-    				}
-    				if(match)
-    					return operation;
-    			}
-    		}
-    	}
-    	return null;
-    }
+		for (UMLOperation operation : operations) {
+			if (operation.getName().equals(otherOperation.getName())) {
+				if (operation.getParameters().size() == otherOperation.getParameters().size()) {
+					boolean match = true;
+					int i = 0;
+					for (UMLParameter parameter : operation.getParameters()) {
+						UMLParameter otherParameter = otherOperation.getParameters().get(i);
+						String thisParameterType = parameter.getType().getClassType();
+						String otherParameterType = otherParameter.getType().getClassType();
+						int thisArrayDimension = parameter.getType().getArrayDimension();
+						int otherArrayDimension = otherParameter.getType().getArrayDimension();
+						String thisParameterTypeComparedString;
+						if (thisParameterType.contains("."))
+							thisParameterTypeComparedString = thisParameterType.substring(thisParameterType.lastIndexOf(".") + 1);
+						else
+							thisParameterTypeComparedString = thisParameterType;
+						String otherParameterTypeComparedString;
+						if (otherParameterType.contains("."))
+							otherParameterTypeComparedString = otherParameterType.substring(otherParameterType.lastIndexOf(".") + 1);
+						else
+							otherParameterTypeComparedString = otherParameterType;
+						if (!thisParameterTypeComparedString.equals(otherParameterTypeComparedString) || thisArrayDimension != otherArrayDimension) {
+							match = false;
+							break;
+						}
+						i++;
+					}
+					if (match)
+						return operation;
+				}
+			}
+		}
+		return null;
+	}
 
     public boolean hasSameNameAndKind(UMLClass umlClass) {
 		if (!this.name.equals(umlClass.name))

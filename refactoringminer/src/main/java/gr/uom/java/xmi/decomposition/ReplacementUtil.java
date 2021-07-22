@@ -99,7 +99,7 @@ public class ReplacementUtil {
         boolean replacementOccurred = false;
         for (String character : SPECIAL_CHARACTERS) {
             if (temp.contains(subString1 + character) && completeString2.contains(subString2 + character)) {
-                StringBuffer sb = new StringBuffer();
+                StringBuilder sb = new StringBuilder();
                 Pattern p1 = Pattern.compile(Pattern.quote(subString1 + character));
                 Matcher m1 = p1.matcher(temp);
                 Pattern p2 = Pattern.compile(Pattern.quote(subString2 + character));
@@ -121,17 +121,17 @@ public class ReplacementUtil {
 		if(!replacementOccurred && !UMLOperationBodyMapper.containsMethodSignatureOfAnonymousClass(completeString1) && !UMLOperationBodyMapper.containsMethodSignatureOfAnonymousClass(completeString2)) {
 			for(String character : SPECIAL_CHARACTERS) {
 				if(temp.contains(character + subString1) && completeString2.contains(character + subString2)) {
-					StringBuffer sb = new StringBuffer();
-					Pattern p1 = Pattern.compile(Pattern.quote(character + subString1));
-					Matcher m1 = p1.matcher(temp);
-					Pattern p2 = Pattern.compile(Pattern.quote(character + subString2));
-					Matcher m2 = p2.matcher(completeString2);
-					while(m1.find() && m2.find()) {
-						int end1 = m1.end();
-						int end2 = m2.end();
-						String characterAfterMatch1 = end1 == temp.length() ? "" : String.valueOf(temp.charAt(end1));
-						String characterAfterMatch2 = end2 == completeString2.length() ? "" : String.valueOf(completeString2.charAt(end2));
-						if(compatibleCharacterAfterMatch(characterAfterMatch1, characterAfterMatch2)) {
+                    StringBuilder sb = new StringBuilder();
+                    Pattern p1 = Pattern.compile(Pattern.quote(character + subString1));
+                    Matcher m1 = p1.matcher(temp);
+                    Pattern p2 = Pattern.compile(Pattern.quote(character + subString2));
+                    Matcher m2 = p2.matcher(completeString2);
+                    while (m1.find() && m2.find()) {
+                        int end1 = m1.end();
+                        int end2 = m2.end();
+                        String characterAfterMatch1 = end1 == temp.length() ? "" : String.valueOf(temp.charAt(end1));
+                        String characterAfterMatch2 = end2 == completeString2.length() ? "" : String.valueOf(completeString2.charAt(end2));
+                        if (compatibleCharacterAfterMatch(characterAfterMatch1, characterAfterMatch2)) {
 							m1.appendReplacement(sb, Matcher.quoteReplacement(character + subString2));
 							replacementOccurred = true;
 						}

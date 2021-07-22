@@ -34,19 +34,19 @@ public class RemoveClassModifierRefactoring implements Refactoring {
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(classBefore.codeRange()
-				.setDescription("original class declaration")
-				.setCodeElement(classBefore.toString()));
+			.setDescription("original class declaration")
+			.setCodeElement(classBefore.toString()));
 		return ranges;
 	}
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(classAfter.codeRange()
-				.setDescription("class declaration with removed modifier")
-				.setCodeElement(classAfter.toString()));
+			.setDescription("class declaration with removed modifier")
+			.setCodeElement(classAfter.toString()));
 		return ranges;
 	}
 
@@ -62,25 +62,24 @@ public class RemoveClassModifierRefactoring implements Refactoring {
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getClassBefore().getLocationInfo().getFilePath(), getClassBefore().getName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getClassBefore().getLocationInfo().getFilePath(), getClassBefore().getName()));
 		return pairs;
 	}
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getClassAfter().getLocationInfo().getFilePath(), getClassAfter().getName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getClassAfter().getLocationInfo().getFilePath(), getClassAfter().getName()));
 		return pairs;
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(getName()).append("\t");
-		sb.append(modifier);
-		sb.append(" in class ");
-		sb.append(classBefore.getName());
-		return sb.toString();
+		String sb = getName() + "\t" +
+			modifier +
+			" in class " +
+			classBefore.getName();
+		return sb;
 	}
 
 	@Override

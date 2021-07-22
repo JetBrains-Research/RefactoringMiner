@@ -60,15 +60,14 @@ public class CandidateMergeVariableRefactoring {
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append("Merge Attribute").append("\t");
-		sb.append(mergedVariables);
-		sb.append(" to ");
-		sb.append(newVariable);
-		sb.append(" in method ");
-		sb.append(operationAfter);
-		sb.append(" from class ").append(operationAfter.getClassName());
-		return sb.toString();
+		String sb = "Merge Attribute" + "\t" +
+			mergedVariables +
+			" to " +
+			newVariable +
+			" in method " +
+			operationAfter +
+			" from class " + operationAfter.getClassName();
+		return sb;
 	}
 
 	@Override

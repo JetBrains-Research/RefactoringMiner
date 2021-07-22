@@ -11,8 +11,8 @@ import java.util.Map;
 import java.util.Set;
 
 public class MoveSourceFolderRefactoring implements Refactoring {
-    private final List<MovedClassToAnotherSourceFolder> movedClassesToAnotherSourceFolder = new ArrayList<MovedClassToAnotherSourceFolder>();
-    private final Map<String, String> identicalFilePaths = new HashMap<String, String>();
+    private final List<MovedClassToAnotherSourceFolder> movedClassesToAnotherSourceFolder = new ArrayList<>();
+    private final Map<String, String> identicalFilePaths = new HashMap<>();
     private final RenamePattern pattern;
 
     public MoveSourceFolderRefactoring(RenamePattern pattern) {
@@ -64,40 +64,40 @@ public class MoveSourceFolderRefactoring implements Refactoring {
 	}
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		for(MovedClassToAnotherSourceFolder ref : movedClassesToAnotherSourceFolder) {
-			pairs.add(new ImmutablePair<String, String>(ref.getOriginalClass().getLocationInfo().getFilePath(), ref.getOriginalClassName()));
-		}
-		return pairs;
-	}
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        for (MovedClassToAnotherSourceFolder ref : movedClassesToAnotherSourceFolder) {
+            pairs.add(new ImmutablePair<>(ref.getOriginalClass().getLocationInfo().getFilePath(), ref.getOriginalClassName()));
+        }
+        return pairs;
+    }
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		for(MovedClassToAnotherSourceFolder ref : movedClassesToAnotherSourceFolder) {
-			pairs.add(new ImmutablePair<String, String>(ref.getMovedClass().getLocationInfo().getFilePath(), ref.getMovedClassName()));
-		}
-		return pairs;
-	}
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        for (MovedClassToAnotherSourceFolder ref : movedClassesToAnotherSourceFolder) {
+            pairs.add(new ImmutablePair<>(ref.getMovedClass().getLocationInfo().getFilePath(), ref.getMovedClassName()));
+        }
+        return pairs;
+    }
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
-		for(MovedClassToAnotherSourceFolder ref : movedClassesToAnotherSourceFolder) {
-			ranges.add(ref.getOriginalClass().codeRange()
-					.setDescription("original type declaration")
-					.setCodeElement(ref.getOriginalClass().getName()));
-		}
-		return ranges;
-	}
+        List<CodeRange> ranges = new ArrayList<>();
+        for (MovedClassToAnotherSourceFolder ref : movedClassesToAnotherSourceFolder) {
+            ranges.add(ref.getOriginalClass().codeRange()
+                .setDescription("original type declaration")
+                .setCodeElement(ref.getOriginalClass().getName()));
+        }
+        return ranges;
+    }
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
-		for(MovedClassToAnotherSourceFolder ref : movedClassesToAnotherSourceFolder) {
-			ranges.add(ref.getMovedClass().codeRange()
-					.setDescription("moved type declaration")
-					.setCodeElement(ref.getMovedClass().getName()));
-		}
-		return ranges;
-	}
+        List<CodeRange> ranges = new ArrayList<>();
+        for (MovedClassToAnotherSourceFolder ref : movedClassesToAnotherSourceFolder) {
+            ranges.add(ref.getMovedClass().codeRange()
+                .setDescription("moved type declaration")
+                .setCodeElement(ref.getMovedClass().getName()));
+        }
+        return ranges;
+    }
 }

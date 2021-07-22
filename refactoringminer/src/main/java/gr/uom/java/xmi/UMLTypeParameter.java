@@ -10,8 +10,8 @@ public class UMLTypeParameter {
 
 	public UMLTypeParameter(String name) {
 		this.name = name;
-		this.typeBounds = new ArrayList<UMLType>();
-		this.annotations = new ArrayList<UMLAnnotation>();
+		this.typeBounds = new ArrayList<>();
+		this.annotations = new ArrayList<>();
 	}
 
 	public String getName() {
@@ -51,10 +51,9 @@ public class UMLTypeParameter {
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(name);
-		sb.append(typeBoundsToString());
-		return sb.toString();
+		String sb = name +
+			typeBoundsToString();
+		return sb;
 	}
 
 	@Override

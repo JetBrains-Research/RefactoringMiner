@@ -18,7 +18,7 @@ public class OperationBody {
 
 	public OperationBody(CompilationUnit cu, String filePath, Block methodBody) {
 		this.compositeStatement = new CompositeStatementObject(cu, filePath, methodBody, 0, CodeElementType.BLOCK);
-		this.activeVariableDeclarations = new HashSet<VariableDeclaration>();
+		this.activeVariableDeclarations = new HashSet<>();
 		List<Statement> statements = methodBody.statements();
 		for (Statement statement : statements) {
 			processStatement(cu, filePath, compositeStatement, statement);
@@ -44,33 +44,33 @@ public class OperationBody {
 		return containsAssertion;
 	}
 
-	public List<AnonymousClassDeclarationObject> getAllAnonymousClassDeclarations() {
-		return new ArrayList<AnonymousClassDeclarationObject>(compositeStatement.getAllAnonymousClassDeclarations());
-	}
-
 	public List<OperationInvocation> getAllOperationInvocations() {
-		List<OperationInvocation> invocations = new ArrayList<OperationInvocation>();
+		List<OperationInvocation> invocations = new ArrayList<>();
 		Map<String, List<OperationInvocation>> invocationMap = compositeStatement.getAllMethodInvocations();
-		for(String key : invocationMap.keySet()) {
+		for (String key : invocationMap.keySet()) {
 			invocations.addAll(invocationMap.get(key));
 		}
 		return invocations;
 	}
 
+	public List<AnonymousClassDeclarationObject> getAllAnonymousClassDeclarations() {
+		return new ArrayList<>(compositeStatement.getAllAnonymousClassDeclarations());
+	}
+
 	public List<LambdaExpressionObject> getAllLambdas() {
-		return new ArrayList<LambdaExpressionObject>(compositeStatement.getAllLambdas());
+		return new ArrayList<>(compositeStatement.getAllLambdas());
 	}
 
 	public List<String> getAllVariables() {
-		return new ArrayList<String>(compositeStatement.getAllVariables());
+		return new ArrayList<>(compositeStatement.getAllVariables());
 	}
 
 	public List<VariableDeclaration> getAllVariableDeclarations() {
-		return new ArrayList<VariableDeclaration>(compositeStatement.getAllVariableDeclarations());
+		return new ArrayList<>(compositeStatement.getAllVariableDeclarations());
 	}
 
 	public List<VariableDeclaration> getVariableDeclarationsInScope(LocationInfo location) {
-		return new ArrayList<VariableDeclaration>(compositeStatement.getVariableDeclarationsInScope(location));
+		return new ArrayList<>(compositeStatement.getVariableDeclarationsInScope(location));
 	}
 
 	public VariableDeclaration getVariableDeclaration(String variableName) {

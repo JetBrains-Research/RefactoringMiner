@@ -12,7 +12,7 @@ public class TryStatementObject extends CompositeStatementObject {
 
     public TryStatementObject(CompilationUnit cu, String filePath, Statement statement, int depth) {
         super(cu, filePath, statement, depth, CodeElementType.TRY_STATEMENT);
-        this.catchClauses = new ArrayList<CompositeStatementObject>();
+        this.catchClauses = new ArrayList<>();
     }
 
     public void addCatchClause(CompositeStatementObject catchClause) {

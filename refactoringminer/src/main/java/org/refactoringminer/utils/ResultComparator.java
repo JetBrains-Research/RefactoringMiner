@@ -21,10 +21,10 @@ import static org.refactoringminer.utils.RefactoringRelationship.parentOf;
 
 public class ResultComparator {
 
-    Set<String> groupIds = new LinkedHashSet<>();
-    Map<String, RefactoringSet> expectedMap = new LinkedHashMap<>();
-    Map<String, RefactoringSet> notExpectedMap = new LinkedHashMap<>();
-    Map<String, RefactoringSet> resultMap = new HashMap<>();
+    final Set<String> groupIds = new LinkedHashSet<>();
+    final Map<String, RefactoringSet> expectedMap = new LinkedHashMap<>();
+    final Map<String, RefactoringSet> notExpectedMap = new LinkedHashMap<>();
+    final Map<String, RefactoringSet> resultMap = new HashMap<>();
 
     private boolean groupRefactorings;
     private boolean ignoreMethodParams;
@@ -77,7 +77,7 @@ public class ResultComparator {
                 int fpRt = r.getFPCount(refType);
                 int fnRt = r.getFNCount(refType);
                 if (tpRt > 0 || fpRt > 0 || fnRt > 0) {
-                    out.println(String.format("%-7s" + getResultLine(tpRt, fpRt, fnRt), refType.getAbbreviation()));
+                    out.printf("%-7s" + getResultLine(tpRt, fpRt, fnRt) + "%n", refType.getAbbreviation());
                 }
             }
             out.println();
@@ -112,9 +112,7 @@ public class ResultComparator {
                         }
                     }
                 }
-                for (Object r : expectedRefactorings) {
-                    falseNegatives.add(r);
-                }
+                falseNegatives.addAll(expectedRefactorings);
             }
         }
         return new CompareResult(truePositives, falsePositives, falseNegatives);
@@ -147,10 +145,9 @@ public class ResultComparator {
         EnumSet<RefactoringType> ignore = EnumSet.complementOf(refTypesToConsider);
         boolean headerPrinted = false;
         for (RefactoringSet expected : expectedMap.values()) {
-            Set<RefactoringRelationship> all = new HashSet<>();
             Set<RefactoringRelationship> expectedRefactorings = expected.ignoring(ignore).ignoringMethodParameters(ignoreMethodParams).getRefactorings();
             Set<RefactoringRelationship> expectedUnfiltered = expected.getRefactorings();
-            all.addAll(expectedRefactorings); //
+            Set<RefactoringRelationship> all = new HashSet<>(expectedRefactorings); //
 
             StringBuilder header = new StringBuilder("Ref Type\tEntity before\tEntity after");
             for (String groupId : groupIds) {
@@ -167,8 +164,7 @@ public class ResultComparator {
             }
             if (!all.isEmpty()) {
                 out.println(getProjectRevisionId(expected.getProject(), expected.getRevision()));
-                ArrayList<RefactoringRelationship> allList = new ArrayList<>();
-                allList.addAll(all);
+                ArrayList<RefactoringRelationship> allList = new ArrayList<>(all);
                 Collections.sort(allList);
                 for (RefactoringRelationship r : allList) {
                     out.print(r.toString());
@@ -181,23 +177,23 @@ public class ResultComparator {
                             int found = actualRefactorings.contains(r) ? 1 : 0;
                             String label = labels[correct + found];
                             out.print(label);
-                            if (label == "FP" && isPullUpToExtractedSupertype(r, expectedUnfiltered)) {
+                            if (label.equals("FP") && isPullUpToExtractedSupertype(r, expectedUnfiltered)) {
                                 out.print("<ES>");
                             }
-                            if (label == "FP" && isMoveToRenamedType(r, expectedUnfiltered)) {
+                            if (label.equals("FP") && isMoveToRenamedType(r, expectedUnfiltered)) {
                                 out.print("<RT>");
                             }
-                            if (label == "FP" && isMoveToMovedType(r, expectedUnfiltered)) {
+                            if (label.equals("FP") && isMoveToMovedType(r, expectedUnfiltered)) {
                                 out.print("<MT>");
                             }
-                            if (label == "FP" && (r.getRefactoringType() == RefactoringType.MOVE_ATTRIBUTE || r.getRefactoringType() == RefactoringType.MOVE_OPERATION)) {
+                            if (label.equals("FP") && (r.getRefactoringType() == RefactoringType.MOVE_ATTRIBUTE || r.getRefactoringType() == RefactoringType.MOVE_OPERATION)) {
                                 if (expectedUnfiltered.contains(new RefactoringRelationship(RefactoringType.EXTRACT_SUPERCLASS, parentOf(r.getEntityBefore()), parentOf(r.getEntityAfter())))) {
                                     out.print("<ES>");
                                 }
                                 if (expectedUnfiltered.contains(new RefactoringRelationship(RefactoringType.EXTRACT_INTERFACE, parentOf(r.getEntityBefore()), parentOf(r.getEntityAfter())))) {
                                     out.print("<ES>");
                                 }
-                                
+
                                 if (expectedUnfiltered.contains(new RefactoringRelationship(RefactoringType.PULL_UP_ATTRIBUTE, (r.getEntityBefore()), (r.getEntityAfter())))) {
                                     out.print("<PUF>");
                                 }

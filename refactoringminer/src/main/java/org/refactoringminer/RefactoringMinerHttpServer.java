@@ -27,42 +27,42 @@ import java.util.concurrent.TimeUnit;
 public class RefactoringMinerHttpServer {
 
 	public static void main(String[] args) throws Exception {
-		Properties prop = new Properties();
-		InputStream input = new FileInputStream("server.properties");
-		prop.load(input);
-		String hostName = prop.getProperty("hostname");
-		int port = Integer.parseInt(prop.getProperty("port"));
-		
-		InetSocketAddress inetSocketAddress = new InetSocketAddress(InetAddress.getByName(hostName), port);
-		HttpServer server = HttpServer.create(inetSocketAddress, 0);
-		server.createContext("/RefactoringMiner", new MyHandler());
-		server.setExecutor(new ThreadPoolExecutor(4, 8, 60, TimeUnit.SECONDS, new ArrayBlockingQueue<Runnable>(100)));
-		server.start();
-		System.out.println(InetAddress.getLocalHost());
-	}
+        Properties prop = new Properties();
+        InputStream input = new FileInputStream("server.properties");
+        prop.load(input);
+        String hostName = prop.getProperty("hostname");
+        int port = Integer.parseInt(prop.getProperty("port"));
+
+        InetSocketAddress inetSocketAddress = new InetSocketAddress(InetAddress.getByName(hostName), port);
+        HttpServer server = HttpServer.create(inetSocketAddress, 0);
+        server.createContext("/RefactoringMiner", new MyHandler());
+        server.setExecutor(new ThreadPoolExecutor(4, 8, 60, TimeUnit.SECONDS, new ArrayBlockingQueue<>(100)));
+        server.start();
+        System.out.println(InetAddress.getLocalHost());
+    }
 
 	static class MyHandler implements HttpHandler {
 		@Override
 		public void handle(HttpExchange exchange) throws IOException {
-			printRequestInfo(exchange);
-			URI requestURI = exchange.getRequestURI();
-			String query = requestURI.getQuery();
-			Map<String, String> queryToMap = queryToMap(query);
+            printRequestInfo(exchange);
+            URI requestURI = exchange.getRequestURI();
+            String query = requestURI.getQuery();
+            Map<String, String> queryToMap = queryToMap(query);
 
-			String gitURL = queryToMap.get("gitURL");
-			String commitId = queryToMap.get("commitId");
-			int timeout = Integer.parseInt(queryToMap.get("timeout"));
-			List<Refactoring> detectedRefactorings = new ArrayList<Refactoring>();
+            String gitURL = queryToMap.get("gitURL");
+            String commitId = queryToMap.get("commitId");
+            int timeout = Integer.parseInt(queryToMap.get("timeout"));
+            List<Refactoring> detectedRefactorings = new ArrayList<>();
 
-			GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
-			miner.detectAtCommit(gitURL, commitId, new RefactoringHandler() {
-				@Override
-				public void handle(String commitId, List<Refactoring> refactorings) {
-					detectedRefactorings.addAll(refactorings);
-				}
-			}, timeout);
+            GitHistoryRefactoringMiner miner = new GitHistoryRefactoringMinerImpl();
+            miner.detectAtCommit(gitURL, commitId, new RefactoringHandler() {
+                @Override
+                public void handle(String commitId, List<Refactoring> refactorings) {
+                    detectedRefactorings.addAll(refactorings);
+                }
+            }, timeout);
 
-			String response = JSON(gitURL, commitId, detectedRefactorings);
+            String response = JSON(gitURL, commitId, detectedRefactorings);
 			System.out.println(response);
 			exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
 			exchange.sendResponseHeaders(200, response.length());

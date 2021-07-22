@@ -12,8 +12,8 @@ import java.util.List;
 import java.util.Set;
 
 public class MoveOperationRefactoring implements Refactoring {
-	protected UMLOperation originalOperation;
-	protected UMLOperation movedOperation;
+	protected final UMLOperation originalOperation;
+	protected final UMLOperation movedOperation;
 	private final Set<Replacement> replacements;
 	private UMLOperationBodyMapper bodyMapper;
 
@@ -27,20 +27,19 @@ public class MoveOperationRefactoring implements Refactoring {
 	public MoveOperationRefactoring(UMLOperation originalOperation, UMLOperation movedOperation) {
 		this.originalOperation = originalOperation;
 		this.movedOperation = movedOperation;
-		this.replacements = new LinkedHashSet<Replacement>();
+		this.replacements = new LinkedHashSet<>();
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(getName()).append("\t");
-		sb.append(originalOperation);
-		sb.append(" from class ");
-		sb.append(originalOperation.getClassName());
-		sb.append(" to ");
-		sb.append(movedOperation);
-		sb.append(" from class ");
-		sb.append(movedOperation.getClassName());
-		return sb.toString();
+		String sb = getName() + "\t" +
+			originalOperation +
+			" from class " +
+			originalOperation.getClassName() +
+			" to " +
+			movedOperation +
+			" from class " +
+			movedOperation.getClassName();
+		return sb;
 	}
 
 	public String getName() {
@@ -96,32 +95,32 @@ public class MoveOperationRefactoring implements Refactoring {
 	}
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOriginalOperation().getLocationInfo().getFilePath(), getOriginalOperation().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOriginalOperation().getLocationInfo().getFilePath(), getOriginalOperation().getClassName()));
 		return pairs;
 	}
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getMovedOperation().getLocationInfo().getFilePath(), getMovedOperation().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getMovedOperation().getLocationInfo().getFilePath(), getMovedOperation().getClassName()));
 		return pairs;
 	}
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(originalOperation.codeRange()
-				.setDescription("original method declaration")
-				.setCodeElement(originalOperation.toString()));
+			.setDescription("original method declaration")
+			.setCodeElement(originalOperation.toString()));
 		return ranges;
 	}
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(movedOperation.codeRange()
-				.setDescription("moved method declaration")
-				.setCodeElement(movedOperation.toString()));
+			.setDescription("moved method declaration")
+			.setCodeElement(movedOperation.toString()));
 		return ranges;
 	}
 

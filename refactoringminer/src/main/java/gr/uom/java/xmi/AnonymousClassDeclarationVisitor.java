@@ -7,7 +7,7 @@ import java.util.Set;
 
 public class AnonymousClassDeclarationVisitor extends ASTVisitor {
 
-    private final Set<AnonymousClassDeclaration> anonymousClassDeclarations = new LinkedHashSet<AnonymousClassDeclaration>();
+    private final Set<AnonymousClassDeclaration> anonymousClassDeclarations = new LinkedHashSet<>();
 
     public boolean visit(AnonymousClassDeclaration node) {
         anonymousClassDeclarations.add(node);

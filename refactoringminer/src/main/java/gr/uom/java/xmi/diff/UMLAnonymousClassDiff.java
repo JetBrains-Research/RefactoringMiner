@@ -121,38 +121,36 @@ public class UMLAnonymousClassDiff extends UMLAbstractClassDiff {
 	}
 
 	private void checkForExtractedOperations() throws RefactoringMinerTimedOutException {
-		List<UMLOperation> operationsToBeRemoved = new ArrayList<UMLOperation>();
-		for(Iterator<UMLOperation> addedOperationIterator = addedOperations.iterator(); addedOperationIterator.hasNext();) {
-			UMLOperation addedOperation = addedOperationIterator.next();
-			for(UMLOperationBodyMapper mapper : getOperationBodyMapperList()) {
-				ExtractOperationDetection detection = new ExtractOperationDetection(mapper, addedOperations, classDiff, modelDiff);
-				List<ExtractOperationRefactoring> refs = detection.check(addedOperation);
-				for(ExtractOperationRefactoring refactoring : refs) {
-					refactorings.add(refactoring);
-					UMLOperationBodyMapper operationBodyMapper = refactoring.getBodyMapper();
-					mapper.addChildMapper(operationBodyMapper);
-					operationsToBeRemoved.add(addedOperation);
-				}
-			}
-		}
+        List<UMLOperation> operationsToBeRemoved = new ArrayList<>();
+        for (UMLOperation addedOperation : addedOperations) {
+            for (UMLOperationBodyMapper mapper : getOperationBodyMapperList()) {
+                ExtractOperationDetection detection = new ExtractOperationDetection(mapper, addedOperations, classDiff, modelDiff);
+                List<ExtractOperationRefactoring> refs = detection.check(addedOperation);
+                for (ExtractOperationRefactoring refactoring : refs) {
+                    refactorings.add(refactoring);
+                    UMLOperationBodyMapper operationBodyMapper = refactoring.getBodyMapper();
+                    mapper.addChildMapper(operationBodyMapper);
+                    operationsToBeRemoved.add(addedOperation);
+                }
+            }
+        }
 		addedOperations.removeAll(operationsToBeRemoved);
 	}
 
 	private void checkForInlinedOperations() throws RefactoringMinerTimedOutException {
-		List<UMLOperation> operationsToBeRemoved = new ArrayList<UMLOperation>();
-		for(Iterator<UMLOperation> removedOperationIterator = removedOperations.iterator(); removedOperationIterator.hasNext();) {
-			UMLOperation removedOperation = removedOperationIterator.next();
-			for(UMLOperationBodyMapper mapper : getOperationBodyMapperList()) {
-				InlineOperationDetection detection = new InlineOperationDetection(mapper, removedOperations, classDiff, modelDiff);
-				List<InlineOperationRefactoring> refs = detection.check(removedOperation);
-				for(InlineOperationRefactoring refactoring : refs) {
-					refactorings.add(refactoring);
-					UMLOperationBodyMapper operationBodyMapper = refactoring.getBodyMapper();
-					mapper.addChildMapper(operationBodyMapper);
-					operationsToBeRemoved.add(removedOperation);
-				}
-			}
-		}
+        List<UMLOperation> operationsToBeRemoved = new ArrayList<>();
+        for (UMLOperation removedOperation : removedOperations) {
+            for (UMLOperationBodyMapper mapper : getOperationBodyMapperList()) {
+                InlineOperationDetection detection = new InlineOperationDetection(mapper, removedOperations, classDiff, modelDiff);
+                List<InlineOperationRefactoring> refs = detection.check(removedOperation);
+                for (InlineOperationRefactoring refactoring : refs) {
+                    refactorings.add(refactoring);
+                    UMLOperationBodyMapper operationBodyMapper = refactoring.getBodyMapper();
+                    mapper.addChildMapper(operationBodyMapper);
+                    operationsToBeRemoved.add(removedOperation);
+                }
+            }
+        }
 		removedOperations.removeAll(operationsToBeRemoved);
 	}
 }

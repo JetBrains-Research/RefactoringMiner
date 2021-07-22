@@ -27,7 +27,7 @@ public class GHRepositoryWrapper {
                         if (urlParts.length == 2) {
                             url = urlParts[0] + "=";
                             url = url.trim();
-                            int lastPage = Integer.valueOf(urlParts[1]);
+                            int lastPage = Integer.parseInt(urlParts[1]);
                             for (int page = 2; page <= lastPage; page++) {
                                 files.addAll(getGhCommitGitHubResponse(url + page).body().getFiles());
                             }

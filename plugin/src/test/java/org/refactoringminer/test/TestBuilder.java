@@ -40,12 +40,12 @@ public class TestBuilder {
 	private BigInteger refactoringFilter;
 
 	public TestBuilder(GitHistoryRefactoringMiner detector, String tempDir) {
-		this.map = new HashMap<String, ProjectMatcher>();
-		this.refactoringDetector = detector;
-		this.tempDir = tempDir;
-		this.verbose = false;
-		this.aggregate = false;
-	}
+        this.map = new HashMap<>();
+        this.refactoringDetector = detector;
+        this.tempDir = tempDir;
+        this.verbose = false;
+        this.aggregate = false;
+    }
 
 	public TestBuilder(GitHistoryRefactoringMiner detector, String tempDir, BigInteger refactorings) {
 		this(detector, tempDir);
@@ -63,125 +63,125 @@ public class TestBuilder {
 		return this;
 	}
 
-	private static class Counter {
-		int[] c = new int[5];
-	}
-
-	private void count(int type, String refactoring) {
-		c.c[type]++;
-		RefactoringType refType = RefactoringType.extractFromDescription(refactoring);
-		Counter refTypeCounter = cMap.get(refType);
-		if (refTypeCounter == null) {
-			refTypeCounter = new Counter();
-			cMap.put(refType, refTypeCounter);
-		}
-		refTypeCounter.c[type]++;
-	}
-
-	private int get(int type) {
-		return c.c[type];
-	}
-
-	private int get(int type, Counter counter) {
-		return counter.c[type];
-	}
-
-	public TestBuilder() {
-		this(new GitHistoryRefactoringMinerImpl(), "tmp");
-	}
-
-	public final ProjectMatcher project(String cloneUrl, String branch) {
-		ProjectMatcher projectMatcher = this.map.get(cloneUrl);
-		if (projectMatcher == null) {
-			projectMatcher = new ProjectMatcher(cloneUrl, branch);
-			this.map.put(cloneUrl, projectMatcher);
-		}
-		return projectMatcher;
-	}
-
 	public void assertExpectations(int expectedTPs, int expectedFPs, int expectedFNs) throws Exception {
-		c = new Counter();
-		cMap = new HashMap<RefactoringType, Counter>();
-		commitsCount = 0;
-		errorCommitsCount = 0;
-		GitService gitService = new GitServiceImpl();
+        c = new Counter();
+        cMap = new HashMap<>();
+        commitsCount = 0;
+        errorCommitsCount = 0;
+        GitService gitService = new GitServiceImpl();
 
-		for (ProjectMatcher m : map.values()) {
-			String folder = tempDir + "/"
-					+ m.cloneUrl.substring(m.cloneUrl.lastIndexOf('/') + 1, m.cloneUrl.lastIndexOf('.'));
-			try (Repository rep = gitService.cloneIfNotExists(folder,
-					m.cloneUrl/* , m.branch */)) {
-				if (m.ignoreNonSpecifiedCommits) {
-					// It is faster to only look at particular commits
-					for (String commitId : m.getCommits()) {
-						refactoringDetector.detectAtCommit(rep, commitId, m);
-					}
-				} else {
-					// Iterate over each commit
-					refactoringDetector.detectAll(rep, m.branch, m);
-				}
-			}
-		}
-		System.out.println(String.format("Commits: %d  Errors: %d", commitsCount, errorCommitsCount));
+        for (ProjectMatcher m : map.values()) {
+            String folder = tempDir + "/"
+                + m.cloneUrl.substring(m.cloneUrl.lastIndexOf('/') + 1, m.cloneUrl.lastIndexOf('.'));
+            try (Repository rep = gitService.cloneIfNotExists(folder,
+                m.cloneUrl/* , m.branch */)) {
+                if (m.ignoreNonSpecifiedCommits) {
+                    // It is faster to only look at particular commits
+                    for (String commitId : m.getCommits()) {
+                        refactoringDetector.detectAtCommit(rep, commitId, m);
+                    }
+                } else {
+                    // Iterate over each commit
+                    refactoringDetector.detectAll(rep, m.branch, m);
+                }
+            }
+        }
+        System.out.printf("Commits: %d  Errors: %d%n", commitsCount, errorCommitsCount);
 
-		String mainResultMessage = buildResultMessage(c);
-		System.out.println("Total  " + mainResultMessage);
-		for (RefactoringType refType : RefactoringType.values()) {
-			Counter refTypeCounter = cMap.get(refType);
-			if (refTypeCounter != null) {
-				System.out
-						.println(String.format("%-7s", refType.getAbbreviation()) + buildResultMessage(refTypeCounter));
-			}
-		}
+        String mainResultMessage = buildResultMessage(c);
+        System.out.println("Total  " + mainResultMessage);
+        for (RefactoringType refType : RefactoringType.values()) {
+            Counter refTypeCounter = cMap.get(refType);
+            if (refTypeCounter != null) {
+                System.out
+                    .println(String.format("%-7s", refType.getAbbreviation()) + buildResultMessage(refTypeCounter));
+            }
+        }
 
-		boolean success = get(FP) == expectedFPs && get(FN) == expectedFNs && get(TP) == expectedTPs;
-		if (!success || verbose) {
-			for (ProjectMatcher m : map.values()) {
-				m.printResults();
-			}
-		}
-		Assert.assertTrue(mainResultMessage, success);
-	}
+        boolean success = get(FP) == expectedFPs && get(FN) == expectedFNs && get(TP) == expectedTPs;
+        if (!success || verbose) {
+            for (ProjectMatcher m : map.values()) {
+                m.printResults();
+            }
+        }
+        Assert.assertTrue(mainResultMessage, success);
+    }
 
-	private String buildResultMessage(Counter c) {
-		double precision = ((double) get(TP, c) / (get(TP, c) + get(FP, c)));
-		double recall = ((double) get(TP, c)) / (get(TP, c) + get(FN, c));
-		String mainResultMessage = String.format(
-				"TP: %2d  FP: %2d  FN: %2d  TN: %2d  Unk.: %2d  Prec.: %.3f  Recall: %.3f", get(TP, c), get(FP, c),
-				get(FN, c), get(TN, c), get(UNK, c), precision, recall);
-		return mainResultMessage;
-	}
+    private void count(int type, String refactoring) {
+        c.c[type]++;
+        RefactoringType refType = RefactoringType.extractFromDescription(refactoring);
+        Counter refTypeCounter = cMap.get(refType);
+        if (refTypeCounter == null) {
+            refTypeCounter = new Counter();
+            cMap.put(refType, refTypeCounter);
+        }
+        refTypeCounter.c[type]++;
+    }
 
-	private List<String> normalize(String refactoring) {
-		RefactoringType refType = RefactoringType.extractFromDescription(refactoring);
-		refactoring = normalizeSingle(refactoring);
-		if (aggregate) {
-			refactoring = refType.aggregate(refactoring);
-		} else {
-			int begin = refactoring.indexOf("from classes [");
-			if (begin != -1) {
-				int end = refactoring.lastIndexOf(']');
-				String types = refactoring.substring(begin + "from classes [".length(), end);
-				String[] typesArray = types.split(", ");
-				List<String> refactorings = new ArrayList<String>();
-				for (String type : typesArray) {
-					refactorings.add(refactoring.substring(0, begin) + "from class " + type);
-				}
-				return refactorings;
-			}
-		}
-		return Collections.singletonList(refactoring);
-	}
+    private int get(int type) {
+        return c.c[type];
+    }
 
-	/**
-	 * Remove generics type information.
-	 */
-	private static String normalizeSingle(String refactoring) {
-		StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < refactoring.length(); i++) {
-			char c = refactoring.charAt(i);
-			if (c == '\t') {
-				c = ' ';
+    private int get(int type, Counter counter) {
+        return counter.c[type];
+    }
+
+    public TestBuilder() {
+        this(new GitHistoryRefactoringMinerImpl(), "tmp");
+    }
+
+    public final ProjectMatcher project(String cloneUrl, String branch) {
+        ProjectMatcher projectMatcher = this.map.get(cloneUrl);
+        if (projectMatcher == null) {
+            projectMatcher = new ProjectMatcher(cloneUrl, branch);
+            this.map.put(cloneUrl, projectMatcher);
+        }
+        return projectMatcher;
+    }
+
+    private List<String> normalize(String refactoring) {
+        RefactoringType refType = RefactoringType.extractFromDescription(refactoring);
+        refactoring = normalizeSingle(refactoring);
+        if (aggregate) {
+            refactoring = refType.aggregate(refactoring);
+        } else {
+            int begin = refactoring.indexOf("from classes [");
+            if (begin != -1) {
+                int end = refactoring.lastIndexOf(']');
+                String types = refactoring.substring(begin + "from classes [".length(), end);
+                String[] typesArray = types.split(", ");
+                List<String> refactorings = new ArrayList<>();
+                for (String type : typesArray) {
+                    refactorings.add(refactoring.substring(0, begin) + "from class " + type);
+                }
+                return refactorings;
+            }
+        }
+        return Collections.singletonList(refactoring);
+    }
+
+    private String buildResultMessage(Counter c) {
+        double precision = ((double) get(TP, c) / (get(TP, c) + get(FP, c)));
+        double recall = ((double) get(TP, c)) / (get(TP, c) + get(FN, c));
+        String mainResultMessage = String.format(
+            "TP: %2d  FP: %2d  FN: %2d  TN: %2d  Unk.: %2d  Prec.: %.3f  Recall: %.3f", get(TP, c), get(FP, c),
+            get(FN, c), get(TN, c), get(UNK, c), precision, recall);
+        return mainResultMessage;
+    }
+
+    private static class Counter {
+        final int[] c = new int[5];
+    }
+
+    /**
+     * Remove generics type information.
+     */
+    private static String normalizeSingle(String refactoring) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < refactoring.length(); i++) {
+            char c = refactoring.charAt(i);
+            if (c == '\t') {
+                c = ' ';
 			}
 			sb.append(c);
 		}
@@ -248,18 +248,18 @@ public class TestBuilder {
 				matcher = null;
 			}
 			if (matcher != null) {
-				matcher.analyzed = true;
-				Set<String> refactoringsFound = new HashSet<String>();
-				for (Refactoring refactoring : refactorings) {
-					refactoringsFound.addAll(normalize(refactoring.toString()));
-				}
-				// count true positives
-				for (Iterator<String> iter = matcher.expected.iterator(); iter.hasNext();) {
-					String expectedRefactoring = iter.next();
-					if (refactoringsFound.contains(expectedRefactoring)) {
-						iter.remove();
-						refactoringsFound.remove(expectedRefactoring);
-						this.truePositiveCount++;
+                matcher.analyzed = true;
+                Set<String> refactoringsFound = new HashSet<>();
+                for (Refactoring refactoring : refactorings) {
+                    refactoringsFound.addAll(normalize(refactoring.toString()));
+                }
+                // count true positives
+                for (Iterator<String> iter = matcher.expected.iterator(); iter.hasNext(); ) {
+                    String expectedRefactoring = iter.next();
+                    if (refactoringsFound.contains(expectedRefactoring)) {
+                        iter.remove();
+                        refactoringsFound.remove(expectedRefactoring);
+                        this.truePositiveCount++;
 						count(TP, expectedRefactoring);
 						matcher.truePositive.add(expectedRefactoring);
 					}
@@ -383,33 +383,33 @@ public class TestBuilder {
 		// }
 		// }
 
-		public class CommitMatcher {
-			private Set<String> expected = new HashSet<String>();
-			private Set<String> notExpected = new HashSet<String>();
-			private final Set<String> truePositive = new HashSet<String>();
-			private final Set<String> unknown = new HashSet<String>();
-			private boolean ignoreNonSpecified = true;
-			private boolean analyzed = false;
-			private String error = null;
+        public class CommitMatcher {
+            private final Set<String> truePositive = new HashSet<>();
+            private final Set<String> unknown = new HashSet<>();
+            private Set<String> expected = new HashSet<>();
+            private Set<String> notExpected = new HashSet<>();
+            private boolean ignoreNonSpecified = true;
+            private boolean analyzed = false;
+            private String error = null;
 
-			private CommitMatcher() {
-			}
+            private CommitMatcher() {
+            }
 
-			public ProjectMatcher contains(String... refactorings) {
-				for (String refactoring : refactorings) {
-					expected.addAll(normalize(refactoring));
+            public ProjectMatcher contains(String... refactorings) {
+                for (String refactoring : refactorings) {
+                    expected.addAll(normalize(refactoring));
 				}
 				return ProjectMatcher.this;
 			}
 
 			public ProjectMatcher containsOnly(String... refactorings) {
-				this.ignoreNonSpecified = false;
-				this.expected = new HashSet<String>();
-				this.notExpected = new HashSet<String>();
-				for (String refactoring : refactorings) {
-					expected.addAll(normalize(refactoring));
-				}
-				return ProjectMatcher.this;
+                this.ignoreNonSpecified = false;
+                this.expected = new HashSet<>();
+                this.notExpected = new HashSet<>();
+                for (String refactoring : refactorings) {
+                    expected.addAll(normalize(refactoring));
+                }
+                return ProjectMatcher.this;
 			}
 
 			public ProjectMatcher containsNothing() {

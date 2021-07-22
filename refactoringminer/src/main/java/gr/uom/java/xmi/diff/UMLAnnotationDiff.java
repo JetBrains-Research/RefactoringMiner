@@ -22,11 +22,11 @@ public class UMLAnnotationDiff {
     public UMLAnnotationDiff(UMLAnnotation removedAnnotation, UMLAnnotation addedAnnotation) {
         this.removedAnnotation = removedAnnotation;
         this.addedAnnotation = addedAnnotation;
-        this.removedMemberValuePairs = new ArrayList<SimpleEntry<String, AbstractExpression>>();
-        this.addedMemberValuePairs = new ArrayList<SimpleEntry<String, AbstractExpression>>();
-        this.matchedMemberValuePairsWithDifferentExpressions = new LinkedHashMap<SimpleEntry<String, AbstractExpression>, SimpleEntry<String, AbstractExpression>>();
+        this.removedMemberValuePairs = new ArrayList<>();
+        this.addedMemberValuePairs = new ArrayList<>();
+        this.matchedMemberValuePairsWithDifferentExpressions = new LinkedHashMap<>();
         Map<SimpleEntry<String, AbstractExpression>, SimpleEntry<String, AbstractExpression>> matchedMemberValuePairs =
-            new LinkedHashMap<SimpleEntry<String, AbstractExpression>, SimpleEntry<String, AbstractExpression>>();
+            new LinkedHashMap<>();
         if (!removedAnnotation.getTypeName().equals(addedAnnotation.getTypeName())) {
             typeNameChanged = true;
         }

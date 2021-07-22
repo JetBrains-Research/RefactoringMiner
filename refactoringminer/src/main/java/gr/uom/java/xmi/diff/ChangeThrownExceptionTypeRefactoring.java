@@ -42,29 +42,29 @@ public class ChangeThrownExceptionTypeRefactoring implements Refactoring {
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
-		for(UMLType originalType : originalTypes) {
+		List<CodeRange> ranges = new ArrayList<>();
+		for (UMLType originalType : originalTypes) {
 			ranges.add(originalType.codeRange()
-					.setDescription("original exception type")
-					.setCodeElement(originalType.toString()));
+				.setDescription("original exception type")
+				.setCodeElement(originalType.toString()));
 		}
 		ranges.add(operationBefore.codeRange()
-				.setDescription("original method declaration")
-				.setCodeElement(operationBefore.toString()));
+			.setDescription("original method declaration")
+			.setCodeElement(operationBefore.toString()));
 		return ranges;
 	}
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
-		for(UMLType changedType : changedTypes) {
+		List<CodeRange> ranges = new ArrayList<>();
+		for (UMLType changedType : changedTypes) {
 			ranges.add(changedType.codeRange()
-					.setDescription("changed exception type")
-					.setCodeElement(changedType.toString()));
+				.setDescription("changed exception type")
+				.setCodeElement(changedType.toString()));
 		}
 		ranges.add(operationAfter.codeRange()
-				.setDescription("method declaration with changed thrown exception type")
-				.setCodeElement(operationAfter.toString()));
+			.setDescription("method declaration with changed thrown exception type")
+			.setCodeElement(operationAfter.toString()));
 		return ranges;
 	}
 
@@ -80,28 +80,27 @@ public class ChangeThrownExceptionTypeRefactoring implements Refactoring {
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOperationBefore().getLocationInfo().getFilePath(), getOperationBefore().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOperationBefore().getLocationInfo().getFilePath(), getOperationBefore().getClassName()));
 		return pairs;
 	}
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOperationAfter().getLocationInfo().getFilePath(), getOperationAfter().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOperationAfter().getLocationInfo().getFilePath(), getOperationAfter().getClassName()));
 		return pairs;
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(getName()).append("\t");
-		sb.append(originalTypes.size() == 1 ? originalTypes.iterator().next() : originalTypes);
-		sb.append(" to ");
-		sb.append(changedTypes.size() == 1 ? changedTypes.iterator().next() : changedTypes);
-		sb.append(" in method ");
-		sb.append(operationAfter.toString());
-		sb.append(" from class ").append(operationAfter.getClassName());
-		return sb.toString();
+		String sb = getName() + "\t" +
+			(originalTypes.size() == 1 ? originalTypes.iterator().next() : originalTypes) +
+			" to " +
+			(changedTypes.size() == 1 ? changedTypes.iterator().next() : changedTypes) +
+			" in method " +
+			operationAfter.toString() +
+			" from class " + operationAfter.getClassName();
+		return sb;
 	}
 
 	@Override

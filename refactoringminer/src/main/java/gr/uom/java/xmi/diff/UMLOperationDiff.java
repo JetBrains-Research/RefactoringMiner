@@ -29,34 +29,34 @@ public class UMLOperationDiff {
 	private boolean qualifiedReturnTypeChanged;
 	private boolean operationRenamed;
 	private boolean parametersReordered;
-	private Set<AbstractCodeMapping> mappings = new LinkedHashSet<AbstractCodeMapping>();
+	private Set<AbstractCodeMapping> mappings = new LinkedHashSet<>();
 	private UMLAnnotationListDiff annotationListDiff;
 	private List<UMLType> addedExceptionTypes;
 	private List<UMLType> removedExceptionTypes;
 	private SimpleEntry<Set<UMLType>, Set<UMLType>> changedExceptionTypes;
-	
+
 	public UMLOperationDiff(UMLOperation removedOperation, UMLOperation addedOperation) {
 		process(removedOperation, addedOperation);
 	}
 
 	private void process(UMLOperation removedOperation, UMLOperation addedOperation) {
-        this.removedOperation = removedOperation;
-        this.addedOperation = addedOperation;
-        this.addedParameters = new ArrayList<UMLParameter>();
-        this.removedParameters = new ArrayList<UMLParameter>();
-        this.parameterDiffList = new ArrayList<UMLParameterDiff>();
-        this.addedExceptionTypes = new ArrayList<UMLType>();
-        this.removedExceptionTypes = new ArrayList<UMLType>();
-        this.visibilityChanged = false;
-        this.abstractionChanged = false;
-        this.returnTypeChanged = false;
-        operationRenamed = !removedOperation.getName().equals(addedOperation.getName());
-        if (!removedOperation.getVisibility().equals(addedOperation.getVisibility()))
-            visibilityChanged = true;
-        if (removedOperation.isAbstract() != addedOperation.isAbstract())
-            abstractionChanged = true;
-        if (removedOperation.isFinal() != addedOperation.isFinal())
-            finalChanged = true;
+		this.removedOperation = removedOperation;
+		this.addedOperation = addedOperation;
+		this.addedParameters = new ArrayList<>();
+		this.removedParameters = new ArrayList<>();
+		this.parameterDiffList = new ArrayList<>();
+		this.addedExceptionTypes = new ArrayList<>();
+		this.removedExceptionTypes = new ArrayList<>();
+		this.visibilityChanged = false;
+		this.abstractionChanged = false;
+		this.returnTypeChanged = false;
+		operationRenamed = !removedOperation.getName().equals(addedOperation.getName());
+		if (!removedOperation.getVisibility().equals(addedOperation.getVisibility()))
+			visibilityChanged = true;
+		if (removedOperation.isAbstract() != addedOperation.isAbstract())
+			abstractionChanged = true;
+		if (removedOperation.isFinal() != addedOperation.isFinal())
+			finalChanged = true;
         if (removedOperation.isStatic() != addedOperation.isStatic())
             staticChanged = true;
         if (removedOperation.isSynchronized() != addedOperation.isSynchronized())
@@ -158,17 +158,17 @@ public class UMLOperationDiff {
 	}
 
 	private void processThrownExceptionTypes(List<UMLType> exceptionTypes1, List<UMLType> exceptionTypes2) {
-		Set<UMLType> addedExceptionTypes = new LinkedHashSet<UMLType>();
-		Set<UMLType> removedExceptionTypes = new LinkedHashSet<UMLType>();
-		for(UMLType exceptionType1 : exceptionTypes1) {
+		Set<UMLType> addedExceptionTypes = new LinkedHashSet<>();
+		Set<UMLType> removedExceptionTypes = new LinkedHashSet<>();
+		for (UMLType exceptionType1 : exceptionTypes1) {
 			boolean found = false;
-			for(UMLType exceptionType2 : exceptionTypes2) {
-				if(exceptionType1.equals(exceptionType2)) {
+			for (UMLType exceptionType2 : exceptionTypes2) {
+				if (exceptionType1.equals(exceptionType2)) {
 					found = true;
 					break;
 				}
 			}
-			if(!found) {
+			if (!found) {
 				removedExceptionTypes.add(exceptionType1);
 			}
 		}
@@ -191,7 +191,7 @@ public class UMLOperationDiff {
 			this.addedExceptionTypes.addAll(addedExceptionTypes);
 		}
 		else if(removedExceptionTypes.size() > 0 && addedExceptionTypes.size() > 0) {
-			this.changedExceptionTypes = new SimpleEntry<Set<UMLType>, Set<UMLType>>(removedExceptionTypes, addedExceptionTypes);
+			this.changedExceptionTypes = new SimpleEntry<>(removedExceptionTypes, addedExceptionTypes);
 		}
 	}
 
@@ -209,13 +209,13 @@ public class UMLOperationDiff {
 	}
 
 	private List<SimpleEntry<UMLParameter, UMLParameter>> updateAddedRemovedParameters(UMLOperation removedOperation, UMLOperation addedOperation) {
-		List<SimpleEntry<UMLParameter, UMLParameter>> matchedParameters = new ArrayList<SimpleEntry<UMLParameter, UMLParameter>>();
-		for(UMLParameter parameter1 : removedOperation.getParameters()) {
-			if(!parameter1.getKind().equals("return")) {
+		List<SimpleEntry<UMLParameter, UMLParameter>> matchedParameters = new ArrayList<>();
+		for (UMLParameter parameter1 : removedOperation.getParameters()) {
+			if (!parameter1.getKind().equals("return")) {
 				boolean found = false;
-				for(UMLParameter parameter2 : addedOperation.getParameters()) {
-					if(parameter1.equalsIncludingName(parameter2)) {
-						matchedParameters.add(new SimpleEntry<UMLParameter, UMLParameter>(parameter1, parameter2));
+				for (UMLParameter parameter2 : addedOperation.getParameters()) {
+					if (parameter1.equalsIncludingName(parameter2)) {
+						matchedParameters.add(new SimpleEntry<>(parameter1, parameter2));
 						found = true;
 						break;
 					}
@@ -230,7 +230,7 @@ public class UMLOperationDiff {
 				boolean found = false;
 				for(UMLParameter parameter2 : removedOperation.getParameters()) {
 					if(parameter1.equalsIncludingName(parameter2)) {
-						matchedParameters.add(new SimpleEntry<UMLParameter, UMLParameter>(parameter2, parameter1));
+						matchedParameters.add(new SimpleEntry<>(parameter2, parameter1));
 						found = true;
 						break;
 					}
@@ -274,47 +274,46 @@ public class UMLOperationDiff {
 
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		if(!isEmpty())
+		if (!isEmpty())
 			sb.append("\t").append(removedOperation).append("\n");
-		if(operationRenamed)
-			sb.append("\t").append("renamed from " + removedOperation.getName() + " to " + addedOperation.getName()).append("\n");
-		if(visibilityChanged)
-			sb.append("\t").append("visibility changed from " + removedOperation.getVisibility() + " to " + addedOperation.getVisibility()).append("\n");
-		if(abstractionChanged)
-			sb.append("\t").append("abstraction changed from " + (removedOperation.isAbstract() ? "abstract" : "concrete") + " to " +
-					(addedOperation.isAbstract() ? "abstract" : "concrete")).append("\n");
-		if(returnTypeChanged || qualifiedReturnTypeChanged)
-			sb.append("\t").append("return type changed from " + removedOperation.getReturnParameter() + " to " + addedOperation.getReturnParameter()).append("\n");
+		if (operationRenamed)
+			sb.append("\t").append("renamed from ").append(removedOperation.getName()).append(" to ").append(addedOperation.getName()).append("\n");
+		if (visibilityChanged)
+			sb.append("\t").append("visibility changed from ").append(removedOperation.getVisibility()).append(" to ").append(addedOperation.getVisibility()).append("\n");
+		if (abstractionChanged)
+			sb.append("\t").append("abstraction changed from ").append(removedOperation.isAbstract() ? "abstract" : "concrete").append(" to ").append(addedOperation.isAbstract() ? "abstract" : "concrete").append("\n");
+		if (returnTypeChanged || qualifiedReturnTypeChanged)
+			sb.append("\t").append("return type changed from ").append(removedOperation.getReturnParameter()).append(" to ").append(addedOperation.getReturnParameter()).append("\n");
 		for(UMLParameter umlParameter : removedParameters) {
-			sb.append("\t").append("parameter " + umlParameter + " removed").append("\n");
+			sb.append("\t").append("parameter ").append(umlParameter).append(" removed").append("\n");
 		}
 		for(UMLParameter umlParameter : addedParameters) {
-			sb.append("\t").append("parameter " + umlParameter + " added").append("\n");
+			sb.append("\t").append("parameter ").append(umlParameter).append(" added").append("\n");
 		}
 		for(UMLParameterDiff parameterDiff : parameterDiffList) {
 			sb.append(parameterDiff);
 		}
 		for(UMLAnnotation annotation : annotationListDiff.getRemovedAnnotations()) {
-			sb.append("\t").append("annotation " + annotation + " removed").append("\n");
+			sb.append("\t").append("annotation ").append(annotation).append(" removed").append("\n");
 		}
 		for(UMLAnnotation annotation : annotationListDiff.getAddedAnnotations()) {
-			sb.append("\t").append("annotation " + annotation + " added").append("\n");
+			sb.append("\t").append("annotation ").append(annotation).append(" added").append("\n");
 		}
 		for(UMLAnnotationDiff annotationDiff : annotationListDiff.getAnnotationDiffList()) {
-			sb.append("\t").append("annotation " + annotationDiff.getRemovedAnnotation() + " modified to " + annotationDiff.getAddedAnnotation()).append("\n");
+			sb.append("\t").append("annotation ").append(annotationDiff.getRemovedAnnotation()).append(" modified to ").append(annotationDiff.getAddedAnnotation()).append("\n");
 		}
 		return sb.toString();
 	}
 
 	public Set<Refactoring> getRefactorings() {
-		Set<Refactoring> refactorings = new LinkedHashSet<Refactoring>();
-		if(returnTypeChanged || qualifiedReturnTypeChanged) {
+		Set<Refactoring> refactorings = new LinkedHashSet<>();
+		if (returnTypeChanged || qualifiedReturnTypeChanged) {
 			UMLParameter removedOperationReturnParameter = removedOperation.getReturnParameter();
 			UMLParameter addedOperationReturnParameter = addedOperation.getReturnParameter();
-			if(removedOperationReturnParameter != null && addedOperationReturnParameter != null) {
+			if (removedOperationReturnParameter != null && addedOperationReturnParameter != null) {
 				Set<AbstractCodeMapping> references = VariableReferenceExtractor.findReturnReferences(mappings);
 				ChangeReturnTypeRefactoring refactoring = new ChangeReturnTypeRefactoring(removedOperationReturnParameter.getType(), addedOperationReturnParameter.getType(),
-						removedOperation, addedOperation, references);
+					removedOperation, addedOperation, references);
 				refactorings.add(refactoring);
 			}
 		}

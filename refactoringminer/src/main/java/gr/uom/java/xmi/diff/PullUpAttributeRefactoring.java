@@ -12,16 +12,15 @@ public class PullUpAttributeRefactoring extends MoveAttributeRefactoring {
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(getName()).append("\t");
-		sb.append(getOriginalAttribute().toQualifiedString());
-		sb.append(" from class ");
-		sb.append(getSourceClassName());
-		sb.append(" to ");
-		sb.append(getMovedAttribute().toQualifiedString());
-		sb.append(" from class ");
-		sb.append(getTargetClassName());
-		return sb.toString();
+		String sb = getName() + "\t" +
+			getOriginalAttribute().toQualifiedString() +
+			" from class " +
+			getSourceClassName() +
+			" to " +
+			getMovedAttribute().toQualifiedString() +
+			" from class " +
+			getTargetClassName();
+		return sb;
 	}
 
 	public RefactoringType getRefactoringType() {
@@ -30,10 +29,10 @@ public class PullUpAttributeRefactoring extends MoveAttributeRefactoring {
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(movedAttribute.codeRange()
-				.setDescription("pulled up attribute declaration")
-				.setCodeElement(movedAttribute.toString()));
+			.setDescription("pulled up attribute declaration")
+			.setCodeElement(movedAttribute.toString()));
 		return ranges;
 	}
 }

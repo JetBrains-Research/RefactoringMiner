@@ -13,8 +13,8 @@ public class CallTree {
     }
 
     public List<CallTreeNode> getNodesInBreadthFirstOrder() {
-        List<CallTreeNode> nodes = new ArrayList<CallTreeNode>();
-        List<CallTreeNode> queue = new LinkedList<CallTreeNode>();
+        List<CallTreeNode> nodes = new ArrayList<>();
+        List<CallTreeNode> queue = new LinkedList<>();
         nodes.add(root);
         queue.add(root);
         while (!queue.isEmpty()) {

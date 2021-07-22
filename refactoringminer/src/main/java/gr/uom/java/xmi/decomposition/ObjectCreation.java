@@ -21,15 +21,15 @@ public class ObjectCreation extends AbstractCall {
 		this.locationInfo = new LocationInfo(cu, filePath, creation, CodeElementType.CLASS_INSTANCE_CREATION);
 		this.type = UMLType.extractTypeObject(cu, filePath, creation.getType(), 0);
 		this.typeArguments = creation.arguments().size();
-		this.arguments = new ArrayList<String>();
+		this.arguments = new ArrayList<>();
 		List<Expression> args = creation.arguments();
-		for(Expression argument : args) {
+		for (Expression argument : args) {
 			this.arguments.add(argument.toString());
 		}
-		if(creation.getExpression() != null) {
+		if (creation.getExpression() != null) {
 			this.expression = creation.getExpression().toString();
 		}
-		if(creation.getAnonymousClassDeclaration() != null) {
+		if (creation.getAnonymousClassDeclaration() != null) {
 			this.anonymousClassDeclaration = creation.getAnonymousClassDeclaration().toString();
 		}
 	}
@@ -39,12 +39,12 @@ public class ObjectCreation extends AbstractCall {
 		this.isArray = true;
 		this.type = UMLType.extractTypeObject(cu, filePath, creation.getType(), 0);
 		this.typeArguments = creation.dimensions().size();
-		this.arguments = new ArrayList<String>();
+		this.arguments = new ArrayList<>();
 		List<Expression> args = creation.dimensions();
-		for(Expression argument : args) {
+		for (Expression argument : args) {
 			this.arguments.add(argument.toString());
 		}
-		if(creation.getInitializer() != null) {
+		if (creation.getInitializer() != null) {
 			this.anonymousClassDeclaration = creation.getInitializer().toString();
 		}
 	}
@@ -95,10 +95,10 @@ public class ObjectCreation extends AbstractCall {
         sb.append(type);
         sb.append("(");
         if(typeArguments > 0) {
-            for(int i=0; i<typeArguments-1; i++)
-                sb.append("arg" + i).append(", ");
-            sb.append("arg" + (typeArguments-1));
-        }
+			for (int i = 0; i < typeArguments - 1; i++)
+				sb.append("arg").append(i).append(", ");
+			sb.append("arg").append(typeArguments - 1);
+		}
         sb.append(")");
         return sb.toString();
     }
@@ -136,9 +136,8 @@ public class ObjectCreation extends AbstractCall {
 	}
 
 	public String actualString() {
-		StringBuilder sb = new StringBuilder();
-        sb.append("new ");
-        sb.append(super.actualString());
-        return sb.toString();
+		String sb = "new " +
+			super.actualString();
+		return sb;
 	}
 }

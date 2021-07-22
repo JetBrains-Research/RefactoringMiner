@@ -133,7 +133,7 @@ public class StatementObject extends AbstractStatement {
 
 	@Override
 	public List<StatementObject> getLeaves() {
-		List<StatementObject> leaves = new ArrayList<StatementObject>();
+		List<StatementObject> leaves = new ArrayList<>();
 		leaves.add(this);
 		return leaves;
 	}
@@ -262,7 +262,7 @@ public class StatementObject extends AbstractStatement {
 
 	@Override
 	public List<String> stringRepresentation() {
-		List<String> stringRepresentation = new ArrayList<String>();
+		List<String> stringRepresentation = new ArrayList<>();
 		stringRepresentation.add(this.toString());
 		return stringRepresentation;
 	}

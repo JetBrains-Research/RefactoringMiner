@@ -28,13 +28,12 @@ public class ExtractClassRefactoring implements Refactoring {
     }
 
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(getName()).append("\t");
-        sb.append(extractedClass);
-        sb.append(" from class ");
-        sb.append(classDiff.getOriginalClass());
-        return sb.toString();
-    }
+		String sb = getName() + "\t" +
+			extractedClass +
+			" from class " +
+			classDiff.getOriginalClass();
+		return sb;
+	}
 
 	public RefactoringType getRefactoringType() {
 		if(extractedClass.isSubTypeOf(classDiff.getOriginalClass()) || extractedClass.isSubTypeOf(classDiff.getNextClass()))
@@ -67,38 +66,38 @@ public class ExtractClassRefactoring implements Refactoring {
 	}
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOriginalClass().getLocationInfo().getFilePath(), getOriginalClass().getName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOriginalClass().getLocationInfo().getFilePath(), getOriginalClass().getName()));
 		return pairs;
 	}
 
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getExtractedClass().getLocationInfo().getFilePath(), getExtractedClass().getName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getExtractedClass().getLocationInfo().getFilePath(), getExtractedClass().getName()));
 		return pairs;
 	}
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(classDiff.getOriginalClass().codeRange()
-				.setDescription("original type declaration")
-				.setCodeElement(classDiff.getOriginalClass().getName()));
+			.setDescription("original type declaration")
+			.setCodeElement(classDiff.getOriginalClass().getName()));
 		return ranges;
 	}
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(extractedClass.codeRange()
-				.setDescription("extracted type declaration")
-				.setCodeElement(extractedClass.getName()));
-		for(UMLOperation extractedOperation : extractedOperations) {
+			.setDescription("extracted type declaration")
+			.setCodeElement(extractedClass.getName()));
+		for (UMLOperation extractedOperation : extractedOperations) {
 			ranges.add(extractedOperation.codeRange()
-					.setDescription("extracted method declaration")
-					.setCodeElement(extractedOperation.toString()));
+				.setDescription("extracted method declaration")
+				.setCodeElement(extractedOperation.toString()));
 		}
-		for(UMLAttribute extractedAttribute : extractedAttributes) {
+		for (UMLAttribute extractedAttribute : extractedAttributes) {
 			ranges.add(extractedAttribute.codeRange()
 					.setDescription("extracted attribute declaration")
 					.setCodeElement(extractedAttribute.toString()));

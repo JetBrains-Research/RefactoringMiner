@@ -82,11 +82,10 @@ public class VariableScope {
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(startLine).append(":").append(startColumn);
-		sb.append("-");
-		sb.append(endLine).append(":").append(endColumn);
-		return sb.toString();
+		String sb = startLine + ":" + startColumn +
+			"-" +
+			endLine + ":" + endColumn;
+		return sb;
 	}
 
 	public void addStatement(AbstractCodeFragment statement) {

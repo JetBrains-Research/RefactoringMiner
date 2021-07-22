@@ -48,25 +48,25 @@ public class RemoveVariableModifierRefactoring implements Refactoring {
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(variableBefore.codeRange()
-				.setDescription("original variable declaration")
-				.setCodeElement(variableBefore.toString()));
+			.setDescription("original variable declaration")
+			.setCodeElement(variableBefore.toString()));
 		ranges.add(operationBefore.codeRange()
-				.setDescription("original method declaration")
-				.setCodeElement(operationBefore.toString()));
+			.setDescription("original method declaration")
+			.setCodeElement(operationBefore.toString()));
 		return ranges;
 	}
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(variableAfter.codeRange()
-				.setDescription("variable declaration with removed modifier")
-				.setCodeElement(variableAfter.toString()));
+			.setDescription("variable declaration with removed modifier")
+			.setCodeElement(variableAfter.toString()));
 		ranges.add(operationAfter.codeRange()
-				.setDescription("method declaration with removed variable modifier")
-				.setCodeElement(operationAfter.toString()));
+			.setDescription("method declaration with removed variable modifier")
+			.setCodeElement(operationAfter.toString()));
 		return ranges;
 	}
 
@@ -87,15 +87,15 @@ public class RemoveVariableModifierRefactoring implements Refactoring {
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOperationBefore().getLocationInfo().getFilePath(), getOperationBefore().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOperationBefore().getLocationInfo().getFilePath(), getOperationBefore().getClassName()));
 		return pairs;
 	}
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOperationAfter().getLocationInfo().getFilePath(), getOperationAfter().getClassName()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOperationAfter().getLocationInfo().getFilePath(), getOperationAfter().getClassName()));
 		return pairs;
 	}
 

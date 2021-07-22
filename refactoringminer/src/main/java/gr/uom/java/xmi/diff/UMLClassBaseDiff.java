@@ -39,8 +39,8 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 
 	private static final int MAXIMUM_NUMBER_OF_COMPARED_METHODS = 30;
 	public static final double MAX_OPERATION_NAME_DISTANCE = 0.4;
-	protected UMLClass originalClass;
-	protected UMLClass nextClass;
+	protected final UMLClass originalClass;
+	protected final UMLClass nextClass;
 	private final List<UMLEnumConstant> addedEnumConstants;
 	private final List<UMLEnumConstant> removedEnumConstants;
 	private boolean visibilityChanged;
@@ -61,12 +61,12 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 	private UMLAnnotationListDiff annotationListDiff;
 	private final List<UMLEnumConstantDiff> enumConstantDiffList;
 	private Map<MethodInvocationReplacement, UMLOperationBodyMapper> consistentMethodInvocationRenames;
-	private final Set<CandidateAttributeRefactoring> candidateAttributeRenames = new LinkedHashSet<CandidateAttributeRefactoring>();
-	private final Set<CandidateMergeVariableRefactoring> candidateAttributeMerges = new LinkedHashSet<CandidateMergeVariableRefactoring>();
-	private final Set<CandidateSplitVariableRefactoring> candidateAttributeSplits = new LinkedHashSet<CandidateSplitVariableRefactoring>();
-	private final Map<Replacement, Set<CandidateAttributeRefactoring>> renameMap = new LinkedHashMap<Replacement, Set<CandidateAttributeRefactoring>>();
-	private final Map<MergeVariableReplacement, Set<CandidateMergeVariableRefactoring>> mergeMap = new LinkedHashMap<MergeVariableReplacement, Set<CandidateMergeVariableRefactoring>>();
-	private final Map<SplitVariableReplacement, Set<CandidateSplitVariableRefactoring>> splitMap = new LinkedHashMap<SplitVariableReplacement, Set<CandidateSplitVariableRefactoring>>();
+	private final Set<CandidateAttributeRefactoring> candidateAttributeRenames = new LinkedHashSet<>();
+	private final Set<CandidateMergeVariableRefactoring> candidateAttributeMerges = new LinkedHashSet<>();
+	private final Set<CandidateSplitVariableRefactoring> candidateAttributeSplits = new LinkedHashSet<>();
+	private final Map<Replacement, Set<CandidateAttributeRefactoring>> renameMap = new LinkedHashMap<>();
+	private final Map<MergeVariableReplacement, Set<CandidateMergeVariableRefactoring>> mergeMap = new LinkedHashMap<>();
+	private final Map<SplitVariableReplacement, Set<CandidateSplitVariableRefactoring>> splitMap = new LinkedHashMap<>();
 
 	public UMLClassBaseDiff(UMLClass originalClass, UMLClass nextClass, UMLModelDiff modelDiff) {
 		super(modelDiff);
@@ -75,13 +75,13 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 		this.visibilityChanged = false;
 		this.abstractionChanged = false;
 		this.superclassChanged = false;
-		this.addedEnumConstants = new ArrayList<UMLEnumConstant>();
-		this.removedEnumConstants = new ArrayList<UMLEnumConstant>();
-		this.addedImplementedInterfaces = new ArrayList<UMLType>();
-		this.removedImplementedInterfaces = new ArrayList<UMLType>();
-		this.addedAnonymousClasses = new ArrayList<UMLAnonymousClass>();
-		this.removedAnonymousClasses = new ArrayList<UMLAnonymousClass>();
-		this.enumConstantDiffList = new ArrayList<UMLEnumConstantDiff>();
+		this.addedEnumConstants = new ArrayList<>();
+		this.removedEnumConstants = new ArrayList<>();
+		this.addedImplementedInterfaces = new ArrayList<>();
+		this.removedImplementedInterfaces = new ArrayList<>();
+		this.addedAnonymousClasses = new ArrayList<>();
+		this.removedAnonymousClasses = new ArrayList<>();
+		this.enumConstantDiffList = new ArrayList<>();
 	}
 
 	public void process() throws RefactoringMinerTimedOutException {
@@ -190,7 +190,7 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 	}
 
 	public Set<UMLType> nextClassCommonInterfaces(UMLClassBaseDiff other) {
-		Set<UMLType> common = new LinkedHashSet<UMLType>(nextClass.getImplementedInterfaces());
+		Set<UMLType> common = new LinkedHashSet<>(nextClass.getImplementedInterfaces());
 		common.retainAll(other.nextClass.getImplementedInterfaces());
 		return common;
 	}
@@ -521,26 +521,26 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 	}
 
 	public List<Refactoring> getRefactorings() throws RefactoringMinerTimedOutException {
-		List<Refactoring> refactorings = new ArrayList<Refactoring>(this.refactorings);
-		for(UMLOperationBodyMapper mapper : operationBodyMapperList) {
+		List<Refactoring> refactorings = new ArrayList<>(this.refactorings);
+		for (UMLOperationBodyMapper mapper : operationBodyMapperList) {
 			UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(mapper.getOperation1(), mapper.getOperation2(), mapper.getMappings());
 			refactorings.addAll(operationSignatureDiff.getRefactorings());
 			processMapperRefactorings(mapper, refactorings);
 		}
 		refactorings.addAll(inferAttributeMergesAndSplits(renameMap, refactorings));
-		for(MergeVariableReplacement merge : mergeMap.keySet()) {
-			Set<UMLAttribute> mergedAttributes = new LinkedHashSet<UMLAttribute>();
-			Set<VariableDeclaration> mergedVariables = new LinkedHashSet<VariableDeclaration>();
-			for(String mergedVariable : merge.getMergedVariables()) {
+		for (MergeVariableReplacement merge : mergeMap.keySet()) {
+			Set<UMLAttribute> mergedAttributes = new LinkedHashSet<>();
+			Set<VariableDeclaration> mergedVariables = new LinkedHashSet<>();
+			for (String mergedVariable : merge.getMergedVariables()) {
 				UMLAttribute a1 = findAttributeInOriginalClass(mergedVariable);
-				if(a1 != null) {
+				if (a1 != null) {
 					mergedAttributes.add(a1);
 					mergedVariables.add(a1.getVariableDeclaration());
 				}
 			}
 			UMLAttribute a2 = findAttributeInNextClass(merge.getAfter());
 			Set<CandidateMergeVariableRefactoring> set = mergeMap.get(merge);
-			for(CandidateMergeVariableRefactoring candidate : set) {
+			for (CandidateMergeVariableRefactoring candidate : set) {
 				if(mergedVariables.size() > 1 && mergedVariables.size() == merge.getMergedVariables().size() && a2 != null) {
 					MergeAttributeRefactoring ref = new MergeAttributeRefactoring(mergedAttributes, a2, getOriginalClassName(), getNextClassName(), set);
 					if(!refactorings.contains(ref)) {
@@ -556,26 +556,25 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 			}
 		}
 		for(SplitVariableReplacement split : splitMap.keySet()) {
-			Set<UMLAttribute> splitAttributes = new LinkedHashSet<UMLAttribute>();
-			Set<VariableDeclaration> splitVariables = new LinkedHashSet<VariableDeclaration>();
-			for(String splitVariable : split.getSplitVariables()) {
+			Set<UMLAttribute> splitAttributes = new LinkedHashSet<>();
+			Set<VariableDeclaration> splitVariables = new LinkedHashSet<>();
+			for (String splitVariable : split.getSplitVariables()) {
 				UMLAttribute a2 = findAttributeInNextClass(splitVariable);
-				if(a2 != null) {
+				if (a2 != null) {
 					splitAttributes.add(a2);
 					splitVariables.add(a2.getVariableDeclaration());
 				}
 			}
 			UMLAttribute a1 = findAttributeInOriginalClass(split.getBefore());
 			Set<CandidateSplitVariableRefactoring> set = splitMap.get(split);
-			for(CandidateSplitVariableRefactoring candidate : set) {
+			for (CandidateSplitVariableRefactoring candidate : set) {
 				if(splitVariables.size() > 1 && splitVariables.size() == split.getSplitVariables().size() && a1 != null) {
 					SplitAttributeRefactoring ref = new SplitAttributeRefactoring(a1, splitAttributes, getOriginalClassName(), getNextClassName(), set);
 					if(!refactorings.contains(ref)) {
 						refactorings.add(ref);
 						break;//it's not necessary to repeat the same process for all candidates in the set
 					}
-				}
-				else {
+				} else {
 					candidate.setSplitAttributes(splitAttributes);
 					candidate.setOldAttribute(a1);
 					candidateAttributeSplits.add(candidate);
@@ -583,18 +582,18 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 			}
 		}
 		Set<Replacement> renames = renameMap.keySet();
-		Set<Replacement> allConsistentRenames = new LinkedHashSet<Replacement>();
-		Set<Replacement> allInconsistentRenames = new LinkedHashSet<Replacement>();
+		Set<Replacement> allConsistentRenames = new LinkedHashSet<>();
+		Set<Replacement> allInconsistentRenames = new LinkedHashSet<>();
 		Map<String, Set<String>> aliasedAttributesInOriginalClass = originalClass.aliasedAttributes();
 		Map<String, Set<String>> aliasedAttributesInNextClass = nextClass.aliasedAttributes();
 		ConsistentReplacementDetector.updateRenames(allConsistentRenames, allInconsistentRenames, renames,
-				aliasedAttributesInOriginalClass, aliasedAttributesInNextClass, renameMap);
+			aliasedAttributesInOriginalClass, aliasedAttributesInNextClass, renameMap);
 		allConsistentRenames.removeAll(allInconsistentRenames);
-		for(Replacement pattern : allConsistentRenames) {
+		for (Replacement pattern : allConsistentRenames) {
 			UMLAttribute a1 = findAttributeInOriginalClass(pattern.getBefore());
 			UMLAttribute a2 = findAttributeInNextClass(pattern.getAfter());
 			Set<CandidateAttributeRefactoring> set = renameMap.get(pattern);
-			for(CandidateAttributeRefactoring candidate : set) {
+			for (CandidateAttributeRefactoring candidate : set) {
 				if(candidate.getOriginalVariableDeclaration() == null && candidate.getRenamedVariableDeclaration() == null) {
 					if(a1 != null && a2 != null) {
 						if((!originalClass.containsAttributeWithName(pattern.getAfter()) || cyclicRename(renameMap, pattern)) &&
@@ -725,15 +724,15 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 					renameMap.get(renamePattern).add(candidate);
 				}
 				else {
-					Set<CandidateAttributeRefactoring> set = new LinkedHashSet<CandidateAttributeRefactoring>();
+					Set<CandidateAttributeRefactoring> set = new LinkedHashSet<>();
 					set.add(candidate);
 					renameMap.put(renamePattern, set);
 				}
 			}
 		}
 		for(CandidateMergeVariableRefactoring candidate : mapper.getCandidateAttributeMerges()) {
-			Set<String> before = new LinkedHashSet<String>();
-			for(String mergedVariable : candidate.getMergedVariables()) {
+			Set<String> before = new LinkedHashSet<>();
+			for (String mergedVariable : candidate.getMergedVariables()) {
 				before.add(PrefixSuffixUtils.normalize(mergedVariable));
 			}
 			String after = PrefixSuffixUtils.normalize(candidate.getNewVariable());
@@ -741,8 +740,8 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 			processMerge(mergeMap, merge, candidate);
 		}
 		for(CandidateSplitVariableRefactoring candidate : mapper.getCandidateAttributeSplits()) {
-			Set<String> after = new LinkedHashSet<String>();
-			for(String splitVariable : candidate.getSplitVariables()) {
+			Set<String> after = new LinkedHashSet<>();
+			for (String splitVariable : candidate.getSplitVariables()) {
 				after.add(PrefixSuffixUtils.normalize(splitVariable));
 			}
 			String before = PrefixSuffixUtils.normalize(candidate.getOldVariable());
@@ -758,12 +757,12 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 				if(extractRefactoring.getExtractedOperation().equals(candidate.getOperationAfter())) {
 					List<OperationInvocation> extractedInvocations = extractRefactoring.getExtractedOperationInvocations();
 					if(extractedInvocations.size() > 1) {
-						Set<VariableDeclaration> attributesMatchedWithArguments = new LinkedHashSet<VariableDeclaration>();
-						Set<String> attributeNamesMatchedWithArguments = new LinkedHashSet<String>();
-						for(OperationInvocation extractedInvocation : extractedInvocations) {
-							for(String argument : extractedInvocation.getArguments()) {
-								for(UMLAttribute attribute : originalClass.getAttributes()) {
-									if(attribute.getName().equals(argument)) {
+						Set<VariableDeclaration> attributesMatchedWithArguments = new LinkedHashSet<>();
+						Set<String> attributeNamesMatchedWithArguments = new LinkedHashSet<>();
+						for (OperationInvocation extractedInvocation : extractedInvocations) {
+							for (String argument : extractedInvocation.getArguments()) {
+								for (UMLAttribute attribute : originalClass.getAttributes()) {
+									if (attribute.getName().equals(argument)) {
 										attributesMatchedWithArguments.add(attribute.getVariableDeclaration());
 										attributeNamesMatchedWithArguments.add(attribute.getName());
 										break;
@@ -773,7 +772,7 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 						}
 						if((attributeNamesMatchedWithArguments.contains(candidate.getOriginalVariableName()) ||
 								attributeNamesMatchedWithArguments.contains(candidate.getRenamedVariableName())) &&
-								attributesMatchedWithArguments.size() > 1) {
+							attributesMatchedWithArguments.size() > 1) {
 							return true;
 						}
 					}
@@ -783,16 +782,114 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 		return false;
 	}
 
+	private void processMerge(Map<MergeVariableReplacement, Set<CandidateMergeVariableRefactoring>> mergeMap,
+							  MergeVariableReplacement newMerge, CandidateMergeVariableRefactoring candidate) {
+		MergeVariableReplacement mergeToBeRemoved = null;
+		for (MergeVariableReplacement merge : mergeMap.keySet()) {
+			if (merge.subsumes(newMerge)) {
+				mergeMap.get(merge).add(candidate);
+				return;
+			} else if (merge.equal(newMerge)) {
+				mergeMap.get(merge).add(candidate);
+				return;
+			} else if (merge.commonAfter(newMerge)) {
+				mergeToBeRemoved = merge;
+				Set<String> mergedVariables = new LinkedHashSet<>();
+				mergedVariables.addAll(merge.getMergedVariables());
+				mergedVariables.addAll(newMerge.getMergedVariables());
+				MergeVariableReplacement replacement = new MergeVariableReplacement(mergedVariables, merge.getAfter());
+				Set<CandidateMergeVariableRefactoring> candidates = mergeMap.get(mergeToBeRemoved);
+				candidates.add(candidate);
+				mergeMap.put(replacement, candidates);
+				break;
+			} else if (newMerge.subsumes(merge)) {
+				mergeToBeRemoved = merge;
+				Set<CandidateMergeVariableRefactoring> candidates = mergeMap.get(mergeToBeRemoved);
+				candidates.add(candidate);
+				mergeMap.put(newMerge, candidates);
+				break;
+			}
+		}
+		if (mergeToBeRemoved != null) {
+			mergeMap.remove(mergeToBeRemoved);
+			return;
+		}
+		Set<CandidateMergeVariableRefactoring> set = new LinkedHashSet<>();
+		set.add(candidate);
+		mergeMap.put(newMerge, set);
+	}
+
+	private boolean attributeMerged(UMLAttribute a1, UMLAttribute a2, List<Refactoring> refactorings) {
+		for (Refactoring refactoring : refactorings) {
+			if (refactoring instanceof MergeAttributeRefactoring) {
+				MergeAttributeRefactoring merge = (MergeAttributeRefactoring) refactoring;
+				if (merge.getMergedVariables().contains(a1.getVariableDeclaration()) && merge.getNewAttribute().getVariableDeclaration().equals(a2.getVariableDeclaration())) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	private boolean attributeSplit(UMLAttribute a1, UMLAttribute a2, List<Refactoring> refactorings) {
+		for (Refactoring refactoring : refactorings) {
+			if (refactoring instanceof SplitAttributeRefactoring) {
+				SplitAttributeRefactoring split = (SplitAttributeRefactoring) refactoring;
+				if (split.getSplitVariables().contains(a2.getVariableDeclaration()) && split.getOldAttribute().getVariableDeclaration().equals(a1.getVariableDeclaration())) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	private void processSplit(Map<SplitVariableReplacement, Set<CandidateSplitVariableRefactoring>> splitMap,
+							  SplitVariableReplacement newSplit, CandidateSplitVariableRefactoring candidate) {
+		SplitVariableReplacement splitToBeRemoved = null;
+		for (SplitVariableReplacement split : splitMap.keySet()) {
+			if (split.subsumes(newSplit)) {
+				splitMap.get(split).add(candidate);
+				return;
+			} else if (split.equal(newSplit)) {
+				splitMap.get(split).add(candidate);
+				return;
+			} else if (split.commonBefore(newSplit)) {
+				splitToBeRemoved = split;
+				Set<String> splitVariables = new LinkedHashSet<>();
+				splitVariables.addAll(split.getSplitVariables());
+				splitVariables.addAll(newSplit.getSplitVariables());
+				SplitVariableReplacement replacement = new SplitVariableReplacement(split.getBefore(), splitVariables);
+				Set<CandidateSplitVariableRefactoring> candidates = splitMap.get(splitToBeRemoved);
+				candidates.add(candidate);
+				splitMap.put(replacement, candidates);
+				break;
+			} else if (newSplit.subsumes(split)) {
+				splitToBeRemoved = split;
+				Set<CandidateSplitVariableRefactoring> candidates = splitMap.get(splitToBeRemoved);
+				candidates.add(candidate);
+				splitMap.put(newSplit, candidates);
+				break;
+			}
+		}
+		if (splitToBeRemoved != null) {
+			splitMap.remove(splitToBeRemoved);
+			return;
+		}
+		Set<CandidateSplitVariableRefactoring> set = new LinkedHashSet<>();
+		set.add(candidate);
+		splitMap.put(newSplit, set);
+	}
+
 	private Set<Refactoring> inferAttributeMergesAndSplits(Map<Replacement, Set<CandidateAttributeRefactoring>> map, List<Refactoring> refactorings) {
-		Set<Refactoring> newRefactorings = new LinkedHashSet<Refactoring>();
-		for(Replacement replacement : map.keySet()) {
+		Set<Refactoring> newRefactorings = new LinkedHashSet<>();
+		for (Replacement replacement : map.keySet()) {
 			Set<CandidateAttributeRefactoring> candidates = map.get(replacement);
-			for(CandidateAttributeRefactoring candidate : candidates) {
+			for (CandidateAttributeRefactoring candidate : candidates) {
 				String originalAttributeName = PrefixSuffixUtils.normalize(candidate.getOriginalVariableName());
 				String renamedAttributeName = PrefixSuffixUtils.normalize(candidate.getRenamedVariableName());
 				UMLOperationBodyMapper candidateMapper = null;
-				for(UMLOperationBodyMapper mapper : operationBodyMapperList) {
-					if(mapper.getMappings().containsAll(candidate.getAttributeReferences())) {
+				for (UMLOperationBodyMapper mapper : operationBodyMapperList) {
+					if (mapper.getMappings().containsAll(candidate.getAttributeReferences())) {
 						candidateMapper = mapper;
 						break;
 					}
@@ -805,17 +902,16 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 				}
 				for(Refactoring refactoring : refactorings) {
 					if(refactoring instanceof MergeVariableRefactoring) {
-						MergeVariableRefactoring merge = (MergeVariableRefactoring)refactoring;
-						Set<String> nonMatchingVariableNames = new LinkedHashSet<String>();
+						MergeVariableRefactoring merge = (MergeVariableRefactoring) refactoring;
+						Set<String> nonMatchingVariableNames = new LinkedHashSet<>();
 						String matchingVariableName = null;
-						for(VariableDeclaration variableDeclaration : merge.getMergedVariables()) {
-							if(originalAttributeName.equals(variableDeclaration.getVariableName())) {
+						for (VariableDeclaration variableDeclaration : merge.getMergedVariables()) {
+							if (originalAttributeName.equals(variableDeclaration.getVariableName())) {
 								matchingVariableName = variableDeclaration.getVariableName();
-							}
-							else {
-								for(StatementObject statement : candidateMapper.getNonMappedLeavesT1()) {
-									if(statement.getString().startsWith(variableDeclaration.getVariableName() + "=") ||
-											statement.getString().startsWith("this." + variableDeclaration.getVariableName() + "=")) {
+							} else {
+								for (StatementObject statement : candidateMapper.getNonMappedLeavesT1()) {
+									if (statement.getString().startsWith(variableDeclaration.getVariableName() + "=") ||
+										statement.getString().startsWith("this." + variableDeclaration.getVariableName() + "=")) {
 										nonMatchingVariableNames.add(variableDeclaration.getVariableName());
 										break;
 									}
@@ -823,18 +919,17 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 							}
 						}
 						if(matchingVariableName != null && renamedAttributeName.equals(merge.getNewVariable().getVariableName()) && nonMatchingVariableNames.size() > 0) {
-							Set<UMLAttribute> mergedAttributes = new LinkedHashSet<UMLAttribute>();
-							Set<VariableDeclaration> mergedVariables = new LinkedHashSet<VariableDeclaration>();
-							Set<String> allMatchingVariables = new LinkedHashSet<String>();
-							if(merge.getMergedVariables().iterator().next().getVariableName().equals(matchingVariableName)) {
+							Set<UMLAttribute> mergedAttributes = new LinkedHashSet<>();
+							Set<VariableDeclaration> mergedVariables = new LinkedHashSet<>();
+							Set<String> allMatchingVariables = new LinkedHashSet<>();
+							if (merge.getMergedVariables().iterator().next().getVariableName().equals(matchingVariableName)) {
 								allMatchingVariables.add(matchingVariableName);
 								allMatchingVariables.addAll(nonMatchingVariableNames);
-							}
-							else {
+							} else {
 								allMatchingVariables.addAll(nonMatchingVariableNames);
 								allMatchingVariables.add(matchingVariableName);
 							}
-							for(String mergedVariable : allMatchingVariables) {
+							for (String mergedVariable : allMatchingVariables) {
 								UMLAttribute a1 = findAttributeInOriginalClass(mergedVariable);
 								if(a1 != null) {
 									mergedAttributes.add(a1);
@@ -843,25 +938,24 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 							}
 							UMLAttribute a2 = findAttributeInNextClass(renamedAttributeName);
 							if(mergedVariables.size() > 1 && mergedVariables.size() == merge.getMergedVariables().size() && a2 != null) {
-								MergeAttributeRefactoring ref = new MergeAttributeRefactoring(mergedAttributes, a2, getOriginalClassName(), getNextClassName(), new LinkedHashSet<CandidateMergeVariableRefactoring>());
-								if(!refactorings.contains(ref)) {
+								MergeAttributeRefactoring ref = new MergeAttributeRefactoring(mergedAttributes, a2, getOriginalClassName(), getNextClassName(), new LinkedHashSet<>());
+								if (!refactorings.contains(ref)) {
 									newRefactorings.add(ref);
 								}
 							}
 						}
 					}
 					else if(refactoring instanceof SplitVariableRefactoring) {
-						SplitVariableRefactoring split = (SplitVariableRefactoring)refactoring;
-						Set<String> nonMatchingVariableNames = new LinkedHashSet<String>();
+						SplitVariableRefactoring split = (SplitVariableRefactoring) refactoring;
+						Set<String> nonMatchingVariableNames = new LinkedHashSet<>();
 						String matchingVariableName = null;
-						for(VariableDeclaration variableDeclaration : split.getSplitVariables()) {
-							if(renamedAttributeName.equals(variableDeclaration.getVariableName())) {
+						for (VariableDeclaration variableDeclaration : split.getSplitVariables()) {
+							if (renamedAttributeName.equals(variableDeclaration.getVariableName())) {
 								matchingVariableName = variableDeclaration.getVariableName();
-							}
-							else {
-								for(StatementObject statement : candidateMapper.getNonMappedLeavesT2()) {
-									if(statement.getString().startsWith(variableDeclaration.getVariableName() + "=") ||
-											statement.getString().startsWith("this." + variableDeclaration.getVariableName() + "=")) {
+							} else {
+								for (StatementObject statement : candidateMapper.getNonMappedLeavesT2()) {
+									if (statement.getString().startsWith(variableDeclaration.getVariableName() + "=") ||
+										statement.getString().startsWith("this." + variableDeclaration.getVariableName() + "=")) {
 										nonMatchingVariableNames.add(variableDeclaration.getVariableName());
 										break;
 									}
@@ -869,18 +963,17 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 							}
 						}
 						if(matchingVariableName != null && originalAttributeName.equals(split.getOldVariable().getVariableName()) && nonMatchingVariableNames.size() > 0) {
-							Set<UMLAttribute> splitAttributes = new LinkedHashSet<UMLAttribute>();
-							Set<VariableDeclaration> splitVariables = new LinkedHashSet<VariableDeclaration>();
-							Set<String> allMatchingVariables = new LinkedHashSet<String>();
-							if(split.getSplitVariables().iterator().next().getVariableName().equals(matchingVariableName)) {
+							Set<UMLAttribute> splitAttributes = new LinkedHashSet<>();
+							Set<VariableDeclaration> splitVariables = new LinkedHashSet<>();
+							Set<String> allMatchingVariables = new LinkedHashSet<>();
+							if (split.getSplitVariables().iterator().next().getVariableName().equals(matchingVariableName)) {
 								allMatchingVariables.add(matchingVariableName);
 								allMatchingVariables.addAll(nonMatchingVariableNames);
-							}
-							else {
+							} else {
 								allMatchingVariables.addAll(nonMatchingVariableNames);
 								allMatchingVariables.add(matchingVariableName);
 							}
-							for(String splitVariable : allMatchingVariables) {
+							for (String splitVariable : allMatchingVariables) {
 								UMLAttribute a2 = findAttributeInNextClass(splitVariable);
 								if(a2 != null) {
 									splitAttributes.add(a2);
@@ -889,8 +982,8 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 							}
 							UMLAttribute a1 = findAttributeInOriginalClass(originalAttributeName);
 							if(splitVariables.size() > 1 && splitVariables.size() == split.getSplitVariables().size() && a1 != null) {
-								SplitAttributeRefactoring ref = new SplitAttributeRefactoring(a1, splitAttributes, getOriginalClassName(), getNextClassName(), new LinkedHashSet<CandidateSplitVariableRefactoring>());
-								if(!refactorings.contains(ref)) {
+								SplitAttributeRefactoring ref = new SplitAttributeRefactoring(a1, splitAttributes, getOriginalClassName(), getNextClassName(), new LinkedHashSet<>());
+								if (!refactorings.contains(ref)) {
 									newRefactorings.add(ref);
 								}
 							}
@@ -900,110 +993,6 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 			}
 		}
 		return newRefactorings;
-	}
-
-	private boolean attributeMerged(UMLAttribute a1, UMLAttribute a2, List<Refactoring> refactorings) {
-		for(Refactoring refactoring : refactorings) {
-			if(refactoring instanceof MergeAttributeRefactoring) {
-				MergeAttributeRefactoring merge = (MergeAttributeRefactoring)refactoring;
-				if(merge.getMergedVariables().contains(a1.getVariableDeclaration()) && merge.getNewAttribute().getVariableDeclaration().equals(a2.getVariableDeclaration())) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
-	private boolean attributeSplit(UMLAttribute a1, UMLAttribute a2, List<Refactoring> refactorings) {
-		for(Refactoring refactoring : refactorings) {
-			if(refactoring instanceof SplitAttributeRefactoring) {
-				SplitAttributeRefactoring split = (SplitAttributeRefactoring)refactoring;
-				if(split.getSplitVariables().contains(a2.getVariableDeclaration()) && split.getOldAttribute().getVariableDeclaration().equals(a1.getVariableDeclaration())) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}
-
-	private void processMerge(Map<MergeVariableReplacement, Set<CandidateMergeVariableRefactoring>> mergeMap,
-			MergeVariableReplacement newMerge, CandidateMergeVariableRefactoring candidate) {
-		MergeVariableReplacement mergeToBeRemoved = null;
-		for(MergeVariableReplacement merge : mergeMap.keySet()) {
-			if(merge.subsumes(newMerge)) {
-				mergeMap.get(merge).add(candidate);
-				return;
-			}
-			else if(merge.equal(newMerge)) {
-				mergeMap.get(merge).add(candidate);
-				return;
-			}
-			else if(merge.commonAfter(newMerge)) {
-				mergeToBeRemoved = merge;
-				Set<String> mergedVariables = new LinkedHashSet<String>();
-				mergedVariables.addAll(merge.getMergedVariables());
-				mergedVariables.addAll(newMerge.getMergedVariables());
-				MergeVariableReplacement replacement = new MergeVariableReplacement(mergedVariables, merge.getAfter());
-				Set<CandidateMergeVariableRefactoring> candidates = mergeMap.get(mergeToBeRemoved);
-				candidates.add(candidate);
-				mergeMap.put(replacement, candidates);
-				break;
-			}
-			else if(newMerge.subsumes(merge)) {
-				mergeToBeRemoved = merge;
-				Set<CandidateMergeVariableRefactoring> candidates = mergeMap.get(mergeToBeRemoved);
-				candidates.add(candidate);
-				mergeMap.put(newMerge, candidates);
-				break;
-			}
-		}
-		if(mergeToBeRemoved != null) {
-			mergeMap.remove(mergeToBeRemoved);
-			return;
-		}
-		Set<CandidateMergeVariableRefactoring> set = new LinkedHashSet<CandidateMergeVariableRefactoring>();
-		set.add(candidate);
-		mergeMap.put(newMerge, set);
-	}
-
-	private void processSplit(Map<SplitVariableReplacement, Set<CandidateSplitVariableRefactoring>> splitMap,
-			SplitVariableReplacement newSplit, CandidateSplitVariableRefactoring candidate) {
-		SplitVariableReplacement splitToBeRemoved = null;
-		for(SplitVariableReplacement split : splitMap.keySet()) {
-			if(split.subsumes(newSplit)) {
-				splitMap.get(split).add(candidate);
-				return;
-			}
-			else if(split.equal(newSplit)) {
-				splitMap.get(split).add(candidate);
-				return;
-			}
-			else if(split.commonBefore(newSplit)) {
-				splitToBeRemoved = split;
-				Set<String> splitVariables = new LinkedHashSet<String>();
-				splitVariables.addAll(split.getSplitVariables());
-				splitVariables.addAll(newSplit.getSplitVariables());
-				SplitVariableReplacement replacement = new SplitVariableReplacement(split.getBefore(), splitVariables);
-				Set<CandidateSplitVariableRefactoring> candidates = splitMap.get(splitToBeRemoved);
-				candidates.add(candidate);
-				splitMap.put(replacement, candidates);
-				break;
-			}
-			else if(newSplit.subsumes(split)) {
-				splitToBeRemoved = split;
-				Set<CandidateSplitVariableRefactoring> candidates = splitMap.get(splitToBeRemoved);
-				candidates.add(candidate);
-				splitMap.put(newSplit, candidates);
-				break;
-			}
-		}
-		if(splitToBeRemoved != null) {
-			splitMap.remove(splitToBeRemoved);
-			return;
-		}
-		Set<CandidateSplitVariableRefactoring> set = new LinkedHashSet<CandidateSplitVariableRefactoring>();
-		set.add(candidate);
-		splitMap.put(newSplit, set);
 	}
 
 	public UMLAttribute findAttributeInOriginalClass(String attributeName) {
@@ -1106,23 +1095,21 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 		if(removedOperations.size() <= addedOperations.size()) {
 			for(Iterator<UMLOperation> removedOperationIterator = removedOperations.iterator(); removedOperationIterator.hasNext();) {
 				UMLOperation removedOperation = removedOperationIterator.next();
-				TreeSet<UMLOperationBodyMapper> mapperSet = new TreeSet<UMLOperationBodyMapper>();
-				for(Iterator<UMLOperation> addedOperationIterator = addedOperations.iterator(); addedOperationIterator.hasNext();) {
-					UMLOperation addedOperation = addedOperationIterator.next();
+				TreeSet<UMLOperationBodyMapper> mapperSet = new TreeSet<>();
+				for (UMLOperation addedOperation : addedOperations) {
 					int maxDifferenceInPosition;
-					if(removedOperation.hasTestAnnotation() && addedOperation.hasTestAnnotation()) {
+					if (removedOperation.hasTestAnnotation() && addedOperation.hasTestAnnotation()) {
 						maxDifferenceInPosition = Math.abs(removedOperations.size() - addedOperations.size());
-					}
-					else {
+					} else {
 						maxDifferenceInPosition = Math.max(removedOperations.size(), addedOperations.size());
 					}
 					updateMapperSet(mapperSet, removedOperation, addedOperation, maxDifferenceInPosition);
 					List<UMLOperation> operationsInsideAnonymousClass = addedOperation.getOperationsInsideAnonymousClass(this.addedAnonymousClasses);
-					for(UMLOperation operationInsideAnonymousClass : operationsInsideAnonymousClass) {
+					for (UMLOperation operationInsideAnonymousClass : operationsInsideAnonymousClass) {
 						updateMapperSet(mapperSet, removedOperation, operationInsideAnonymousClass, addedOperation, maxDifferenceInPosition);
 					}
-					if(initialNumberOfRemovedOperations >= MAXIMUM_NUMBER_OF_COMPARED_METHODS && initialNumberOfAddedOperations >= MAXIMUM_NUMBER_OF_COMPARED_METHODS && mapperSet.size() > 0 &&
-							removedOperation.getName().equals(addedOperation.getName())) {
+					if (initialNumberOfRemovedOperations >= MAXIMUM_NUMBER_OF_COMPARED_METHODS && initialNumberOfAddedOperations >= MAXIMUM_NUMBER_OF_COMPARED_METHODS && mapperSet.size() > 0 &&
+						removedOperation.getName().equals(addedOperation.getName())) {
 						break;
 					}
 				}
@@ -1152,23 +1139,21 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 		else {
 			for(Iterator<UMLOperation> addedOperationIterator = addedOperations.iterator(); addedOperationIterator.hasNext();) {
 				UMLOperation addedOperation = addedOperationIterator.next();
-				TreeSet<UMLOperationBodyMapper> mapperSet = new TreeSet<UMLOperationBodyMapper>();
-				for(Iterator<UMLOperation> removedOperationIterator = removedOperations.iterator(); removedOperationIterator.hasNext();) {
-					UMLOperation removedOperation = removedOperationIterator.next();
+				TreeSet<UMLOperationBodyMapper> mapperSet = new TreeSet<>();
+				for (UMLOperation removedOperation : removedOperations) {
 					int maxDifferenceInPosition;
-					if(removedOperation.hasTestAnnotation() && addedOperation.hasTestAnnotation()) {
+					if (removedOperation.hasTestAnnotation() && addedOperation.hasTestAnnotation()) {
 						maxDifferenceInPosition = Math.abs(removedOperations.size() - addedOperations.size());
-					}
-					else {
+					} else {
 						maxDifferenceInPosition = Math.max(removedOperations.size(), addedOperations.size());
 					}
 					updateMapperSet(mapperSet, removedOperation, addedOperation, maxDifferenceInPosition);
 					List<UMLOperation> operationsInsideAnonymousClass = addedOperation.getOperationsInsideAnonymousClass(this.addedAnonymousClasses);
-					for(UMLOperation operationInsideAnonymousClass : operationsInsideAnonymousClass) {
+					for (UMLOperation operationInsideAnonymousClass : operationsInsideAnonymousClass) {
 						updateMapperSet(mapperSet, removedOperation, operationInsideAnonymousClass, addedOperation, maxDifferenceInPosition);
 					}
-					if(initialNumberOfRemovedOperations >= MAXIMUM_NUMBER_OF_COMPARED_METHODS && initialNumberOfAddedOperations >= MAXIMUM_NUMBER_OF_COMPARED_METHODS && mapperSet.size() > 0 &&
-							removedOperation.getName().equals(addedOperation.getName())) {
+					if (initialNumberOfRemovedOperations >= MAXIMUM_NUMBER_OF_COMPARED_METHODS && initialNumberOfAddedOperations >= MAXIMUM_NUMBER_OF_COMPARED_METHODS && mapperSet.size() > 0 &&
+						removedOperation.getName().equals(addedOperation.getName())) {
 						break;
 					}
 				}
@@ -1228,11 +1213,11 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 	}
 
 	private Set<MethodInvocationReplacement> getCallReferences(UMLOperation removedOperation, UMLOperation addedOperation) {
-		Set<MethodInvocationReplacement> callReferences = new LinkedHashSet<MethodInvocationReplacement>();
-		for(MethodInvocationReplacement replacement : consistentMethodInvocationRenames.keySet()) {
+		Set<MethodInvocationReplacement> callReferences = new LinkedHashSet<>();
+		for (MethodInvocationReplacement replacement : consistentMethodInvocationRenames.keySet()) {
 			UMLOperationBodyMapper mapper = consistentMethodInvocationRenames.get(replacement);
-			if(replacement.getInvokedOperationBefore().matchesOperation(removedOperation, mapper.getOperation1(), modelDiff) &&
-					replacement.getInvokedOperationAfter().matchesOperation(addedOperation, mapper.getOperation2(), modelDiff)) {
+			if (replacement.getInvokedOperationBefore().matchesOperation(removedOperation, mapper.getOperation1(), modelDiff) &&
+				replacement.getInvokedOperationAfter().matchesOperation(addedOperation, mapper.getOperation2(), modelDiff)) {
 				callReferences.add(replacement);
 			}
 		}
@@ -1240,16 +1225,16 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 	}
 
 	private Map<MethodInvocationReplacement, UMLOperationBodyMapper> findConsistentMethodInvocationRenames() {
-		Map<MethodInvocationReplacement, UMLOperationBodyMapper> map = new HashMap<MethodInvocationReplacement, UMLOperationBodyMapper>();
-		Set<MethodInvocationReplacement> allConsistentMethodInvocationRenames = new LinkedHashSet<MethodInvocationReplacement>();
-		Set<MethodInvocationReplacement> allInconsistentMethodInvocationRenames = new LinkedHashSet<MethodInvocationReplacement>();
-		for(UMLOperationBodyMapper bodyMapper : operationBodyMapperList) {
+		Map<MethodInvocationReplacement, UMLOperationBodyMapper> map = new HashMap<>();
+		Set<MethodInvocationReplacement> allConsistentMethodInvocationRenames = new LinkedHashSet<>();
+		Set<MethodInvocationReplacement> allInconsistentMethodInvocationRenames = new LinkedHashSet<>();
+		for (UMLOperationBodyMapper bodyMapper : operationBodyMapperList) {
 			Set<MethodInvocationReplacement> methodInvocationRenames = bodyMapper.getMethodInvocationRenameReplacements();
-			for(MethodInvocationReplacement replacement : methodInvocationRenames) {
+			for (MethodInvocationReplacement replacement : methodInvocationRenames) {
 				map.put(replacement, bodyMapper);
 			}
 			ConsistentReplacementDetector.updateRenames(allConsistentMethodInvocationRenames, allInconsistentMethodInvocationRenames,
-					methodInvocationRenames);
+				methodInvocationRenames);
 		}
 		//allConsistentMethodInvocationRenames.removeAll(allInconsistentMethodInvocationRenames);
 		map.keySet().removeAll(allInconsistentMethodInvocationRenames);
@@ -1258,17 +1243,16 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 
 	private void updateMapperSet(TreeSet<UMLOperationBodyMapper> mapperSet, UMLOperation removedOperation, UMLOperation addedOperation, int differenceInPosition) throws RefactoringMinerTimedOutException {
 		UMLOperationBodyMapper operationBodyMapper = new UMLOperationBodyMapper(removedOperation, addedOperation, this);
-		List<AbstractCodeMapping> totalMappings = new ArrayList<AbstractCodeMapping>(operationBodyMapper.getMappings());
+		List<AbstractCodeMapping> totalMappings = new ArrayList<>(operationBodyMapper.getMappings());
 		int mappings = operationBodyMapper.mappingsWithoutBlocks();
-		if(mappings > 0) {
+		if (mappings > 0) {
 			int absoluteDifferenceInPosition = computeAbsoluteDifferenceInPositionWithinClass(removedOperation, addedOperation);
-			if(exactMappings(operationBodyMapper)) {
+			if (exactMappings(operationBodyMapper)) {
 				mapperSet.add(operationBodyMapper);
-			}
-			else if(mappedElementsMoreThanNonMappedT1AndT2(mappings, operationBodyMapper) &&
-					absoluteDifferenceInPosition <= differenceInPosition &&
-					compatibleSignatures(removedOperation, addedOperation, absoluteDifferenceInPosition) &&
-					removedOperation.testMethodCheck(addedOperation)) {
+			} else if (mappedElementsMoreThanNonMappedT1AndT2(mappings, operationBodyMapper) &&
+				absoluteDifferenceInPosition <= differenceInPosition &&
+				compatibleSignatures(removedOperation, addedOperation, absoluteDifferenceInPosition) &&
+				removedOperation.testMethodCheck(addedOperation)) {
 				mapperSet.add(operationBodyMapper);
 			}
 			else if(removedOperation.isConstructor() == addedOperation.isConstructor() &&
@@ -1362,12 +1346,12 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 				int countableStatements = 0;
 				int parameterizedVariableDeclarationStatements = 0;
 				UMLOperation addedOperation = operationBodyMapper.getOperation2();
-				List<String> nonMappedLeavesT1 = new ArrayList<String>();
-				for(StatementObject statement : operationBodyMapper.getNonMappedLeavesT1()) {
-					if(statement.countableStatement()) {
+				List<String> nonMappedLeavesT1 = new ArrayList<>();
+				for (StatementObject statement : operationBodyMapper.getNonMappedLeavesT1()) {
+					if (statement.countableStatement()) {
 						nonMappedLeavesT1.add(statement.getString());
-						for(String parameterName : addedOperation.getParameterNameList()) {
-							if(statement.getVariableDeclaration(parameterName) != null) {
+						for (String parameterName : addedOperation.getParameterNameList()) {
+							if (statement.getVariableDeclaration(parameterName) != null) {
 								parameterizedVariableDeclarationStatements++;
 								break;
 							}
@@ -1481,14 +1465,14 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 	}
 
 	private UMLOperationBodyMapper findBestMapper(TreeSet<UMLOperationBodyMapper> mapperSet) {
-		List<UMLOperationBodyMapper> mapperList = new ArrayList<UMLOperationBodyMapper>(mapperSet);
+		List<UMLOperationBodyMapper> mapperList = new ArrayList<>(mapperSet);
 		UMLOperationBodyMapper bestMapper = mapperSet.first();
 		UMLOperation bestMapperOperation1 = bestMapper.getOperation1();
 		UMLOperation bestMapperOperation2 = bestMapper.getOperation2();
-		if(equalSignatureWithCommonParameterTypes(bestMapperOperation1, bestMapperOperation2)) {
+		if (equalSignatureWithCommonParameterTypes(bestMapperOperation1, bestMapperOperation2)) {
 			return bestMapper;
 		}
-		for(int i=1; i<mapperList.size(); i++) {
+		for (int i = 1; i < mapperList.size(); i++) {
 			UMLOperationBodyMapper mapper = mapperList.get(i);
 			UMLOperation operation2 = mapper.getOperation2();
 			List<OperationInvocation> operationInvocations2 = operation2.getAllOperationInvocations();
@@ -1548,16 +1532,16 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 						return true;
 					}
 					else if(equalSignatureWithCommonParameterTypes(operation1, addedOperation)) {
-						List<String> commonStatements = new ArrayList<String>();
-						for(String statement : addedOperationStringRepresentation) {
-							if(!statement.equals("{") && !statement.equals("}") && !statement.equals("try") && !statement.startsWith("catch(") && !statement.startsWith("case ") && !statement.startsWith("default :") &&
-									!statement.startsWith("return true;") && !statement.startsWith("return false;") && !statement.startsWith("return this;") && !statement.startsWith("return null;") && !statement.startsWith("return;")) {
-								if(stringRepresentation.contains(statement)) {
+						List<String> commonStatements = new ArrayList<>();
+						for (String statement : addedOperationStringRepresentation) {
+							if (!statement.equals("{") && !statement.equals("}") && !statement.equals("try") && !statement.startsWith("catch(") && !statement.startsWith("case ") && !statement.startsWith("default :") &&
+								!statement.startsWith("return true;") && !statement.startsWith("return false;") && !statement.startsWith("return this;") && !statement.startsWith("return null;") && !statement.startsWith("return;")) {
+								if (stringRepresentation.contains(statement)) {
 									commonStatements.add(statement);
 								}
 							}
 						}
-						if(commonStatements.size() > mapper.exactMatches()*2) {
+						if (commonStatements.size() > mapper.exactMatches() * 2) {
 							return true;
 						}
 					}
@@ -1579,16 +1563,16 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 						return true;
 					}
 					else if(equalSignatureWithCommonParameterTypes(removedOperation, operation2)) {
-						List<String> commonStatements = new ArrayList<String>();
-						for(String statement : removedOperationStringRepresentation) {
-							if(!statement.equals("{") && !statement.equals("}") && !statement.equals("try") && !statement.startsWith("catch(") && !statement.startsWith("case ") && !statement.startsWith("default :") &&
-									!statement.startsWith("return true;") && !statement.startsWith("return false;") && !statement.startsWith("return this;") && !statement.startsWith("return null;") && !statement.startsWith("return;")) {
-								if(stringRepresentation.contains(statement)) {
+						List<String> commonStatements = new ArrayList<>();
+						for (String statement : removedOperationStringRepresentation) {
+							if (!statement.equals("{") && !statement.equals("}") && !statement.equals("try") && !statement.startsWith("catch(") && !statement.startsWith("case ") && !statement.startsWith("default :") &&
+								!statement.startsWith("return true;") && !statement.startsWith("return false;") && !statement.startsWith("return this;") && !statement.startsWith("return null;") && !statement.startsWith("return;")) {
+								if (stringRepresentation.contains(statement)) {
 									commonStatements.add(statement);
 								}
 							}
 						}
-						if(commonStatements.size() > mapper.exactMatches()*2) {
+						if (commonStatements.size() > mapper.exactMatches() * 2) {
 							return true;
 						}
 					}
@@ -1623,12 +1607,11 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 		for(UMLOperation operation : operations) {
 			List<OperationInvocation> operationInvocations = operation.getAllOperationInvocations();
 			for(OperationInvocation operationInvocation : operationInvocations) {
-				Set<String> argumentIntersection = new LinkedHashSet<String>(operationInvocation.getArguments());
+				Set<String> argumentIntersection = new LinkedHashSet<>(operationInvocation.getArguments());
 				argumentIntersection.retainAll(invocation.getArguments());
-				if(operationInvocation.getMethodName().equals(invocation.getMethodName()) && !argumentIntersection.isEmpty()) {
+				if (operationInvocation.getMethodName().equals(invocation.getMethodName()) && !argumentIntersection.isEmpty()) {
 					return true;
-				}
-				else if(argumentIntersection.size() > 0 && argumentIntersection.size() == invocation.getArguments().size()) {
+				} else if (argumentIntersection.size() > 0 && argumentIntersection.size() == invocation.getArguments().size()) {
 					return true;
 				}
 			}
@@ -1728,13 +1711,12 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 	}
 
 	private void checkForInlinedOperations() throws RefactoringMinerTimedOutException {
-		List<UMLOperation> operationsToBeRemoved = new ArrayList<UMLOperation>();
-		for(Iterator<UMLOperation> removedOperationIterator = removedOperations.iterator(); removedOperationIterator.hasNext();) {
-			UMLOperation removedOperation = removedOperationIterator.next();
-			for(UMLOperationBodyMapper mapper : getOperationBodyMapperList()) {
+		List<UMLOperation> operationsToBeRemoved = new ArrayList<>();
+		for (UMLOperation removedOperation : removedOperations) {
+			for (UMLOperationBodyMapper mapper : getOperationBodyMapperList()) {
 				InlineOperationDetection detection = new InlineOperationDetection(mapper, removedOperations, this, modelDiff);
 				List<InlineOperationRefactoring> refs = detection.check(removedOperation);
-				for(InlineOperationRefactoring refactoring : refs) {
+				for (InlineOperationRefactoring refactoring : refs) {
 					refactorings.add(refactoring);
 					UMLOperationBodyMapper operationBodyMapper = refactoring.getBodyMapper();
 					processMapperRefactorings(operationBodyMapper, refactorings);
@@ -1747,13 +1729,12 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 	}
 
 	private void checkForExtractedOperations() throws RefactoringMinerTimedOutException {
-		List<UMLOperation> operationsToBeRemoved = new ArrayList<UMLOperation>();
-		for(Iterator<UMLOperation> addedOperationIterator = addedOperations.iterator(); addedOperationIterator.hasNext();) {
-			UMLOperation addedOperation = addedOperationIterator.next();
-			for(UMLOperationBodyMapper mapper : getOperationBodyMapperList()) {
+		List<UMLOperation> operationsToBeRemoved = new ArrayList<>();
+		for (UMLOperation addedOperation : addedOperations) {
+			for (UMLOperationBodyMapper mapper : getOperationBodyMapperList()) {
 				ExtractOperationDetection detection = new ExtractOperationDetection(mapper, addedOperations, this, modelDiff);
 				List<ExtractOperationRefactoring> refs = detection.check(addedOperation);
-				for(ExtractOperationRefactoring refactoring : refs) {
+				for (ExtractOperationRefactoring refactoring : refs) {
 					refactorings.add(refactoring);
 					UMLOperationBodyMapper operationBodyMapper = refactoring.getBodyMapper();
 					processMapperRefactorings(operationBodyMapper, refactorings);
@@ -1768,24 +1749,24 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 
 	private void checkForInconsistentVariableRenames(UMLOperationBodyMapper mapper) {
 		if(mapper.getChildMappers().size() > 1) {
-			Set<Refactoring> refactoringsToBeRemoved = new LinkedHashSet<Refactoring>();
-			for(Refactoring r : refactorings) {
-				if(r instanceof RenameVariableRefactoring) {
-					RenameVariableRefactoring rename = (RenameVariableRefactoring)r;
+			Set<Refactoring> refactoringsToBeRemoved = new LinkedHashSet<>();
+			for (Refactoring r : refactorings) {
+				if (r instanceof RenameVariableRefactoring) {
+					RenameVariableRefactoring rename = (RenameVariableRefactoring) r;
 					Set<AbstractCodeMapping> references = rename.getVariableReferences();
-					for(AbstractCodeMapping reference : references) {
-						if(reference.getFragment1().getVariableDeclarations().size() > 0 && !reference.isExact()) {
-							Set<AbstractCodeMapping> allMappingsForReference = new LinkedHashSet<AbstractCodeMapping>();
-							for(UMLOperationBodyMapper childMapper : mapper.getChildMappers()) {
-								for(AbstractCodeMapping mapping : childMapper.getMappings()) {
-									if(mapping.getFragment1().equals(reference.getFragment1())) {
+					for (AbstractCodeMapping reference : references) {
+						if (reference.getFragment1().getVariableDeclarations().size() > 0 && !reference.isExact()) {
+							Set<AbstractCodeMapping> allMappingsForReference = new LinkedHashSet<>();
+							for (UMLOperationBodyMapper childMapper : mapper.getChildMappers()) {
+								for (AbstractCodeMapping mapping : childMapper.getMappings()) {
+									if (mapping.getFragment1().equals(reference.getFragment1())) {
 										allMappingsForReference.add(mapping);
 										break;
 									}
 								}
 							}
-							if(allMappingsForReference.size() > 1) {
-								for(AbstractCodeMapping mapping : allMappingsForReference) {
+							if (allMappingsForReference.size() > 1) {
+								for (AbstractCodeMapping mapping : allMappingsForReference) {
 									if(!mapping.equals(reference) && mapping.isExact()) {
 										refactoringsToBeRemoved.add(rename);
 										break;
@@ -1814,27 +1795,26 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
 		if(!isEmpty())
 			sb.append(originalClass.getName()).append(":").append("\n");
 		if(visibilityChanged) {
-			sb.append("\t").append("visibility changed from " + oldVisibility + " to " + newVisibility).append("\n");
+			sb.append("\t").append("visibility changed from ").append(oldVisibility).append(" to ").append(newVisibility).append("\n");
 		}
 		if(abstractionChanged) {
-			sb.append("\t").append("abstraction changed from " + (oldAbstraction ? "abstract" : "concrete") + " to " +
-					(newAbstraction ? "abstract" : "concrete")).append("\n");
+			sb.append("\t").append("abstraction changed from ").append(oldAbstraction ? "abstract" : "concrete").append(" to ").append(newAbstraction ? "abstract" : "concrete").append("\n");
 		}
 		Collections.sort(removedOperations);
 		for(UMLOperation umlOperation : removedOperations) {
-			sb.append("operation " + umlOperation + " removed").append("\n");
+			sb.append("operation ").append(umlOperation).append(" removed").append("\n");
 		}
 		Collections.sort(addedOperations);
 		for(UMLOperation umlOperation : addedOperations) {
-			sb.append("operation " + umlOperation + " added").append("\n");
+			sb.append("operation ").append(umlOperation).append(" added").append("\n");
 		}
 		Collections.sort(removedAttributes);
 		for(UMLAttribute umlAttribute : removedAttributes) {
-			sb.append("attribute " + umlAttribute + " removed").append("\n");
+			sb.append("attribute ").append(umlAttribute).append(" removed").append("\n");
 		}
 		Collections.sort(addedAttributes);
 		for(UMLAttribute umlAttribute : addedAttributes) {
-			sb.append("attribute " + umlAttribute + " added").append("\n");
+			sb.append("attribute ").append(umlAttribute).append(" added").append("\n");
 		}
 		for(UMLOperationDiff operationDiff : operationDiffList) {
 			sb.append(operationDiff);

@@ -38,11 +38,10 @@ public class PrefixSuffixUtils {
 	}
 
 	public static String normalize(String input) {
-		String output = null;
-		if(input.startsWith("this.")) {
-            output = input.substring(5);
-        }
-		else {
+		String output;
+		if (input.startsWith("this.")) {
+			output = input.substring(5);
+		} else {
 			output = input;
 		}
 		return output;

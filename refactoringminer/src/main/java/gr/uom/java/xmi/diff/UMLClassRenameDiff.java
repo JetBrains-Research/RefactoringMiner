@@ -17,12 +17,11 @@ public class UMLClassRenameDiff extends UMLClassBaseDiff {
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append("class ");
-		sb.append(originalClass.getName());
-		sb.append(" was renamed to ");
-		sb.append(nextClass.getName());
-		sb.append("\n");
-		return sb.toString();
+		String sb = "class " +
+			originalClass.getName() +
+			" was renamed to " +
+			nextClass.getName() +
+			"\n";
+		return sb;
 	}
 }

@@ -74,14 +74,14 @@ public class LeafMapping extends AbstractCodeMapping implements Comparable<LeafM
 				int depthDiff2 = Math.abs(o.getFragment1().getDepth() - o.getFragment2().getDepth());
 	
 				if(depthDiff1 != depthDiff2) {
-					return Integer.valueOf(depthDiff1).compareTo(Integer.valueOf(depthDiff2));
-				}
+                    return Integer.compare(depthDiff1, depthDiff2);
+                }
 				else {
 					int indexDiff1 = Math.abs(this.getFragment1().getIndex() - this.getFragment2().getIndex());
 					int indexDiff2 = Math.abs(o.getFragment1().getIndex() - o.getFragment2().getIndex());
 					if(indexDiff1 != indexDiff2) {
-						return Integer.valueOf(indexDiff1).compareTo(Integer.valueOf(indexDiff2));
-					}
+                        return Integer.compare(indexDiff1, indexDiff2);
+                    }
 					else {
 						boolean sameVariableDeclarationTypeInParent1 = this.sameVariableDeclarationTypeInParent();
 						boolean sameVariableDeclarationTypeInParent2 = o.sameVariableDeclarationTypeInParent();
@@ -161,11 +161,11 @@ public class LeafMapping extends AbstractCodeMapping implements Comparable<LeafM
 	}
 
 	public Set<String> callChainIntersection() {
-		OperationInvocation invocation1 = this.getFragment1().invocationCoveringEntireFragment();
-		OperationInvocation invocation2 = this.getFragment2().invocationCoveringEntireFragment();
-		if(invocation1 != null && invocation2 != null) {
-			return invocation1.callChainIntersection(invocation2);
-		}
-		return new LinkedHashSet<String>();
-	}
+        OperationInvocation invocation1 = this.getFragment1().invocationCoveringEntireFragment();
+        OperationInvocation invocation2 = this.getFragment2().invocationCoveringEntireFragment();
+        if (invocation1 != null && invocation2 != null) {
+            return invocation1.callChainIntersection(invocation2);
+        }
+        return new LinkedHashSet<>();
+    }
 }

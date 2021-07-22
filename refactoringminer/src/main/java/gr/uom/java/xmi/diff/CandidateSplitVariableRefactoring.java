@@ -60,15 +60,14 @@ public class CandidateSplitVariableRefactoring {
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append("Split Attribute").append("\t");
-		sb.append(oldVariable);
-		sb.append(" to ");
-		sb.append(splitVariables);
-		sb.append(" in method ");
-		sb.append(operationAfter);
-		sb.append(" from class ").append(operationAfter.getClassName());
-		return sb.toString();
+		String sb = "Split Attribute" + "\t" +
+			oldVariable +
+			" to " +
+			splitVariables +
+			" in method " +
+			operationAfter +
+			" from class " + operationAfter.getClassName();
+		return sb;
 	}
 
 	@Override

@@ -20,16 +20,15 @@ public class ReplaceAttributeRefactoring extends MoveAttributeRefactoring {
     }
 
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append(getName()).append("\t");
-        sb.append(originalAttribute.toQualifiedString());
-        sb.append(" from class ");
-        sb.append(getSourceClassName());
-        sb.append(" with ");
-        sb.append(movedAttribute.toQualifiedString());
-        sb.append(" from class ");
-		sb.append(getTargetClassName());
-		return sb.toString();
+		String sb = getName() + "\t" +
+			originalAttribute.toQualifiedString() +
+			" from class " +
+			getSourceClassName() +
+			" with " +
+			movedAttribute.toQualifiedString() +
+			" from class " +
+			getTargetClassName();
+		return sb;
 	}
 
 	public String getName() {
@@ -42,10 +41,10 @@ public class ReplaceAttributeRefactoring extends MoveAttributeRefactoring {
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(movedAttribute.codeRange()
-				.setDescription("replaced attribute declaration")
-				.setCodeElement(movedAttribute.toString()));
+			.setDescription("replaced attribute declaration")
+			.setCodeElement(movedAttribute.toString()));
 		return ranges;
 	}
 }

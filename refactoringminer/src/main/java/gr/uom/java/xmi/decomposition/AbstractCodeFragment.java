@@ -63,16 +63,16 @@ public abstract class AbstractCodeFragment implements LocationInfoProvider {
 		for(String parameter : parameterToArgumentMap.keySet()) {
 			String argument = parameterToArgumentMap.get(parameter);
 			if(!parameter.equals(argument)) {
-				StringBuffer sb = new StringBuffer();
-				Pattern p = Pattern.compile(Pattern.quote(parameter));
-				Matcher m = p.matcher(afterReplacements);
-				while(m.find()) {
-					//check if the matched string is an argument
-					//previous character should be "(" or "," or " " or there is no previous character
-					int start = m.start();
-					boolean isArgument = false;
-					boolean isInsideStringLiteral = false;
-					if(start >= 1) {
+                StringBuilder sb = new StringBuilder();
+                Pattern p = Pattern.compile(Pattern.quote(parameter));
+                Matcher m = p.matcher(afterReplacements);
+                while (m.find()) {
+                    //check if the matched string is an argument
+                    //previous character should be "(" or "," or " " or there is no previous character
+                    int start = m.start();
+                    boolean isArgument = false;
+                    boolean isInsideStringLiteral = false;
+                    if (start >= 1) {
                         String previousChar = afterReplacements.substring(start - 1, start);
                         if (previousChar.equals("(") || previousChar.equals(",") || previousChar.equals(" ") || previousChar.equals("=")) {
                             isArgument = true;

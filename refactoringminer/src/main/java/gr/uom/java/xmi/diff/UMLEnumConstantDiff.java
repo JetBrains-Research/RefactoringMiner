@@ -38,42 +38,41 @@ public class UMLEnumConstantDiff {
 
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		if(!isEmpty())
-			sb.append("\t").append(removedEnumConstant).append("\n");
-		if(renamed)
-			sb.append("\t").append("renamed from " + removedEnumConstant.getName() + " to " + addedEnumConstant.getName()).append("\n");
+		if (!isEmpty())
+            sb.append("\t").append(removedEnumConstant).append("\n");
+        if (renamed)
+            sb.append("\t").append("renamed from ").append(removedEnumConstant.getName()).append(" to ").append(addedEnumConstant.getName()).append("\n");
 		for(UMLAnnotation annotation : annotationListDiff.getRemovedAnnotations()) {
-			sb.append("\t").append("annotation " + annotation + " removed").append("\n");
-		}
-		for(UMLAnnotation annotation : annotationListDiff.getAddedAnnotations()) {
-			sb.append("\t").append("annotation " + annotation + " added").append("\n");
-		}
-		for(UMLAnnotationDiff annotationDiff : annotationListDiff.getAnnotationDiffList()) {
-			sb.append("\t").append("annotation " + annotationDiff.getRemovedAnnotation() + " modified to " + annotationDiff.getAddedAnnotation()).append("\n");
-		}
-		return sb.toString();
-	}
+            sb.append("\t").append("annotation ").append(annotation).append(" removed").append("\n");
+        }
+        for (UMLAnnotation annotation : annotationListDiff.getAddedAnnotations()) {
+            sb.append("\t").append("annotation ").append(annotation).append(" added").append("\n");
+        }
+        for (UMLAnnotationDiff annotationDiff : annotationListDiff.getAnnotationDiffList()) {
+            sb.append("\t").append("annotation ").append(annotationDiff.getRemovedAnnotation()).append(" modified to ").append(annotationDiff.getAddedAnnotation()).append("\n");
+        }
+        return sb.toString();
+    }
 
-	private Set<Refactoring> getAnnotationRefactorings() {
-		Set<Refactoring> refactorings = new LinkedHashSet<Refactoring>();
-		for(UMLAnnotation annotation : annotationListDiff.getAddedAnnotations()) {
-			AddAttributeAnnotationRefactoring refactoring = new AddAttributeAnnotationRefactoring(annotation, removedEnumConstant, addedEnumConstant);
-			refactorings.add(refactoring);
-		}
-		for(UMLAnnotation annotation : annotationListDiff.getRemovedAnnotations()) {
-			RemoveAttributeAnnotationRefactoring refactoring = new RemoveAttributeAnnotationRefactoring(annotation, removedEnumConstant, addedEnumConstant);
-			refactorings.add(refactoring);
-		}
-		for(UMLAnnotationDiff annotationDiff : annotationListDiff.getAnnotationDiffList()) {
-			ModifyAttributeAnnotationRefactoring refactoring = new ModifyAttributeAnnotationRefactoring(annotationDiff.getRemovedAnnotation(), annotationDiff.getAddedAnnotation(), removedEnumConstant, addedEnumConstant);
-			refactorings.add(refactoring);
-		}
-		return refactorings;
-	}
+    public Set<Refactoring> getRefactorings() {
+        Set<Refactoring> refactorings = new LinkedHashSet<>(getAnnotationRefactorings());
+        return refactorings;
+    }
 
-	public Set<Refactoring> getRefactorings() {
-		Set<Refactoring> refactorings = new LinkedHashSet<Refactoring>();
-		refactorings.addAll(getAnnotationRefactorings());
+    private Set<Refactoring> getAnnotationRefactorings() {
+        Set<Refactoring> refactorings = new LinkedHashSet<>();
+        for (UMLAnnotation annotation : annotationListDiff.getAddedAnnotations()) {
+            AddAttributeAnnotationRefactoring refactoring = new AddAttributeAnnotationRefactoring(annotation, removedEnumConstant, addedEnumConstant);
+            refactorings.add(refactoring);
+        }
+        for (UMLAnnotation annotation : annotationListDiff.getRemovedAnnotations()) {
+            RemoveAttributeAnnotationRefactoring refactoring = new RemoveAttributeAnnotationRefactoring(annotation, removedEnumConstant, addedEnumConstant);
+            refactorings.add(refactoring);
+        }
+        for (UMLAnnotationDiff annotationDiff : annotationListDiff.getAnnotationDiffList()) {
+            ModifyAttributeAnnotationRefactoring refactoring = new ModifyAttributeAnnotationRefactoring(annotationDiff.getRemovedAnnotation(), annotationDiff.getAddedAnnotation(), removedEnumConstant, addedEnumConstant);
+			refactorings.add(refactoring);
+		}
 		return refactorings;
 	}
 }

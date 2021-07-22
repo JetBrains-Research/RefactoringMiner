@@ -58,13 +58,12 @@ public class SplitAttributeRefactoring implements Refactoring {
 	}
 
 	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(getName()).append("\t");
-		sb.append(oldAttribute.getVariableDeclaration());
-		sb.append(" to ");
-		sb.append(getSplitVariables());
-		sb.append(" in class ").append(classNameAfter);
-		return sb.toString();
+		String sb = getName() + "\t" +
+			oldAttribute.getVariableDeclaration() +
+			" to " +
+			getSplitVariables() +
+			" in class " + classNameAfter;
+		return sb;
 	}
 
 	@Override
@@ -115,36 +114,36 @@ public class SplitAttributeRefactoring implements Refactoring {
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		pairs.add(new ImmutablePair<String, String>(getOldAttribute().getLocationInfo().getFilePath(), getClassNameBefore()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		pairs.add(new ImmutablePair<>(getOldAttribute().getLocationInfo().getFilePath(), getClassNameBefore()));
 		return pairs;
 	}
 
 	@Override
 	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<ImmutablePair<String, String>>();
-		for(UMLAttribute splitAttribute : this.splitAttributes) {
-			pairs.add(new ImmutablePair<String, String>(splitAttribute.getLocationInfo().getFilePath(), getClassNameAfter()));
+		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+		for (UMLAttribute splitAttribute : this.splitAttributes) {
+			pairs.add(new ImmutablePair<>(splitAttribute.getLocationInfo().getFilePath(), getClassNameAfter()));
 		}
 		return pairs;
 	}
 
 	@Override
 	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
+		List<CodeRange> ranges = new ArrayList<>();
 		ranges.add(oldAttribute.getVariableDeclaration().codeRange()
-				.setDescription("original attribute declaration")
-				.setCodeElement(oldAttribute.getVariableDeclaration().toString()));
+			.setDescription("original attribute declaration")
+			.setCodeElement(oldAttribute.getVariableDeclaration().toString()));
 		return ranges;
 	}
 
 	@Override
 	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<CodeRange>();
-		for(VariableDeclaration splitVariableDeclaration : getSplitVariables()) {
+		List<CodeRange> ranges = new ArrayList<>();
+		for (VariableDeclaration splitVariableDeclaration : getSplitVariables()) {
 			ranges.add(splitVariableDeclaration.codeRange()
-					.setDescription("split attribute declaration")
-					.setCodeElement(splitVariableDeclaration.toString()));
+				.setDescription("split attribute declaration")
+				.setCodeElement(splitVariableDeclaration.toString()));
 		}
 		return ranges;
 	}

@@ -18,7 +18,7 @@ public class InlineOperationDetection {
     private final UMLClassBaseDiff classDiff;
     private final UMLModelDiff modelDiff;
     private final List<OperationInvocation> operationInvocations;
-    private final Map<CallTreeNode, CallTree> callTreeMap = new LinkedHashMap<CallTreeNode, CallTree>();
+	private final Map<CallTreeNode, CallTree> callTreeMap = new LinkedHashMap<>();
 
     public InlineOperationDetection(UMLOperationBodyMapper mapper, List<UMLOperation> removedOperations, UMLClassBaseDiff classDiff, UMLModelDiff modelDiff) {
         this.mapper = mapper;
@@ -29,31 +29,30 @@ public class InlineOperationDetection {
     }
 
     public List<InlineOperationRefactoring> check(UMLOperation removedOperation) throws RefactoringMinerTimedOutException {
-        List<InlineOperationRefactoring> refactorings = new ArrayList<InlineOperationRefactoring>();
+		List<InlineOperationRefactoring> refactorings = new ArrayList<>();
         if (!mapper.getNonMappedLeavesT2().isEmpty() || !mapper.getNonMappedInnerNodesT2().isEmpty() ||
             !mapper.getReplacementsInvolvingMethodInvocation().isEmpty()) {
             List<OperationInvocation> removedOperationInvocations = matchingInvocations(removedOperation, operationInvocations, mapper.getOperation1());
             if (removedOperationInvocations.size() > 0 && !invocationMatchesWithAddedOperation(removedOperationInvocations.get(0), mapper.getOperation1(), mapper.getOperation2().getAllOperationInvocations())) {
                 OperationInvocation removedOperationInvocation = removedOperationInvocations.get(0);
-                CallTreeNode root = new CallTreeNode(mapper.getOperation1(), removedOperation, removedOperationInvocation);
-                CallTree callTree = null;
-                if (callTreeMap.containsKey(root)) {
-                    callTree = callTreeMap.get(root);
-				}
-				else {
+				CallTreeNode root = new CallTreeNode(mapper.getOperation1(), removedOperation, removedOperationInvocation);
+				CallTree callTree;
+				if (callTreeMap.containsKey(root)) {
+					callTree = callTreeMap.get(root);
+				} else {
 					callTree = new CallTree(root);
 					generateCallTree(removedOperation, root, callTree);
 					callTreeMap.put(root, callTree);
 				}
 				UMLOperationBodyMapper operationBodyMapper = createMapperForInlinedMethod(mapper, removedOperation, removedOperationInvocation);
-				List<AbstractCodeMapping> additionalExactMatches = new ArrayList<AbstractCodeMapping>();
+				List<AbstractCodeMapping> additionalExactMatches = new ArrayList<>();
 				List<CallTreeNode> nodesInBreadthFirstOrder = callTree.getNodesInBreadthFirstOrder();
-				for(int i=1; i<nodesInBreadthFirstOrder.size(); i++) {
+				for (int i = 1; i < nodesInBreadthFirstOrder.size(); i++) {
 					CallTreeNode node = nodesInBreadthFirstOrder.get(i);
-					if(matchingInvocations(node.getInvokedOperation(), operationInvocations, mapper.getOperation1()).size() == 0) {
+					if (matchingInvocations(node.getInvokedOperation(), operationInvocations, mapper.getOperation1()).size() == 0) {
 						UMLOperationBodyMapper nestedMapper = createMapperForInlinedMethod(mapper, node.getInvokedOperation(), node.getInvocation());
 						additionalExactMatches.addAll(nestedMapper.getExactMatches());
-						if(inlineMatchCondition(nestedMapper, mapper)) {
+						if (inlineMatchCondition(nestedMapper, mapper)) {
 							List<OperationInvocation> nestedMatchingInvocations = matchingInvocations(node.getInvokedOperation(), node.getOriginalOperation().getAllOperationInvocations(), node.getOriginalOperation());
 							InlineOperationRefactoring nestedRefactoring = new InlineOperationRefactoring(nestedMapper, mapper.getOperation1(), nestedMatchingInvocations);
 							refactorings.add(nestedRefactoring);
@@ -71,9 +70,9 @@ public class InlineOperationDetection {
 	}
 
 	private List<OperationInvocation> matchingInvocations(UMLOperation removedOperation, List<OperationInvocation> operationInvocations, UMLOperation callerOperation) {
-		List<OperationInvocation> removedOperationInvocations = new ArrayList<OperationInvocation>();
-		for(OperationInvocation invocation : operationInvocations) {
-			if(invocation.matchesOperation(removedOperation, callerOperation, modelDiff)) {
+		List<OperationInvocation> removedOperationInvocations = new ArrayList<>();
+		for (OperationInvocation invocation : operationInvocations) {
+			if (invocation.matchesOperation(removedOperation, callerOperation, modelDiff)) {
 				removedOperationInvocations.add(invocation);
 			}
 		}
@@ -84,13 +83,13 @@ public class InlineOperationDetection {
 			UMLOperation removedOperation, OperationInvocation removedOperationInvocation) throws RefactoringMinerTimedOutException {
 		List<String> arguments = removedOperationInvocation.getArguments();
 		List<String> parameters = removedOperation.getParameterNameList();
-		Map<String, String> parameterToArgumentMap = new LinkedHashMap<String, String>();
+		Map<String, String> parameterToArgumentMap = new LinkedHashMap<>();
 		//special handling for methods with varargs parameter for which no argument is passed in the matching invocation
 		int size = Math.min(arguments.size(), parameters.size());
-		for(int i=0; i<size; i++) {
+		for (int i = 0; i < size; i++) {
 			parameterToArgumentMap.put(parameters.get(i), arguments.get(i));
 		}
-		UMLOperationBodyMapper operationBodyMapper = new UMLOperationBodyMapper(removedOperation, mapper, parameterToArgumentMap, new LinkedHashMap<String, String>(), classDiff);
+		UMLOperationBodyMapper operationBodyMapper = new UMLOperationBodyMapper(removedOperation, mapper, parameterToArgumentMap, new LinkedHashMap<>(), classDiff);
 		return operationBodyMapper;
 	}
 
