@@ -37,50 +37,47 @@ public class UMLAnnotationDiff {
                 valueChanged = true;
             }
         } else if (value1 != null && value2 == null) {
-			valueRemoved = true;
-		}
-		else if(value1 == null && value2 != null) {
-			valueAdded  = true;
-		}
-		Map<String, AbstractExpression> memberValuePairs1 = removedAnnotation.getMemberValuePairs();
-		Map<String, AbstractExpression> memberValuePairs2 = addedAnnotation.getMemberValuePairs();
-		if(!memberValuePairs1.isEmpty() || !memberValuePairs2.isEmpty()) {
-			for(String key1 : memberValuePairs1.keySet()) {
-				if(memberValuePairs2.containsKey(key1)) {
-					matchedMemberValuePairs.put(new SimpleEntry<>(key1, memberValuePairs1.get(key1)), new SimpleEntry<>(key1, memberValuePairs2.get(key1)));
-				}
-				else {
-					removedMemberValuePairs.add(new SimpleEntry<>(key1, memberValuePairs1.get(key1)));
-				}
-			}
-			for(String key2 : memberValuePairs2.keySet()) {
-				if(memberValuePairs1.containsKey(key2)) {
-					matchedMemberValuePairs.put(new SimpleEntry<>(key2, memberValuePairs1.get(key2)), new SimpleEntry<>(key2, memberValuePairs2.get(key2)));
-				}
-				else {
-					addedMemberValuePairs.add(new SimpleEntry<>(key2, memberValuePairs2.get(key2)));
-				}
-			}
-		}
-		for(SimpleEntry<String, AbstractExpression> key : matchedMemberValuePairs.keySet()) {
-			SimpleEntry<String, AbstractExpression> value = matchedMemberValuePairs.get(key);
-			if(!key.getValue().getExpression().equals(value.getValue().getExpression())) {
-				matchedMemberValuePairsWithDifferentExpressions.put(key, value);
-			}
-		}
-	}
-	
-	public UMLAnnotation getRemovedAnnotation() {
-		return removedAnnotation;
-	}
+            valueRemoved = true;
+        } else if (value1 == null && value2 != null) {
+            valueAdded = true;
+        }
+        Map<String, AbstractExpression> memberValuePairs1 = removedAnnotation.getMemberValuePairs();
+        Map<String, AbstractExpression> memberValuePairs2 = addedAnnotation.getMemberValuePairs();
+        if (!memberValuePairs1.isEmpty() || !memberValuePairs2.isEmpty()) {
+            for (String key1 : memberValuePairs1.keySet()) {
+                if (memberValuePairs2.containsKey(key1)) {
+                    matchedMemberValuePairs.put(new SimpleEntry<>(key1, memberValuePairs1.get(key1)), new SimpleEntry<>(key1, memberValuePairs2.get(key1)));
+                } else {
+                    removedMemberValuePairs.add(new SimpleEntry<>(key1, memberValuePairs1.get(key1)));
+                }
+            }
+            for (String key2 : memberValuePairs2.keySet()) {
+                if (memberValuePairs1.containsKey(key2)) {
+                    matchedMemberValuePairs.put(new SimpleEntry<>(key2, memberValuePairs1.get(key2)), new SimpleEntry<>(key2, memberValuePairs2.get(key2)));
+                } else {
+                    addedMemberValuePairs.add(new SimpleEntry<>(key2, memberValuePairs2.get(key2)));
+                }
+            }
+        }
+        for (SimpleEntry<String, AbstractExpression> key : matchedMemberValuePairs.keySet()) {
+            SimpleEntry<String, AbstractExpression> value = matchedMemberValuePairs.get(key);
+            if (!key.getValue().getExpression().equals(value.getValue().getExpression())) {
+                matchedMemberValuePairsWithDifferentExpressions.put(key, value);
+            }
+        }
+    }
 
-	public UMLAnnotation getAddedAnnotation() {
-		return addedAnnotation;
-	}
+    public UMLAnnotation getRemovedAnnotation() {
+        return removedAnnotation;
+    }
 
-	public boolean isEmpty() {
-		return !typeNameChanged && !valueChanged && !valueAdded && !valueRemoved &&
-				removedMemberValuePairs.isEmpty() && addedMemberValuePairs.isEmpty() &&
-				matchedMemberValuePairsWithDifferentExpressions.isEmpty();
-	}
+    public UMLAnnotation getAddedAnnotation() {
+        return addedAnnotation;
+    }
+
+    public boolean isEmpty() {
+        return !typeNameChanged && !valueChanged && !valueAdded && !valueRemoved &&
+            removedMemberValuePairs.isEmpty() && addedMemberValuePairs.isEmpty() &&
+            matchedMemberValuePairsWithDifferentExpressions.isEmpty();
+    }
 }

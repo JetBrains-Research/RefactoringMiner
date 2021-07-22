@@ -25,20 +25,20 @@ public class UMLTagElement {
     }
 
     public boolean contains(String s) {
-		for(String fragment : fragments) {
-			if(fragment.contains(s)) {
-				return true;
-			}
-		}
-		return false;
-	}
+        for (String fragment : fragments) {
+            if (fragment.contains(s)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-	public boolean containsIgnoreCase(String s) {
-		for(String fragment : fragments) {
-			if(fragment.toLowerCase().contains(s.toLowerCase())) {
-				return true;
-			}
-		}
-		return false;
-	}
+    public boolean containsIgnoreCase(String s) {
+        for (String fragment : fragments) {
+            if (fragment.toLowerCase().contains(s.toLowerCase())) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

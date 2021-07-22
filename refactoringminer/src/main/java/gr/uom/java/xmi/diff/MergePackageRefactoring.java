@@ -9,120 +9,120 @@ import java.util.List;
 import java.util.Set;
 
 public class MergePackageRefactoring implements Refactoring {
-	private final Set<String> mergedPackages;
-	private String newPackage;
-	private final Set<RenamePackageRefactoring> renamePackageRefactorings;
+    private final Set<String> mergedPackages;
+    private final Set<RenamePackageRefactoring> renamePackageRefactorings;
+    private String newPackage;
 
-	public MergePackageRefactoring(Set<RenamePackageRefactoring> renamePackageRefactorings) {
-		this.renamePackageRefactorings = renamePackageRefactorings;
-		this.mergedPackages = new LinkedHashSet<>();
-		for (RenamePackageRefactoring refactoring : renamePackageRefactorings) {
-			RenamePattern pattern = refactoring.getPattern();
-			if (newPackage == null) {
-				this.newPackage = pattern.getAfter();
-			}
-			mergedPackages.add(pattern.getBefore());
-		}
-	}
+    public MergePackageRefactoring(Set<RenamePackageRefactoring> renamePackageRefactorings) {
+        this.renamePackageRefactorings = renamePackageRefactorings;
+        this.mergedPackages = new LinkedHashSet<>();
+        for (RenamePackageRefactoring refactoring : renamePackageRefactorings) {
+            RenamePattern pattern = refactoring.getPattern();
+            if (newPackage == null) {
+                this.newPackage = pattern.getAfter();
+            }
+            mergedPackages.add(pattern.getBefore());
+        }
+    }
 
-	@Override
-	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<>();
-		for (RenamePackageRefactoring renamePackage : renamePackageRefactorings) {
-			for (PackageLevelRefactoring ref : renamePackage.getMoveClassRefactorings()) {
-				ranges.add(ref.getOriginalClass().codeRange()
-					.setDescription("original type declaration")
-					.setCodeElement(ref.getOriginalClass().getName()));
-			}
-		}
-		return ranges;
-	}
+    @Override
+    public List<CodeRange> leftSide() {
+        List<CodeRange> ranges = new ArrayList<>();
+        for (RenamePackageRefactoring renamePackage : renamePackageRefactorings) {
+            for (PackageLevelRefactoring ref : renamePackage.getMoveClassRefactorings()) {
+                ranges.add(ref.getOriginalClass().codeRange()
+                    .setDescription("original type declaration")
+                    .setCodeElement(ref.getOriginalClass().getName()));
+            }
+        }
+        return ranges;
+    }
 
-	@Override
-	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<>();
-		for (RenamePackageRefactoring renamePackage : renamePackageRefactorings) {
-			for (PackageLevelRefactoring ref : renamePackage.getMoveClassRefactorings()) {
-				ranges.add(ref.getMovedClass().codeRange()
-					.setDescription("moved type declaration")
-					.setCodeElement(ref.getMovedClass().getName()));
-			}
-		}
-		return ranges;
-	}
+    @Override
+    public List<CodeRange> rightSide() {
+        List<CodeRange> ranges = new ArrayList<>();
+        for (RenamePackageRefactoring renamePackage : renamePackageRefactorings) {
+            for (PackageLevelRefactoring ref : renamePackage.getMoveClassRefactorings()) {
+                ranges.add(ref.getMovedClass().codeRange()
+                    .setDescription("moved type declaration")
+                    .setCodeElement(ref.getMovedClass().getName()));
+            }
+        }
+        return ranges;
+    }
 
-	@Override
-	public RefactoringType getRefactoringType() {
-		return RefactoringType.MERGE_PACKAGE;
-	}
+    @Override
+    public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        for (RenamePackageRefactoring renamePackage : renamePackageRefactorings) {
+            for (PackageLevelRefactoring ref : renamePackage.getMoveClassRefactorings()) {
+                pairs.add(new ImmutablePair<>(ref.getOriginalClass().getLocationInfo().getFilePath(), ref.getOriginalClassName()));
+            }
+        }
+        return pairs;
+    }
 
-	@Override
-	public String getName() {
-		return this.getRefactoringType().getDisplayName();
-	}
+    @Override
+    public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        for (RenamePackageRefactoring renamePackage : renamePackageRefactorings) {
+            for (PackageLevelRefactoring ref : renamePackage.getMoveClassRefactorings()) {
+                pairs.add(new ImmutablePair<>(ref.getMovedClass().getLocationInfo().getFilePath(), ref.getMovedClassName()));
+            }
+        }
+        return pairs;
+    }
 
-	@Override
-	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
-		for (RenamePackageRefactoring renamePackage : renamePackageRefactorings) {
-			for (PackageLevelRefactoring ref : renamePackage.getMoveClassRefactorings()) {
-				pairs.add(new ImmutablePair<>(ref.getOriginalClass().getLocationInfo().getFilePath(), ref.getOriginalClassName()));
-			}
-		}
-		return pairs;
-	}
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(getName()).append("\t");
+        Set<String> mergedPaths = new LinkedHashSet<>();
+        for (String mergePackage : mergedPackages) {
+            String mergePath = mergePackage.endsWith(".") ? mergePackage.substring(0, mergePackage.length() - 1) : mergePackage;
+            mergedPaths.add(mergePath);
+        }
+        sb.append(mergedPaths);
+        sb.append(" to ");
+        String newPath = newPackage.endsWith(".") ? newPackage.substring(0, newPackage.length() - 1) : newPackage;
+        sb.append(newPath);
+        return sb.toString();
+    }
 
-	@Override
-	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
-		for (RenamePackageRefactoring renamePackage : renamePackageRefactorings) {
-			for (PackageLevelRefactoring ref : renamePackage.getMoveClassRefactorings()) {
-				pairs.add(new ImmutablePair<>(ref.getMovedClass().getLocationInfo().getFilePath(), ref.getMovedClassName()));
-			}
-		}
-		return pairs;
-	}
+    @Override
+    public String getName() {
+        return this.getRefactoringType().getDisplayName();
+    }
 
-	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(getName()).append("\t");
-		Set<String> mergedPaths = new LinkedHashSet<>();
-		for (String mergePackage : mergedPackages) {
-			String mergePath = mergePackage.endsWith(".") ? mergePackage.substring(0, mergePackage.length() - 1) : mergePackage;
-			mergedPaths.add(mergePath);
-		}
-		sb.append(mergedPaths);
-		sb.append(" to ");
-		String newPath = newPackage.endsWith(".") ? newPackage.substring(0, newPackage.length() - 1) : newPackage;
-		sb.append(newPath);
-		return sb.toString();
-	}
+    @Override
+    public RefactoringType getRefactoringType() {
+        return RefactoringType.MERGE_PACKAGE;
+    }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((mergedPackages == null) ? 0 : mergedPackages.hashCode());
-		result = prime * result + ((newPackage == null) ? 0 : newPackage.hashCode());
-		return result;
-	}
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((mergedPackages == null) ? 0 : mergedPackages.hashCode());
+        result = prime * result + ((newPackage == null) ? 0 : newPackage.hashCode());
+        return result;
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		MergePackageRefactoring other = (MergePackageRefactoring) obj;
-		if (mergedPackages == null) {
-			if (other.mergedPackages != null)
-				return false;
-		} else if (!mergedPackages.equals(other.mergedPackages))
-			return false;
-		if (newPackage == null) {
-			return other.newPackage == null;
-		} else return newPackage.equals(other.newPackage);
-	}
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        MergePackageRefactoring other = (MergePackageRefactoring) obj;
+        if (mergedPackages == null) {
+            if (other.mergedPackages != null)
+                return false;
+        } else if (!mergedPackages.equals(other.mergedPackages))
+            return false;
+        if (newPackage == null) {
+            return other.newPackage == null;
+        } else return newPackage.equals(other.newPackage);
+    }
 }

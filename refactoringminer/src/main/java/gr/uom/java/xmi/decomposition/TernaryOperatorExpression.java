@@ -24,6 +24,16 @@ public class TernaryOperatorExpression {
         return condition;
     }
 
+    public Replacement makeReplacementWithTernaryOnTheRight(String statement) {
+        if (getElseExpression().getString().equals(statement)) {
+            return new Replacement(statement, getExpression(), ReplacementType.EXPRESSION_REPLACED_WITH_TERNARY_ELSE);
+        }
+        if (getThenExpression().getString().equals(statement)) {
+            return new Replacement(statement, getExpression(), ReplacementType.EXPRESSION_REPLACED_WITH_TERNARY_THEN);
+        }
+        return null;
+    }
+
     public AbstractExpression getThenExpression() {
         return thenExpression;
     }
@@ -32,27 +42,17 @@ public class TernaryOperatorExpression {
         return elseExpression;
     }
 
-	public String getExpression() {
-		return expression;
-	}
+    public String getExpression() {
+        return expression;
+    }
 
-	public Replacement makeReplacementWithTernaryOnTheRight(String statement) {
-		if(getElseExpression().getString().equals(statement)) {
-			return new Replacement(statement, getExpression(), ReplacementType.EXPRESSION_REPLACED_WITH_TERNARY_ELSE);
-		}
-		if(getThenExpression().getString().equals(statement)) {
-			return new Replacement(statement, getExpression(), ReplacementType.EXPRESSION_REPLACED_WITH_TERNARY_THEN);
-		}
-		return null;
-	}
-
-	public Replacement makeReplacementWithTernaryOnTheLeft(String statement) {
-		if(getElseExpression().getString().equals(statement)) {
-			return new Replacement(getExpression(), statement, ReplacementType.EXPRESSION_REPLACED_WITH_TERNARY_ELSE);
-		}
-		if(getThenExpression().getString().equals(statement)) {
-			return new Replacement(getExpression(), statement, ReplacementType.EXPRESSION_REPLACED_WITH_TERNARY_THEN);
-		}
-		return null;
-	}
+    public Replacement makeReplacementWithTernaryOnTheLeft(String statement) {
+        if (getElseExpression().getString().equals(statement)) {
+            return new Replacement(getExpression(), statement, ReplacementType.EXPRESSION_REPLACED_WITH_TERNARY_ELSE);
+        }
+        if (getThenExpression().getString().equals(statement)) {
+            return new Replacement(getExpression(), statement, ReplacementType.EXPRESSION_REPLACED_WITH_TERNARY_THEN);
+        }
+        return null;
+    }
 }

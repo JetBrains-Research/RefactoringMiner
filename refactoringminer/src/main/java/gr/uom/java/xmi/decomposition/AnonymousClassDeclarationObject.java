@@ -54,86 +54,86 @@ public class AnonymousClassDeclarationObject implements LocationInfoProvider {
     }
 
     public String toString() {
-		return astNodeString;
-	}
+        return astNodeString;
+    }
 
-	public Map<String, List<OperationInvocation>> getMethodInvocationMap() {
-		return this.methodInvocationMap;
-	}
+    public Map<String, List<OperationInvocation>> getMethodInvocationMap() {
+        return this.methodInvocationMap;
+    }
 
-	public List<VariableDeclaration> getVariableDeclarations() {
-		return variableDeclarations;
-	}
+    public List<VariableDeclaration> getVariableDeclarations() {
+        return variableDeclarations;
+    }
 
-	public List<String> getTypes() {
-		return types;
-	}
+    public List<String> getTypes() {
+        return types;
+    }
 
-	public List<AnonymousClassDeclarationObject> getAnonymousClassDeclarations() {
-		return anonymousClassDeclarations;
-	}
+    public List<AnonymousClassDeclarationObject> getAnonymousClassDeclarations() {
+        return anonymousClassDeclarations;
+    }
 
-	public List<String> getStringLiterals() {
-		return stringLiterals;
-	}
+    public List<String> getStringLiterals() {
+        return stringLiterals;
+    }
 
-	public List<String> getNumberLiterals() {
-		return numberLiterals;
-	}
+    public List<String> getNumberLiterals() {
+        return numberLiterals;
+    }
 
-	public List<String> getNullLiterals() {
-		return nullLiterals;
-	}
+    public List<String> getNullLiterals() {
+        return nullLiterals;
+    }
 
-	public List<String> getBooleanLiterals() {
-		return booleanLiterals;
-	}
+    public List<String> getBooleanLiterals() {
+        return booleanLiterals;
+    }
 
-	public List<String> getTypeLiterals() {
-		return typeLiterals;
-	}
+    public List<String> getTypeLiterals() {
+        return typeLiterals;
+    }
 
-	public Map<String, List<ObjectCreation>> getCreationMap() {
-		return creationMap;
-	}
+    public Map<String, List<ObjectCreation>> getCreationMap() {
+        return creationMap;
+    }
 
-	public List<String> getInfixExpressions() {
-		return infixExpressions;
-	}
+    public List<String> getInfixExpressions() {
+        return infixExpressions;
+    }
 
-	public List<String> getInfixOperators() {
-		return infixOperators;
-	}
+    public List<String> getInfixOperators() {
+        return infixOperators;
+    }
 
-	public List<String> getArrayAccesses() {
-		return arrayAccesses;
-	}
+    public List<String> getArrayAccesses() {
+        return arrayAccesses;
+    }
 
-	public List<String> getPrefixExpressions() {
-		return prefixExpressions;
-	}
+    public List<String> getPrefixExpressions() {
+        return prefixExpressions;
+    }
 
-	public List<String> getPostfixExpressions() {
-		return postfixExpressions;
-	}
+    public List<String> getPostfixExpressions() {
+        return postfixExpressions;
+    }
 
-	public List<String> getArguments() {
-		return this.arguments;
-	}
+    public List<String> getArguments() {
+        return this.arguments;
+    }
 
-	public List<TernaryOperatorExpression> getTernaryOperatorExpressions() {
-		return ternaryOperatorExpressions;
-	}
+    public List<TernaryOperatorExpression> getTernaryOperatorExpressions() {
+        return ternaryOperatorExpressions;
+    }
 
-	public List<String> getVariables() {
-		return variables;
-	}
+    public List<String> getVariables() {
+        return variables;
+    }
 
-	public List<LambdaExpressionObject> getLambdas() {
-		return lambdas;
-	}
+    public List<LambdaExpressionObject> getLambdas() {
+        return lambdas;
+    }
 
-	public CodeRange codeRange() {
-		return locationInfo.codeRange();
-	}
+    public CodeRange codeRange() {
+        return locationInfo.codeRange();
+    }
 }

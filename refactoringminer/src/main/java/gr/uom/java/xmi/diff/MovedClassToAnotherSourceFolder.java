@@ -30,17 +30,17 @@ public class MovedClassToAnotherSourceFolder {
         return originalClass;
     }
 
-	public UMLClass getMovedClass() {
-		return movedClass;
-	}
+    public UMLClass getMovedClass() {
+        return movedClass;
+    }
 
-	public RenamePattern getRenamePattern() {
-		int separatorPos = PrefixSuffixUtils.separatorPosOfCommonSuffix('/', originalPath, movedPath);
-		if (separatorPos == -1) {
-			return new RenamePattern(originalPath, movedPath);
-		}
-		String original = originalPath.substring(0, originalPath.length() - separatorPos);
-		String moved = movedPath.substring(0, movedPath.length() - separatorPos);
-		return new RenamePattern(original, moved);
-	}
+    public RenamePattern getRenamePattern() {
+        int separatorPos = PrefixSuffixUtils.separatorPosOfCommonSuffix('/', originalPath, movedPath);
+        if (separatorPos == -1) {
+            return new RenamePattern(originalPath, movedPath);
+        }
+        String original = originalPath.substring(0, originalPath.length() - separatorPos);
+        String moved = movedPath.substring(0, movedPath.length() - separatorPos);
+        return new RenamePattern(original, moved);
+    }
 }

@@ -25,11 +25,11 @@ public class UMLComment implements LocationInfoProvider {
         if (locationInfo.getCodeElementType().equals(CodeElementType.LINE_COMMENT)) {
             sb.append(locationInfo.getStartLine());
         }
-		if(locationInfo.getCodeElementType().equals(CodeElementType.BLOCK_COMMENT)) {
-			sb.append(locationInfo.getStartLine()).append("-").append(locationInfo.getEndLine());
-		}
-		sb.append(": ");
-		sb.append(text);
-		return sb.toString();
-	}
+        if (locationInfo.getCodeElementType().equals(CodeElementType.BLOCK_COMMENT)) {
+            sb.append(locationInfo.getStartLine()).append("-").append(locationInfo.getEndLine());
+        }
+        sb.append(": ");
+        sb.append(text);
+        return sb.toString();
+    }
 }

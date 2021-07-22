@@ -46,8 +46,19 @@ public class RefactoringSet {
         return refactoringGroups.keySet();
     }
 
-    public RefactoringSet add(RefactoringType type, String entityBefore, String entityAfter) {
-        return add(new RefactoringRelationship(type, entityBefore, entityAfter));
+    public RefactoringSet ignoring(EnumSet<RefactoringType> refTypes) {
+        RefactoringSet newSet = new RefactoringSet(project, revision);
+        newSet.add(refactorings.stream()
+            .filter(r -> !refTypes.contains(r.getRefactoringType()))
+            .collect(Collectors.toList()));
+        return newSet;
+    }
+
+    public RefactoringSet add(Iterable<RefactoringRelationship> rs) {
+        for (RefactoringRelationship r : rs) {
+            this.add(r);
+        }
+        return this;
     }
 
     public RefactoringSet add(RefactoringRelationship r) {
@@ -58,20 +69,6 @@ public class RefactoringSet {
         return this;
     }
 
-    public RefactoringSet add(Iterable<RefactoringRelationship> rs) {
-        for (RefactoringRelationship r : rs) {
-            this.add(r);
-        }
-        return this;
-    }
-
-    public RefactoringSet ignoring(EnumSet<RefactoringType> refTypes) {
-        RefactoringSet newSet = new RefactoringSet(project, revision);
-        newSet.add(refactorings.stream()
-            .filter(r -> !refTypes.contains(r.getRefactoringType()))
-            .collect(Collectors.toList()));
-        return newSet;
-    }
     public RefactoringSet ignoringMethodParameters(boolean active) {
         if (!active) {
             return this;
@@ -121,6 +118,10 @@ public class RefactoringSet {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public RefactoringSet add(RefactoringType type, String entityBefore, String entityAfter) {
+        return add(new RefactoringRelationship(type, entityBefore, entityAfter));
     }
 
 }

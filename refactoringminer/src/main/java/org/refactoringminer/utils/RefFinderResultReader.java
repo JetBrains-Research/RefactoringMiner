@@ -14,7 +14,7 @@ import java.util.function.Function;
 public class RefFinderResultReader {
 
     private static final Map<String, Function<List<String>, RefactoringRelationship>> mappers = initMappings();
-    
+
     public static RefactoringSet read(String project, String revision, String folderPath) {
         try {
             RefactoringSet result = new RefactoringSet(project, revision);
@@ -78,33 +78,15 @@ public class RefFinderResultReader {
         mappers.put("move_field", args -> parse(args, RefactoringType.MOVE_ATTRIBUTE, member(2, 1), member(3, 1)));
         mappers.put("push_down_field", args -> parse(args, RefactoringType.PUSH_DOWN_ATTRIBUTE, member(2, 1), member(3, 1)));
         mappers.put("pull_up_field", args -> parse(args, RefactoringType.PULL_UP_ATTRIBUTE, member(2, 1), member(3, 1)));
-        
+
         return mappers;
     }
-    
+
     private static RefactoringRelationship parse(List<String> args, RefactoringType type, EntityParser parserBefore, EntityParser parserAfter) {
         return new RefactoringRelationship(type, parserBefore.parse(args), parserAfter.parse(args));
     }
-    
+
     private static EntityParser type(final int i) {
-        return new EntityParser() {
-            @Override
-            String parse(List<String> args) {
-                return normalize(args.get(i - 1));
-            }
-        };
-    }
-    
-    private static EntityParser member(final int i, final int j) {
-        return new EntityParser() {
-            @Override
-            String parse(List<String> args) {
-                return normalize(args.get(i - 1)) + "#" + normalize(args.get(j - 1));
-            }
-        };
-    }
-    
-    private static EntityParser member(final int i) {
         return new EntityParser() {
             @Override
             String parse(List<String> args) {
@@ -115,6 +97,24 @@ public class RefFinderResultReader {
 
     private static String normalize(String entity) {
         return entity.replace("%.", ".").replace('#', '.');
+    }
+
+    private static EntityParser member(final int i, final int j) {
+        return new EntityParser() {
+            @Override
+            String parse(List<String> args) {
+                return normalize(args.get(i - 1)) + "#" + normalize(args.get(j - 1));
+            }
+        };
+    }
+
+    private static EntityParser member(final int i) {
+        return new EntityParser() {
+            @Override
+            String parse(List<String> args) {
+                return normalize(args.get(i - 1));
+            }
+        };
     }
 }
 

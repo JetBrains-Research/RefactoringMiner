@@ -10,33 +10,33 @@ import org.eclipse.jdt.core.dom.Expression;
 import org.eclipse.jdt.core.dom.LambdaExpression;
 
 public class LambdaExpressionObject implements LocationInfoProvider {
-	private final LocationInfo locationInfo;
-	private OperationBody body;
-	private AbstractExpression expression;
+    private final LocationInfo locationInfo;
+    private OperationBody body;
+    private AbstractExpression expression;
 
-	public LambdaExpressionObject(CompilationUnit cu, String filePath, LambdaExpression lambda) {
-		this.locationInfo = new LocationInfo(cu, filePath, lambda, CodeElementType.LAMBDA_EXPRESSION);
-		if (lambda.getBody() instanceof Block) {
-			this.body = new OperationBody(cu, filePath, (Block) lambda.getBody());
-		} else if (lambda.getBody() instanceof Expression) {
-			this.expression = new AbstractExpression(cu, filePath, (Expression) lambda.getBody(), CodeElementType.LAMBDA_EXPRESSION_BODY);
-		}
-	}
+    public LambdaExpressionObject(CompilationUnit cu, String filePath, LambdaExpression lambda) {
+        this.locationInfo = new LocationInfo(cu, filePath, lambda, CodeElementType.LAMBDA_EXPRESSION);
+        if (lambda.getBody() instanceof Block) {
+            this.body = new OperationBody(cu, filePath, (Block) lambda.getBody());
+        } else if (lambda.getBody() instanceof Expression) {
+            this.expression = new AbstractExpression(cu, filePath, (Expression) lambda.getBody(), CodeElementType.LAMBDA_EXPRESSION_BODY);
+        }
+    }
 
-	public OperationBody getBody() {
-		return body;
-	}
+    public OperationBody getBody() {
+        return body;
+    }
 
-	public AbstractExpression getExpression() {
-		return expression;
-	}
+    public AbstractExpression getExpression() {
+        return expression;
+    }
 
-	@Override
-	public LocationInfo getLocationInfo() {
-		return locationInfo;
-	}
+    @Override
+    public LocationInfo getLocationInfo() {
+        return locationInfo;
+    }
 
-	public CodeRange codeRange() {
-		return locationInfo.codeRange();
-	}
+    public CodeRange codeRange() {
+        return locationInfo.codeRange();
+    }
 }

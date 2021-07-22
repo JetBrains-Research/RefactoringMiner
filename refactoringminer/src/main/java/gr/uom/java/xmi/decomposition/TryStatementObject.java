@@ -23,15 +23,15 @@ public class TryStatementObject extends CompositeStatementObject {
         return catchClauses;
     }
 
+    public CompositeStatementObject getFinallyClause() {
+        return finallyClause;
+    }
+
     public void setFinallyClause(CompositeStatementObject finallyClause) {
         this.finallyClause = finallyClause;
     }
 
-    public CompositeStatementObject getFinallyClause() {
-		return finallyClause;
-	}
-
-	public boolean isTryWithResources() {
-		return getExpressions().size() > 0;
-	}
+    public boolean isTryWithResources() {
+        return getExpressions().size() > 0;
+    }
 }

@@ -22,24 +22,29 @@ import java.util.Set;
 
 public class TestBuilder {
 
-	private final String tempDir;
-	private final Map<String, ProjectMatcher> map;
-	private final GitHistoryRefactoringMiner refactoringDetector;
-	private boolean verbose;
-	private boolean aggregate;
-	private int commitsCount;
-	private int errorCommitsCount;
-	private Counter c;// = new Counter();
-	private Map<RefactoringType, Counter> cMap;
-	private static final int TP = 0;
-	private static final int FP = 1;
-	private static final int FN = 2;
-	private static final int TN = 3;
-	private static final int UNK = 4;
+    private static final int TP = 0;
+    private static final int FP = 1;
+    private static final int FN = 2;
+    private static final int TN = 3;
+    private static final int UNK = 4;
+    private final String tempDir;
+    private final Map<String, ProjectMatcher> map;
+    private final GitHistoryRefactoringMiner refactoringDetector;
+    private boolean verbose;
+    private boolean aggregate;
+    private int commitsCount;
+    private int errorCommitsCount;
+    private Counter c;// = new Counter();
+    private Map<RefactoringType, Counter> cMap;
+    private BigInteger refactoringFilter;
 
-	private BigInteger refactoringFilter;
+    public TestBuilder(GitHistoryRefactoringMiner detector, String tempDir, BigInteger refactorings) {
+        this(detector, tempDir);
 
-	public TestBuilder(GitHistoryRefactoringMiner detector, String tempDir) {
+        this.refactoringFilter = refactorings;
+    }
+
+    public TestBuilder(GitHistoryRefactoringMiner detector, String tempDir) {
         this.map = new HashMap<>();
         this.refactoringDetector = detector;
         this.tempDir = tempDir;
@@ -47,23 +52,36 @@ public class TestBuilder {
         this.aggregate = false;
     }
 
-	public TestBuilder(GitHistoryRefactoringMiner detector, String tempDir, BigInteger refactorings) {
-		this(detector, tempDir);
+    public TestBuilder() {
+        this(new GitHistoryRefactoringMinerImpl(), "tmp");
+    }
 
-		this.refactoringFilter = refactorings;
-	}
+    /**
+     * Remove generics type information.
+     */
+    private static String normalizeSingle(String refactoring) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < refactoring.length(); i++) {
+            char c = refactoring.charAt(i);
+            if (c == '\t') {
+                c = ' ';
+            }
+            sb.append(c);
+        }
+        return sb.toString();
+    }
 
-	public TestBuilder verbose() {
-		this.verbose = true;
-		return this;
-	}
+    public TestBuilder verbose() {
+        this.verbose = true;
+        return this;
+    }
 
-	public TestBuilder withAggregation() {
-		this.aggregate = true;
-		return this;
-	}
+    public TestBuilder withAggregation() {
+        this.aggregate = true;
+        return this;
+    }
 
-	public void assertExpectations(int expectedTPs, int expectedFPs, int expectedFNs) throws Exception {
+    public void assertExpectations(int expectedTPs, int expectedFPs, int expectedFNs) throws Exception {
         c = new Counter();
         cMap = new HashMap<>();
         commitsCount = 0;
@@ -107,6 +125,19 @@ public class TestBuilder {
         Assert.assertTrue(mainResultMessage, success);
     }
 
+    private int get(int type) {
+        return c.c[type];
+    }
+
+    private String buildResultMessage(Counter c) {
+        double precision = ((double) get(TP, c) / (get(TP, c) + get(FP, c)));
+        double recall = ((double) get(TP, c)) / (get(TP, c) + get(FN, c));
+        String mainResultMessage = String.format(
+            "TP: %2d  FP: %2d  FN: %2d  TN: %2d  Unk.: %2d  Prec.: %.3f  Recall: %.3f", get(TP, c), get(FP, c),
+            get(FN, c), get(TN, c), get(UNK, c), precision, recall);
+        return mainResultMessage;
+    }
+
     private void count(int type, String refactoring) {
         c.c[type]++;
         RefactoringType refType = RefactoringType.extractFromDescription(refactoring);
@@ -116,18 +147,6 @@ public class TestBuilder {
             cMap.put(refType, refTypeCounter);
         }
         refTypeCounter.c[type]++;
-    }
-
-    private int get(int type) {
-        return c.c[type];
-    }
-
-    private int get(int type, Counter counter) {
-        return counter.c[type];
-    }
-
-    public TestBuilder() {
-        this(new GitHistoryRefactoringMinerImpl(), "tmp");
     }
 
     public final ProjectMatcher project(String cloneUrl, String branch) {
@@ -160,94 +179,65 @@ public class TestBuilder {
         return Collections.singletonList(refactoring);
     }
 
-    private String buildResultMessage(Counter c) {
-        double precision = ((double) get(TP, c) / (get(TP, c) + get(FP, c)));
-        double recall = ((double) get(TP, c)) / (get(TP, c) + get(FN, c));
-        String mainResultMessage = String.format(
-            "TP: %2d  FP: %2d  FN: %2d  TN: %2d  Unk.: %2d  Prec.: %.3f  Recall: %.3f", get(TP, c), get(FP, c),
-            get(FN, c), get(TN, c), get(UNK, c), precision, recall);
-        return mainResultMessage;
+    private int get(int type, Counter counter) {
+        return counter.c[type];
     }
 
     private static class Counter {
         final int[] c = new int[5];
     }
 
-    /**
-     * Remove generics type information.
-     */
-    private static String normalizeSingle(String refactoring) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < refactoring.length(); i++) {
-            char c = refactoring.charAt(i);
-            if (c == '\t') {
-                c = ' ';
-			}
-			sb.append(c);
-		}
-		return sb.toString();
-	}
+    public class ProjectMatcher extends RefactoringHandler {
 
-	public class ProjectMatcher extends RefactoringHandler {
+        private final String cloneUrl;
+        private final String branch;
+        private final Map<String, CommitMatcher> expected = new HashMap<>();
+        private boolean ignoreNonSpecifiedCommits = true;
+        private int truePositiveCount = 0;
+        private int falsePositiveCount = 0;
+        private int falseNegativeCount = 0;
+        private int trueNegativeCount = 0;
+        private int unknownCount = 0;
+        // private int errorsCount = 0;
 
-		private final String cloneUrl;
-		private final String branch;
-		private final Map<String, CommitMatcher> expected = new HashMap<>();
-		private boolean ignoreNonSpecifiedCommits = true;
-		private int truePositiveCount = 0;
-		private int falsePositiveCount = 0;
-		private int falseNegativeCount = 0;
-		private int trueNegativeCount = 0;
-		private int unknownCount = 0;
-		// private int errorsCount = 0;
+        private ProjectMatcher(String cloneUrl, String branch) {
+            this.cloneUrl = cloneUrl;
+            this.branch = branch;
+        }
 
-		private ProjectMatcher(String cloneUrl, String branch) {
-			this.cloneUrl = cloneUrl;
-			this.branch = branch;
-		}
+        public ProjectMatcher atNonSpecifiedCommitsContainsNothing() {
+            this.ignoreNonSpecifiedCommits = false;
+            return this;
+        }
 
-		public ProjectMatcher atNonSpecifiedCommitsContainsNothing() {
-			this.ignoreNonSpecifiedCommits = false;
-			return this;
-		}
+        public Set<String> getCommits() {
+            return expected.keySet();
+        }
 
-		public CommitMatcher atCommit(String commitId) {
-			CommitMatcher m = expected.get(commitId);
-			if (m == null) {
-				m = new CommitMatcher();
-				expected.put(commitId, m);
-			}
-			return m;
-		}
+        @Override
+        public boolean skipCommit(String commitId) {
+            if (this.ignoreNonSpecifiedCommits) {
+                return !this.expected.containsKey(commitId);
+            }
+            return false;
+        }
 
-		public Set<String> getCommits() {
-			return expected.keySet();
-		}
-
-		@Override
-		public boolean skipCommit(String commitId) {
-			if (this.ignoreNonSpecifiedCommits) {
-				return !this.expected.containsKey(commitId);
-			}
-			return false;
-		}
-
-		@Override
-		public void handle(String commitId, List<Refactoring> refactorings) {
-			refactorings= filterRefactoring(refactorings);
-			CommitMatcher matcher;
-			commitsCount++;
-			//String commitId = curRevision.getId().getName();
-			if (expected.containsKey(commitId)) {
-				matcher = expected.get(commitId);
-			} else if (!this.ignoreNonSpecifiedCommits) {
-				matcher = this.atCommit(commitId);
-				matcher.containsOnly();
-			} else {
-				// ignore this commit
-				matcher = null;
-			}
-			if (matcher != null) {
+        @Override
+        public void handle(String commitId, List<Refactoring> refactorings) {
+            refactorings = filterRefactoring(refactorings);
+            CommitMatcher matcher;
+            commitsCount++;
+            //String commitId = curRevision.getId().getName();
+            if (expected.containsKey(commitId)) {
+                matcher = expected.get(commitId);
+            } else if (!this.ignoreNonSpecifiedCommits) {
+                matcher = this.atCommit(commitId);
+                matcher.containsOnly();
+            } else {
+                // ignore this commit
+                matcher = null;
+            }
+            if (matcher != null) {
                 matcher.analyzed = true;
                 Set<String> refactoringsFound = new HashSet<>();
                 for (Refactoring refactoring : refactorings) {
@@ -260,128 +250,137 @@ public class TestBuilder {
                         iter.remove();
                         refactoringsFound.remove(expectedRefactoring);
                         this.truePositiveCount++;
-						count(TP, expectedRefactoring);
-						matcher.truePositive.add(expectedRefactoring);
-					}
-				}
+                        count(TP, expectedRefactoring);
+                        matcher.truePositive.add(expectedRefactoring);
+                    }
+                }
 
-				// count false positives
-				for (Iterator<String> iter = matcher.notExpected.iterator(); iter.hasNext();) {
-					String notExpectedRefactoring = iter.next();
-					if (refactoringsFound.contains(notExpectedRefactoring)) {
-						refactoringsFound.remove(notExpectedRefactoring);
-						this.falsePositiveCount++;
-						count(FP, notExpectedRefactoring);
-					} else {
-						this.trueNegativeCount++;
-						count(TN, notExpectedRefactoring);
-						iter.remove();
-					}
-				}
-				// count false positives when using containsOnly
-				if (matcher.ignoreNonSpecified) {
-					for (String refactoring : refactoringsFound) {
-						matcher.unknown.add(refactoring);
-						this.unknownCount++;
-						count(UNK, refactoring);
-					}
-				} else {
-					for (String refactoring : refactoringsFound) {
-						matcher.notExpected.add(refactoring);
-						this.falsePositiveCount++;
-						count(FP, refactoring);
-					}
-				}
+                // count false positives
+                for (Iterator<String> iter = matcher.notExpected.iterator(); iter.hasNext(); ) {
+                    String notExpectedRefactoring = iter.next();
+                    if (refactoringsFound.contains(notExpectedRefactoring)) {
+                        refactoringsFound.remove(notExpectedRefactoring);
+                        this.falsePositiveCount++;
+                        count(FP, notExpectedRefactoring);
+                    } else {
+                        this.trueNegativeCount++;
+                        count(TN, notExpectedRefactoring);
+                        iter.remove();
+                    }
+                }
+                // count false positives when using containsOnly
+                if (matcher.ignoreNonSpecified) {
+                    for (String refactoring : refactoringsFound) {
+                        matcher.unknown.add(refactoring);
+                        this.unknownCount++;
+                        count(UNK, refactoring);
+                    }
+                } else {
+                    for (String refactoring : refactoringsFound) {
+                        matcher.notExpected.add(refactoring);
+                        this.falsePositiveCount++;
+                        count(FP, refactoring);
+                    }
+                }
 
-				// count false negatives
-				for (String expectedButNotFound : matcher.expected) {
-					this.falseNegativeCount++;
-					count(FN, expectedButNotFound);
-				}
-			}
-		}
+                // count false negatives
+                for (String expectedButNotFound : matcher.expected) {
+                    this.falseNegativeCount++;
+                    count(FN, expectedButNotFound);
+                }
+            }
+        }
 
-		private List<Refactoring> filterRefactoring(List<Refactoring> refactorings) {
-			List<Refactoring> filteredRefactorings = new ArrayList<>();
+        public CommitMatcher atCommit(String commitId) {
+            CommitMatcher m = expected.get(commitId);
+            if (m == null) {
+                m = new CommitMatcher();
+                expected.put(commitId, m);
+            }
+            return m;
+        }
 
-			for (Refactoring refactoring : refactorings) {
-				BigInteger value = Enum.valueOf(Refactorings.class, refactoring.getName().replace(" ", "")).getValue();
-				if (value.and(refactoringFilter).compareTo(BigInteger.ZERO) == 1) {
-					filteredRefactorings.add(refactoring);
-				}
-			}
-			
-			return filteredRefactorings;
-		}
+        private List<Refactoring> filterRefactoring(List<Refactoring> refactorings) {
+            List<Refactoring> filteredRefactorings = new ArrayList<>();
 
-		@Override
-		public void handleException(String commitId, Exception e) {
-			if (expected.containsKey(commitId)) {
-				CommitMatcher matcher = expected.get(commitId);
-				matcher.error = e.toString();
-			}
-			errorCommitsCount++;
-			// System.err.println(" error at commit " + commitId + ": " +
-			// e.getMessage());
-		}
+            for (Refactoring refactoring : refactorings) {
+                BigInteger value = Enum.valueOf(Refactorings.class, refactoring.getName().replace(" ", "")).getValue();
+                if (value.and(refactoringFilter).compareTo(BigInteger.ZERO) == 1) {
+                    filteredRefactorings.add(refactoring);
+                }
+            }
 
-		private void printResults() {
-			// if (verbose || this.falsePositiveCount > 0 ||
-			// this.falseNegativeCount > 0 || this.errorsCount > 0) {
-			// System.out.println(this.cloneUrl);
-			// }
-			String baseUrl = this.cloneUrl.substring(0, this.cloneUrl.length() - 4) + "/commit/";
-			for (Map.Entry<String, CommitMatcher> entry : this.expected.entrySet()) {
-				String commitUrl = baseUrl + entry.getKey();
-				CommitMatcher matcher = entry.getValue();
-				if (matcher.error != null) {
-					System.out.println("error at " + commitUrl + ": " + matcher.error);
-				} else {
-					if (verbose || !matcher.expected.isEmpty() || !matcher.notExpected.isEmpty()
-							|| !matcher.unknown.isEmpty()) {
-						if (!matcher.analyzed) {
-							System.out.println("at not analyzed " + commitUrl);
-						} else {
-							System.out.println("at " + commitUrl);
-						}
-					}
-					if (verbose && !matcher.truePositive.isEmpty()) {
-						System.out.println(" true positives");
-						for (String ref : matcher.truePositive) {
-							System.out.println("  " + ref);
-						}
-					}
-					if (!matcher.notExpected.isEmpty()) {
-						System.out.println(" false positives");
-						for (String ref : matcher.notExpected) {
-							System.out.println("  " + ref);
-						}
-					}
-					if (!matcher.expected.isEmpty()) {
-						System.out.println(" false negatives");
-						for (String ref : matcher.expected) {
-							System.out.println("  " + ref);
-						}
-					}
-					if (!matcher.unknown.isEmpty()) {
-						System.out.println(" unknown");
-						for (String ref : matcher.unknown) {
-							System.out.println("  " + ref);
-						}
-					}
-				}
-			}
-		}
+            return filteredRefactorings;
+        }
 
-		// private void countFalseNegatives() {
-		// for (Map.Entry<String, CommitMatcher> entry :
-		// this.expected.entrySet()) {
-		// CommitMatcher matcher = entry.getValue();
-		// if (matcher.error == null) {
-		// this.falseNegativeCount += matcher.expected.size();
-		// }
-		// }
-		// }
+        @Override
+        public void handleException(String commitId, Exception e) {
+            if (expected.containsKey(commitId)) {
+                CommitMatcher matcher = expected.get(commitId);
+                matcher.error = e.toString();
+            }
+            errorCommitsCount++;
+            // System.err.println(" error at commit " + commitId + ": " +
+            // e.getMessage());
+        }
+
+        private void printResults() {
+            // if (verbose || this.falsePositiveCount > 0 ||
+            // this.falseNegativeCount > 0 || this.errorsCount > 0) {
+            // System.out.println(this.cloneUrl);
+            // }
+            String baseUrl = this.cloneUrl.substring(0, this.cloneUrl.length() - 4) + "/commit/";
+            for (Map.Entry<String, CommitMatcher> entry : this.expected.entrySet()) {
+                String commitUrl = baseUrl + entry.getKey();
+                CommitMatcher matcher = entry.getValue();
+                if (matcher.error != null) {
+                    System.out.println("error at " + commitUrl + ": " + matcher.error);
+                } else {
+                    if (verbose || !matcher.expected.isEmpty() || !matcher.notExpected.isEmpty()
+                        || !matcher.unknown.isEmpty()) {
+                        if (!matcher.analyzed) {
+                            System.out.println("at not analyzed " + commitUrl);
+                        } else {
+                            System.out.println("at " + commitUrl);
+                        }
+                    }
+                    if (verbose && !matcher.truePositive.isEmpty()) {
+                        System.out.println(" true positives");
+                        for (String ref : matcher.truePositive) {
+                            System.out.println("  " + ref);
+                        }
+                    }
+                    if (!matcher.notExpected.isEmpty()) {
+                        System.out.println(" false positives");
+                        for (String ref : matcher.notExpected) {
+                            System.out.println("  " + ref);
+                        }
+                    }
+                    if (!matcher.expected.isEmpty()) {
+                        System.out.println(" false negatives");
+                        for (String ref : matcher.expected) {
+                            System.out.println("  " + ref);
+                        }
+                    }
+                    if (!matcher.unknown.isEmpty()) {
+                        System.out.println(" unknown");
+                        for (String ref : matcher.unknown) {
+                            System.out.println("  " + ref);
+                        }
+                    }
+                }
+            }
+        }
+
+        // private void countFalseNegatives() {
+        // for (Map.Entry<String, CommitMatcher> entry :
+        // this.expected.entrySet()) {
+        // CommitMatcher matcher = entry.getValue();
+        // if (matcher.error == null) {
+        // this.falseNegativeCount += matcher.expected.size();
+        // }
+        // }
+        // }
 
         public class CommitMatcher {
             private final Set<String> truePositive = new HashSet<>();
@@ -398,11 +397,15 @@ public class TestBuilder {
             public ProjectMatcher contains(String... refactorings) {
                 for (String refactoring : refactorings) {
                     expected.addAll(normalize(refactoring));
-				}
-				return ProjectMatcher.this;
-			}
+                }
+                return ProjectMatcher.this;
+            }
 
-			public ProjectMatcher containsOnly(String... refactorings) {
+            public ProjectMatcher containsNothing() {
+                return containsOnly();
+            }
+
+            public ProjectMatcher containsOnly(String... refactorings) {
                 this.ignoreNonSpecified = false;
                 this.expected = new HashSet<>();
                 this.notExpected = new HashSet<>();
@@ -410,18 +413,14 @@ public class TestBuilder {
                     expected.addAll(normalize(refactoring));
                 }
                 return ProjectMatcher.this;
-			}
+            }
 
-			public ProjectMatcher containsNothing() {
-				return containsOnly();
-			}
-
-			public ProjectMatcher notContains(String... refactorings) {
-				for (String refactoring : refactorings) {
-					notExpected.addAll(normalize(refactoring));
-				}
-				return ProjectMatcher.this;
-			}
-		}
-	}
+            public ProjectMatcher notContains(String... refactorings) {
+                for (String refactoring : refactorings) {
+                    notExpected.addAll(normalize(refactoring));
+                }
+                return ProjectMatcher.this;
+            }
+        }
+    }
 }

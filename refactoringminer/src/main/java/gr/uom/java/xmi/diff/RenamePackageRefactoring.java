@@ -10,120 +10,119 @@ import java.util.Set;
 
 public class RenamePackageRefactoring implements Refactoring {
 
-	private final List<PackageLevelRefactoring> moveClassRefactorings;
-	private final RenamePattern pattern;
+    private final List<PackageLevelRefactoring> moveClassRefactorings;
+    private final RenamePattern pattern;
 
-	public RenamePackageRefactoring(RenamePattern pattern) {
-		this.moveClassRefactorings = new ArrayList<>();
-		this.pattern = pattern;
-	}
+    public RenamePackageRefactoring(RenamePattern pattern) {
+        this.moveClassRefactorings = new ArrayList<>();
+        this.pattern = pattern;
+    }
 
-	public RenamePackageRefactoring(PackageLevelRefactoring moveClassRefactoring) {
-		this.moveClassRefactorings = new ArrayList<>();
-		this.moveClassRefactorings.add(moveClassRefactoring);
-		this.pattern = moveClassRefactoring.getRenamePattern();
-	}
+    public RenamePackageRefactoring(PackageLevelRefactoring moveClassRefactoring) {
+        this.moveClassRefactorings = new ArrayList<>();
+        this.moveClassRefactorings.add(moveClassRefactoring);
+        this.pattern = moveClassRefactoring.getRenamePattern();
+    }
 
-	public void addMoveClassRefactoring(PackageLevelRefactoring moveClassRefactoring) {
-		moveClassRefactorings.add(moveClassRefactoring);
-	}
+    public void addMoveClassRefactoring(PackageLevelRefactoring moveClassRefactoring) {
+        moveClassRefactorings.add(moveClassRefactoring);
+    }
 
-	public RenamePattern getPattern() {
-		return pattern;
-	}
+    public RenamePattern getPattern() {
+        return pattern;
+    }
 
-	public List<PackageLevelRefactoring> getMoveClassRefactorings() {
-		return moveClassRefactorings;
-	}
+    public List<PackageLevelRefactoring> getMoveClassRefactorings() {
+        return moveClassRefactorings;
+    }
 
-	public RefactoringType getRefactoringType() {
-		String originalPath = pattern.getBefore().endsWith(".") ? pattern.getBefore().substring(0, pattern.getBefore().length()-1) : pattern.getBefore();
-		String movedPath = pattern.getAfter().endsWith(".") ? pattern.getAfter().substring(0, pattern.getAfter().length()-1) : pattern.getAfter();
-		if(originalPath.contains(".") && movedPath.contains(".")) {
-			String prefix1 = originalPath.substring(0, originalPath.lastIndexOf("."));
-			String prefix2 = movedPath.substring(0, movedPath.lastIndexOf("."));
-			if(prefix1.equals(prefix2)) {
-				return RefactoringType.RENAME_PACKAGE;
-			}
-		}
-		else if(!originalPath.contains(".") && !movedPath.contains(".")) {
-			return RefactoringType.RENAME_PACKAGE;
-		}
-		return RefactoringType.MOVE_PACKAGE;
-	}
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(getName()).append("\t");
+        String originalPath = pattern.getBefore().endsWith(".") ? pattern.getBefore().substring(0, pattern.getBefore().length() - 1) : pattern.getBefore();
+        sb.append(originalPath);
+        sb.append(" to ");
+        String movedPath = pattern.getAfter().endsWith(".") ? pattern.getAfter().substring(0, pattern.getAfter().length() - 1) : pattern.getAfter();
+        sb.append(movedPath);
+        return sb.toString();
+    }
 
-	public String getName() {
-		return this.getRefactoringType().getDisplayName();
-	}
+    public String getName() {
+        return this.getRefactoringType().getDisplayName();
+    }
 
-	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(getName()).append("\t");
-		String originalPath = pattern.getBefore().endsWith(".") ? pattern.getBefore().substring(0, pattern.getBefore().length()-1) : pattern.getBefore();
-		sb.append(originalPath);
-		sb.append(" to ");
-		String movedPath = pattern.getAfter().endsWith(".") ? pattern.getAfter().substring(0, pattern.getAfter().length()-1) : pattern.getAfter();
-		sb.append(movedPath);
-		return sb.toString();
-	}
+    public RefactoringType getRefactoringType() {
+        String originalPath = pattern.getBefore().endsWith(".") ? pattern.getBefore().substring(0, pattern.getBefore().length() - 1) : pattern.getBefore();
+        String movedPath = pattern.getAfter().endsWith(".") ? pattern.getAfter().substring(0, pattern.getAfter().length() - 1) : pattern.getAfter();
+        if (originalPath.contains(".") && movedPath.contains(".")) {
+            String prefix1 = originalPath.substring(0, originalPath.lastIndexOf("."));
+            String prefix2 = movedPath.substring(0, movedPath.lastIndexOf("."));
+            if (prefix1.equals(prefix2)) {
+                return RefactoringType.RENAME_PACKAGE;
+            }
+        } else if (!originalPath.contains(".") && !movedPath.contains(".")) {
+            return RefactoringType.RENAME_PACKAGE;
+        }
+        return RefactoringType.MOVE_PACKAGE;
+    }
 
-	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
-		for (PackageLevelRefactoring ref : moveClassRefactorings) {
-			pairs.add(new ImmutablePair<>(ref.getOriginalClass().getLocationInfo().getFilePath(), ref.getOriginalClassName()));
-		}
-		return pairs;
-	}
+    public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        for (PackageLevelRefactoring ref : moveClassRefactorings) {
+            pairs.add(new ImmutablePair<>(ref.getOriginalClass().getLocationInfo().getFilePath(), ref.getOriginalClassName()));
+        }
+        return pairs;
+    }
 
-	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
-		for (PackageLevelRefactoring ref : moveClassRefactorings) {
-			pairs.add(new ImmutablePair<>(ref.getMovedClass().getLocationInfo().getFilePath(), ref.getMovedClassName()));
-		}
-		return pairs;
-	}
+    public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        for (PackageLevelRefactoring ref : moveClassRefactorings) {
+            pairs.add(new ImmutablePair<>(ref.getMovedClass().getLocationInfo().getFilePath(), ref.getMovedClassName()));
+        }
+        return pairs;
+    }
 
-	@Override
-	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<>();
-		for (PackageLevelRefactoring ref : moveClassRefactorings) {
-			ranges.add(ref.getOriginalClass().codeRange()
-				.setDescription("original type declaration")
-				.setCodeElement(ref.getOriginalClass().getName()));
-		}
-		return ranges;
-	}
+    @Override
+    public List<CodeRange> leftSide() {
+        List<CodeRange> ranges = new ArrayList<>();
+        for (PackageLevelRefactoring ref : moveClassRefactorings) {
+            ranges.add(ref.getOriginalClass().codeRange()
+                .setDescription("original type declaration")
+                .setCodeElement(ref.getOriginalClass().getName()));
+        }
+        return ranges;
+    }
 
-	@Override
-	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<>();
-		for (PackageLevelRefactoring ref : moveClassRefactorings) {
-			ranges.add(ref.getMovedClass().codeRange()
-				.setDescription("moved type declaration")
-				.setCodeElement(ref.getMovedClass().getName()));
-		}
-		return ranges;
-	}
+    @Override
+    public List<CodeRange> rightSide() {
+        List<CodeRange> ranges = new ArrayList<>();
+        for (PackageLevelRefactoring ref : moveClassRefactorings) {
+            ranges.add(ref.getMovedClass().codeRange()
+                .setDescription("moved type declaration")
+                .setCodeElement(ref.getMovedClass().getName()));
+        }
+        return ranges;
+    }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((pattern == null) ? 0 : pattern.hashCode());
-		return result;
-	}
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((pattern == null) ? 0 : pattern.hashCode());
+        return result;
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		RenamePackageRefactoring other = (RenamePackageRefactoring) obj;
-		if (pattern == null) {
-			return other.pattern == null;
-		} else return pattern.equals(other.pattern);
-	}
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        RenamePackageRefactoring other = (RenamePackageRefactoring) obj;
+        if (pattern == null) {
+            return other.pattern == null;
+        } else return pattern.equals(other.pattern);
+    }
 }

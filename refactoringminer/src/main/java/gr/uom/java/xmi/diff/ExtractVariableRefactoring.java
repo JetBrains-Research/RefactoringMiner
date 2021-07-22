@@ -12,127 +12,127 @@ import java.util.List;
 import java.util.Set;
 
 public class ExtractVariableRefactoring implements Refactoring {
-	private final VariableDeclaration variableDeclaration;
-	private final UMLOperation operationBefore;
-	private final UMLOperation operationAfter;
-	private final Set<AbstractCodeMapping> references;
+    private final VariableDeclaration variableDeclaration;
+    private final UMLOperation operationBefore;
+    private final UMLOperation operationAfter;
+    private final Set<AbstractCodeMapping> references;
 
-	public ExtractVariableRefactoring(VariableDeclaration variableDeclaration, UMLOperation operationBefore, UMLOperation operationAfter) {
-		this.variableDeclaration = variableDeclaration;
-		this.operationBefore = operationBefore;
-		this.operationAfter = operationAfter;
-		this.references = new LinkedHashSet<>();
-	}
+    public ExtractVariableRefactoring(VariableDeclaration variableDeclaration, UMLOperation operationBefore, UMLOperation operationAfter) {
+        this.variableDeclaration = variableDeclaration;
+        this.operationBefore = operationBefore;
+        this.operationAfter = operationAfter;
+        this.references = new LinkedHashSet<>();
+    }
 
-	public void addReference(AbstractCodeMapping mapping) {
-		references.add(mapping);
-	}
+    public void addReference(AbstractCodeMapping mapping) {
+        references.add(mapping);
+    }
 
-	public RefactoringType getRefactoringType() {
-		return RefactoringType.EXTRACT_VARIABLE;
-	}
+    public VariableDeclaration getVariableDeclaration() {
+        return variableDeclaration;
+    }
 
-	public String getName() {
-		return this.getRefactoringType().getDisplayName();
-	}
+    public Set<AbstractCodeMapping> getReferences() {
+        return references;
+    }
 
-	public VariableDeclaration getVariableDeclaration() {
-		return variableDeclaration;
-	}
+    public String toString() {
+        String sb = getName() + "\t" +
+            variableDeclaration +
+            " in method " +
+            operationAfter +
+            " from class " +
+            operationAfter.getClassName();
+        return sb;
+    }
 
-	public UMLOperation getOperationBefore() {
-		return operationBefore;
-	}
+    public String getName() {
+        return this.getRefactoringType().getDisplayName();
+    }
 
-	public UMLOperation getOperationAfter() {
-		return operationAfter;
-	}
+    public RefactoringType getRefactoringType() {
+        return RefactoringType.EXTRACT_VARIABLE;
+    }
 
-	public Set<AbstractCodeMapping> getReferences() {
-		return references;
-	}
+    /**
+     * @return the code range of the extracted variable declaration in the <b>child</b> commit
+     */
+    public CodeRange getExtractedVariableDeclarationCodeRange() {
+        return variableDeclaration.codeRange();
+    }
 
-	public String toString() {
-		String sb = getName() + "\t" +
-			variableDeclaration +
-			" in method " +
-			operationAfter +
-			" from class " +
-			operationAfter.getClassName();
-		return sb;
-	}
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((operationAfter == null) ? 0 : operationAfter.hashCode());
+        result = prime * result + ((variableDeclaration == null) ? 0 : variableDeclaration.hashCode());
+        return result;
+    }
 
-	/**
-	 * @return the code range of the extracted variable declaration in the <b>child</b> commit
-	 */
-	public CodeRange getExtractedVariableDeclarationCodeRange() {
-		return variableDeclaration.codeRange();
-	}
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        ExtractVariableRefactoring other = (ExtractVariableRefactoring) obj;
+        if (operationAfter == null) {
+            if (other.operationAfter != null)
+                return false;
+        } else if (!operationAfter.equals(other.operationAfter))
+            return false;
+        if (variableDeclaration == null) {
+            return other.variableDeclaration == null;
+        } else return variableDeclaration.equals(other.variableDeclaration);
+    }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((operationAfter == null) ? 0 : operationAfter.hashCode());
-		result = prime * result + ((variableDeclaration == null) ? 0 : variableDeclaration.hashCode());
-		return result;
-	}
+    public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        pairs.add(new ImmutablePair<>(getOperationBefore().getLocationInfo().getFilePath(), getOperationBefore().getClassName()));
+        return pairs;
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		ExtractVariableRefactoring other = (ExtractVariableRefactoring) obj;
-		if (operationAfter == null) {
-			if (other.operationAfter != null)
-				return false;
-		} else if (!operationAfter.equals(other.operationAfter))
-			return false;
-		if (variableDeclaration == null) {
-			return other.variableDeclaration == null;
-		} else return variableDeclaration.equals(other.variableDeclaration);
-	}
+    public UMLOperation getOperationBefore() {
+        return operationBefore;
+    }
 
-	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
-		pairs.add(new ImmutablePair<>(getOperationBefore().getLocationInfo().getFilePath(), getOperationBefore().getClassName()));
-		return pairs;
-	}
+    public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        pairs.add(new ImmutablePair<>(getOperationAfter().getLocationInfo().getFilePath(), getOperationAfter().getClassName()));
+        return pairs;
+    }
 
-	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
-		pairs.add(new ImmutablePair<>(getOperationAfter().getLocationInfo().getFilePath(), getOperationAfter().getClassName()));
-		return pairs;
-	}
+    public UMLOperation getOperationAfter() {
+        return operationAfter;
+    }
 
-	@Override
-	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<>();
-		for (AbstractCodeMapping mapping : references) {
-			ranges.add(mapping.getFragment1().codeRange().setDescription("statement with the initializer of the extracted variable"));
-		}
-		ranges.add(operationBefore.codeRange()
-			.setDescription("original method declaration")
-			.setCodeElement(operationBefore.toString()));
-		return ranges;
-	}
+    @Override
+    public List<CodeRange> leftSide() {
+        List<CodeRange> ranges = new ArrayList<>();
+        for (AbstractCodeMapping mapping : references) {
+            ranges.add(mapping.getFragment1().codeRange().setDescription("statement with the initializer of the extracted variable"));
+        }
+        ranges.add(operationBefore.codeRange()
+            .setDescription("original method declaration")
+            .setCodeElement(operationBefore.toString()));
+        return ranges;
+    }
 
-	@Override
-	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<>();
-		ranges.add(variableDeclaration.codeRange()
-			.setDescription("extracted variable declaration")
-			.setCodeElement(variableDeclaration.toString()));
-		for (AbstractCodeMapping mapping : references) {
-			ranges.add(mapping.getFragment2().codeRange().setDescription("statement with the name of the extracted variable"));
-		}
-		ranges.add(operationAfter.codeRange()
-			.setDescription("method declaration with extracted variable")
-			.setCodeElement(operationAfter.toString()));
-		return ranges;
-	}
+    @Override
+    public List<CodeRange> rightSide() {
+        List<CodeRange> ranges = new ArrayList<>();
+        ranges.add(variableDeclaration.codeRange()
+            .setDescription("extracted variable declaration")
+            .setCodeElement(variableDeclaration.toString()));
+        for (AbstractCodeMapping mapping : references) {
+            ranges.add(mapping.getFragment2().codeRange().setDescription("statement with the name of the extracted variable"));
+        }
+        ranges.add(operationAfter.codeRange()
+            .setDescription("method declaration with extracted variable")
+            .setCodeElement(operationAfter.toString()));
+        return ranges;
+    }
 }

@@ -25,24 +25,24 @@ public class UMLGeneralizationDiff implements Comparable<UMLGeneralizationDiff> 
 
     public UMLGeneralization getAddedGeneralization() {
         return addedGeneralization;
-	}
+    }
 
-	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		if (parentChanged || childChanged)
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        if (parentChanged || childChanged)
             sb.append("generalization ").append(removedGeneralization).append(":").append("\n");
         if (childChanged)
             sb.append("\t").append("child changed from ").append(removedGeneralization.getChild()).append(" to ").append(addedGeneralization.getChild()).append("\n");
         if (parentChanged)
             sb.append("\t").append("parent changed from ").append(removedGeneralization.getParent()).append(" to ").append(addedGeneralization.getParent()).append("\n");
-		return sb.toString();
-	}
+        return sb.toString();
+    }
 
-	public int compareTo(UMLGeneralizationDiff generalizationDiff) {
-		int compare = this.removedGeneralization.compareTo(generalizationDiff.removedGeneralization);
-		if(compare == 0)
-			return this.addedGeneralization.compareTo(generalizationDiff.addedGeneralization);
-		else
-			return compare;
-	}
+    public int compareTo(UMLGeneralizationDiff generalizationDiff) {
+        int compare = this.removedGeneralization.compareTo(generalizationDiff.removedGeneralization);
+        if (compare == 0)
+            return this.addedGeneralization.compareTo(generalizationDiff.addedGeneralization);
+        else
+            return compare;
+    }
 }

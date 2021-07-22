@@ -29,20 +29,16 @@ public class UMLEnumConstantDiff {
     }
 
     public boolean isRenamed() {
-		return renamed;
-	}
+        return renamed;
+    }
 
-	public boolean isEmpty() {
-		return !renamed && annotationListDiff.isEmpty();
-	}
-
-	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		if (!isEmpty())
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        if (!isEmpty())
             sb.append("\t").append(removedEnumConstant).append("\n");
         if (renamed)
             sb.append("\t").append("renamed from ").append(removedEnumConstant.getName()).append(" to ").append(addedEnumConstant.getName()).append("\n");
-		for(UMLAnnotation annotation : annotationListDiff.getRemovedAnnotations()) {
+        for (UMLAnnotation annotation : annotationListDiff.getRemovedAnnotations()) {
             sb.append("\t").append("annotation ").append(annotation).append(" removed").append("\n");
         }
         for (UMLAnnotation annotation : annotationListDiff.getAddedAnnotations()) {
@@ -52,6 +48,10 @@ public class UMLEnumConstantDiff {
             sb.append("\t").append("annotation ").append(annotationDiff.getRemovedAnnotation()).append(" modified to ").append(annotationDiff.getAddedAnnotation()).append("\n");
         }
         return sb.toString();
+    }
+
+    public boolean isEmpty() {
+        return !renamed && annotationListDiff.isEmpty();
     }
 
     public Set<Refactoring> getRefactorings() {
@@ -71,8 +71,8 @@ public class UMLEnumConstantDiff {
         }
         for (UMLAnnotationDiff annotationDiff : annotationListDiff.getAnnotationDiffList()) {
             ModifyAttributeAnnotationRefactoring refactoring = new ModifyAttributeAnnotationRefactoring(annotationDiff.getRemovedAnnotation(), annotationDiff.getAddedAnnotation(), removedEnumConstant, addedEnumConstant);
-			refactorings.add(refactoring);
-		}
-		return refactorings;
-	}
+            refactorings.add(refactoring);
+        }
+        return refactorings;
+    }
 }

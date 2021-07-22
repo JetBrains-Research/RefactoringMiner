@@ -12,126 +12,125 @@ import java.util.List;
 import java.util.Set;
 
 public class AddAttributeAnnotationRefactoring implements Refactoring {
-	private final UMLAnnotation annotation;
-	private final UMLAttribute attributeBefore;
-	private final UMLAttribute attributeAfter;
+    private final UMLAnnotation annotation;
+    private final UMLAttribute attributeBefore;
+    private final UMLAttribute attributeAfter;
 
-	public AddAttributeAnnotationRefactoring(UMLAnnotation annotation, UMLAttribute attributeBefore,
-											 UMLAttribute attributeAfter) {
-		this.annotation = annotation;
-		this.attributeBefore = attributeBefore;
-		this.attributeAfter = attributeAfter;
-	}
+    public AddAttributeAnnotationRefactoring(UMLAnnotation annotation, UMLAttribute attributeBefore,
+                                             UMLAttribute attributeAfter) {
+        this.annotation = annotation;
+        this.attributeBefore = attributeBefore;
+        this.attributeAfter = attributeAfter;
+    }
 
-	public UMLAnnotation getAnnotation() {
-		return annotation;
-	}
+    public UMLAnnotation getAnnotation() {
+        return annotation;
+    }
 
-	public UMLAttribute getAttributeBefore() {
-		return attributeBefore;
-	}
+    @Override
+    public List<CodeRange> leftSide() {
+        List<CodeRange> ranges = new ArrayList<>();
+        ranges.add(attributeBefore.codeRange()
+            .setDescription("original attribute declaration")
+            .setCodeElement(attributeBefore.toString()));
+        return ranges;
+    }
 
-	public UMLAttribute getAttributeAfter() {
-		return attributeAfter;
-	}
+    @Override
+    public List<CodeRange> rightSide() {
+        List<CodeRange> ranges = new ArrayList<>();
+        ranges.add(annotation.codeRange()
+            .setDescription("added annotation")
+            .setCodeElement(annotation.toString()));
+        ranges.add(attributeAfter.codeRange()
+            .setDescription("attribute declaration with added annotation")
+            .setCodeElement(attributeAfter.toString()));
+        return ranges;
+    }
 
-	@Override
-	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<>();
-		ranges.add(attributeBefore.codeRange()
-			.setDescription("original attribute declaration")
-			.setCodeElement(attributeBefore.toString()));
-		return ranges;
-	}
+    @Override
+    public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        pairs.add(new ImmutablePair<>(getAttributeBefore().getLocationInfo().getFilePath(), getAttributeBefore().getClassName()));
+        return pairs;
+    }
 
-	@Override
-	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<>();
-		ranges.add(annotation.codeRange()
-			.setDescription("added annotation")
-			.setCodeElement(annotation.toString()));
-		ranges.add(attributeAfter.codeRange()
-			.setDescription("attribute declaration with added annotation")
-			.setCodeElement(attributeAfter.toString()));
-		return ranges;
-	}
+    public UMLAttribute getAttributeBefore() {
+        return attributeBefore;
+    }
 
-	@Override
-	public RefactoringType getRefactoringType() {
-		return RefactoringType.ADD_ATTRIBUTE_ANNOTATION;
-	}
+    @Override
+    public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        pairs.add(new ImmutablePair<>(getAttributeAfter().getLocationInfo().getFilePath(), getAttributeAfter().getClassName()));
+        return pairs;
+    }
 
-	@Override
-	public String getName() {
-		return this.getRefactoringType().getDisplayName();
-	}
+    public UMLAttribute getAttributeAfter() {
+        return attributeAfter;
+    }
 
-	@Override
-	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
-		pairs.add(new ImmutablePair<>(getAttributeBefore().getLocationInfo().getFilePath(), getAttributeBefore().getClassName()));
-		return pairs;
-	}
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(getName()).append("\t");
+        sb.append(annotation);
+        if (attributeAfter instanceof UMLEnumConstant) {
+            sb.append(" in enum constant ");
+        } else {
+            sb.append(" in attribute ");
+        }
+        sb.append(attributeAfter);
+        sb.append(" from class ");
+        sb.append(attributeAfter.getClassName());
+        return sb.toString();
+    }
 
-	@Override
-	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
-		pairs.add(new ImmutablePair<>(getAttributeAfter().getLocationInfo().getFilePath(), getAttributeAfter().getClassName()));
-		return pairs;
-	}
+    @Override
+    public String getName() {
+        return this.getRefactoringType().getDisplayName();
+    }
 
-	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(getName()).append("\t");
-		sb.append(annotation);
-		if(attributeAfter instanceof UMLEnumConstant) {
-			sb.append(" in enum constant ");
-		}
-		else {
-			sb.append(" in attribute ");
-		}
-		sb.append(attributeAfter);
-		sb.append(" from class ");
-		sb.append(attributeAfter.getClassName());
-		return sb.toString();
-	}
+    @Override
+    public RefactoringType getRefactoringType() {
+        return RefactoringType.ADD_ATTRIBUTE_ANNOTATION;
+    }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((annotation == null) ? 0 : annotation.hashCode());
-		result = prime * result + ((attributeAfter == null || attributeAfter.getVariableDeclaration() == null) ? 0 : attributeAfter.getVariableDeclaration().hashCode());
-		result = prime * result + ((attributeBefore == null || attributeBefore.getVariableDeclaration() == null) ? 0 : attributeBefore.getVariableDeclaration().hashCode());
-		return result;
-	}
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((annotation == null) ? 0 : annotation.hashCode());
+        result = prime * result + ((attributeAfter == null || attributeAfter.getVariableDeclaration() == null) ? 0 : attributeAfter.getVariableDeclaration().hashCode());
+        result = prime * result + ((attributeBefore == null || attributeBefore.getVariableDeclaration() == null) ? 0 : attributeBefore.getVariableDeclaration().hashCode());
+        return result;
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		AddAttributeAnnotationRefactoring other = (AddAttributeAnnotationRefactoring) obj;
-		if (annotation == null) {
-			if (other.annotation != null)
-				return false;
-		} else if (!annotation.equals(other.annotation))
-			return false;
-		if (attributeBefore == null) {
-			if (other.attributeBefore != null)
-				return false;
-		} else if (attributeBefore.getVariableDeclaration() == null) {
-			if (other.attributeBefore.getVariableDeclaration() != null)
-				return false;
-		} else if (!attributeBefore.getVariableDeclaration().equals(other.attributeBefore.getVariableDeclaration()))
-			return false;
-		if (attributeAfter == null) {
-			return other.attributeAfter == null;
-		} else if (attributeAfter.getVariableDeclaration() == null) {
-			return other.attributeAfter.getVariableDeclaration() == null;
-		} else return attributeAfter.getVariableDeclaration().equals(other.attributeAfter.getVariableDeclaration());
-	}
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        AddAttributeAnnotationRefactoring other = (AddAttributeAnnotationRefactoring) obj;
+        if (annotation == null) {
+            if (other.annotation != null)
+                return false;
+        } else if (!annotation.equals(other.annotation))
+            return false;
+        if (attributeBefore == null) {
+            if (other.attributeBefore != null)
+                return false;
+        } else if (attributeBefore.getVariableDeclaration() == null) {
+            if (other.attributeBefore.getVariableDeclaration() != null)
+                return false;
+        } else if (!attributeBefore.getVariableDeclaration().equals(other.attributeBefore.getVariableDeclaration()))
+            return false;
+        if (attributeAfter == null) {
+            return other.attributeAfter == null;
+        } else if (attributeAfter.getVariableDeclaration() == null) {
+            return other.attributeAfter.getVariableDeclaration() == null;
+        } else return attributeAfter.getVariableDeclaration().equals(other.attributeAfter.getVariableDeclaration());
+    }
 }

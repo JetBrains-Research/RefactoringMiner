@@ -33,30 +33,66 @@ public class ResultComparator {
     private boolean ignoreMoveToMovedType = false;
     private boolean ignoreMoveToRenamedType = false;
 
+    public ResultComparator() {
+        this(false, false);
+    }
+
     public ResultComparator(boolean groupRefactorings, boolean ignoreMethodParams) {
         this.groupRefactorings = groupRefactorings;
         this.ignoreMethodParams = ignoreMethodParams;
     }
 
-    public ResultComparator() {
-        this(false, false);
+    public static RefactoringSet[] collectRmResult(GitHistoryRefactoringMiner rm, RefactoringSet[] oracle) {
+        RefactoringSet[] result = new RefactoringSet[oracle.length];
+        for (int i = 0; i < result.length; i++) {
+            result[i] = collectRmResult(rm, oracle[i].getProject(), oracle[i].getRevision());
+        }
+        return result;
     }
 
-    public ResultComparator expect(RefactoringSet ... sets) {
+    public static RefactoringSet collectRmResult(GitHistoryRefactoringMiner rm, String cloneUrl, String commitId) {
+        GitService git = new GitServiceImpl();
+        String tempDir = "tmp";
+        String resultCacheDir = "tmpResult";
+        String projectName = cloneUrl.substring(cloneUrl.lastIndexOf('/') + 1, cloneUrl.lastIndexOf('.'));
+        File cachedResult = new File(resultCacheDir + "/" + rm.getConfigId() + "-" + projectName + "-" + commitId);
+        if (cachedResult.exists()) {
+            RefactoringSet rs = new RefactoringSet(cloneUrl, commitId);
+            rs.readFromFile(cachedResult);
+            return rs;
+        } else {
+            String folder = tempDir + "/" + projectName;
+            final RefactoringCollector rc = new RefactoringCollector(cloneUrl, commitId);
+            try (Repository repo = git.cloneIfNotExists(folder, cloneUrl)) {
+                rm.detectAtCommit(repo, commitId, rc);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            RefactoringSet rs = rc.assertAndGetResult();
+            rs.saveToFile(cachedResult);
+            return rs;
+        }
+    }
+
+    public ResultComparator expect(RefactoringSet... sets) {
         for (RefactoringSet set : sets) {
             expectedMap.put(getProjectRevisionId(set.getProject(), set.getRevision()), set);
         }
         return this;
     }
 
-    public ResultComparator dontExpect(RefactoringSet ... sets) {
+    private String getProjectRevisionId(String project, String revision) {
+        return project.substring(0, project.length() - 4) + "/commit/" + revision;
+    }
+
+    public ResultComparator dontExpect(RefactoringSet... sets) {
         for (RefactoringSet set : sets) {
             notExpectedMap.put(getProjectRevisionId(set.getProject(), set.getRevision()), set);
         }
         return this;
     }
 
-    public ResultComparator compareWith(String groupId, RefactoringSet ... actualArray) {
+    public ResultComparator compareWith(String groupId, RefactoringSet... actualArray) {
         for (RefactoringSet actual : actualArray) {
             groupIds.add(groupId);
             resultMap.put(getResultId(actual.getProject(), actual.getRevision(), groupId), actual);
@@ -64,8 +100,10 @@ public class ResultComparator {
         return this;
     }
 
-    
-    
+    private String getResultId(String project, String revision, String groupId) {
+        return project.substring(0, project.length() - 4) + "/commit/" + revision + ";" + groupId;
+    }
+
     public void printSummary(PrintStream out, EnumSet<RefactoringType> refTypesToConsider) {
         for (String groupId : groupIds) {
             CompareResult r = getCompareResult(groupId, refTypesToConsider);
@@ -91,7 +129,7 @@ public class ResultComparator {
         Set<Object> falseNegatives = new HashSet<>();
 
         EnumSet<RefactoringType> ignore = EnumSet.complementOf(refTypesToConsider);
-        
+
         for (RefactoringSet expected : expectedMap.values()) {
             RefactoringSet actual = resultMap.get(getResultId(expected.getProject(), expected.getRevision(), groupId));
             if (actual != null) {
@@ -103,10 +141,10 @@ public class ResultComparator {
                         truePositives.add(r);
                         expectedRefactorings.remove(r);
                     } else {
-                        boolean ignoreFp = 
+                        boolean ignoreFp =
                             ignoreMoveToMovedType && isMoveToMovedType(r, expectedUnfiltered) ||
-                            ignoreMoveToRenamedType && isMoveToRenamedType(r, expectedUnfiltered) ||
-                            ignorePullUpToExtractedSupertype && isPullUpToExtractedSupertype(r, expectedUnfiltered);
+                                ignoreMoveToRenamedType && isMoveToRenamedType(r, expectedUnfiltered) ||
+                                ignorePullUpToExtractedSupertype && isPullUpToExtractedSupertype(r, expectedUnfiltered);
                         if (!ignoreFp) {
                             falsePositives.add(r);
                         }
@@ -116,6 +154,39 @@ public class ResultComparator {
             }
         }
         return new CompareResult(truePositives, falsePositives, falseNegatives);
+    }
+
+    private boolean isPullUpToExtractedSupertype(RefactoringRelationship r, Set<RefactoringRelationship> expectedUnfiltered) {
+        if (r.getRefactoringType() == RefactoringType.PULL_UP_ATTRIBUTE || r.getRefactoringType() == RefactoringType.PULL_UP_OPERATION) {
+            if (expectedUnfiltered.contains(new RefactoringRelationship(RefactoringType.EXTRACT_SUPERCLASS, parentOf(r.getEntityBefore()), parentOf(r.getEntityAfter())))) {
+                return true;
+            }
+            return expectedUnfiltered.contains(new RefactoringRelationship(RefactoringType.EXTRACT_INTERFACE, parentOf(r.getEntityBefore()), parentOf(r.getEntityAfter())));
+        }
+        return false;
+    }
+
+    private boolean isMoveToRenamedType(RefactoringRelationship r, Set<RefactoringRelationship> expectedUnfiltered) {
+        if (r.getRefactoringType() == RefactoringType.MOVE_OPERATION || r.getRefactoringType() == RefactoringType.MOVE_ATTRIBUTE) {
+            if (expectedUnfiltered.contains(new RefactoringRelationship(RefactoringType.RENAME_CLASS, parentOf(r.getEntityBefore()), parentOf(r.getEntityAfter())))) {
+                return true;
+            }
+            return expectedUnfiltered.contains(new RefactoringRelationship(RefactoringType.RENAME_CLASS, parentOf(parentOf(r.getEntityBefore())), parentOf(parentOf(r.getEntityAfter()))));
+        }
+        return false;
+    }
+
+    private boolean isMoveToMovedType(RefactoringRelationship r, Set<?> expectedUnfiltered) {
+        if (r.getRefactoringType() == RefactoringType.MOVE_OPERATION || r.getRefactoringType() == RefactoringType.MOVE_ATTRIBUTE) {
+            if (expectedUnfiltered.contains(new RefactoringRelationship(RefactoringType.MOVE_CLASS, parentOf(r.getEntityBefore()), parentOf(r.getEntityAfter())))) {
+                return true;
+            }
+            if (expectedUnfiltered.contains(new RefactoringRelationship(RefactoringType.MOVE_CLASS, parentOf(parentOf(r.getEntityBefore())), parentOf(parentOf(r.getEntityAfter()))))) {
+                return true;
+            }
+            return expectedUnfiltered.contains(new RefactoringRelationship(RefactoringType.MOVE_SOURCE_FOLDER, parentOf(r.getEntityBefore()), parentOf(r.getEntityAfter())));
+        }
+        return false;
     }
 
     private String getResultLine(int tp, int fp, int fn) {
@@ -216,136 +287,6 @@ public class ResultComparator {
         out.println();
     }
 
-    private boolean isPullUpToExtractedSupertype(RefactoringRelationship r, Set<RefactoringRelationship> expectedUnfiltered) {
-        if (r.getRefactoringType() == RefactoringType.PULL_UP_ATTRIBUTE || r.getRefactoringType() == RefactoringType.PULL_UP_OPERATION) {
-            if (expectedUnfiltered.contains(new RefactoringRelationship(RefactoringType.EXTRACT_SUPERCLASS, parentOf(r.getEntityBefore()), parentOf(r.getEntityAfter())))) {
-                return true;
-            }
-            return expectedUnfiltered.contains(new RefactoringRelationship(RefactoringType.EXTRACT_INTERFACE, parentOf(r.getEntityBefore()), parentOf(r.getEntityAfter())));
-        }
-        return false;
-    }
-
-    private boolean isMoveToRenamedType(RefactoringRelationship r, Set<RefactoringRelationship> expectedUnfiltered) {
-        if (r.getRefactoringType() == RefactoringType.MOVE_OPERATION || r.getRefactoringType() == RefactoringType.MOVE_ATTRIBUTE) {
-            if (expectedUnfiltered.contains(new RefactoringRelationship(RefactoringType.RENAME_CLASS, parentOf(r.getEntityBefore()), parentOf(r.getEntityAfter())))) {
-                return true;
-            }
-            return expectedUnfiltered.contains(new RefactoringRelationship(RefactoringType.RENAME_CLASS, parentOf(parentOf(r.getEntityBefore())), parentOf(parentOf(r.getEntityAfter()))));
-        }
-        return false;
-    }
-    
-    private boolean isMoveToMovedType(RefactoringRelationship r, Set<?> expectedUnfiltered) {
-        if (r.getRefactoringType() == RefactoringType.MOVE_OPERATION || r.getRefactoringType() == RefactoringType.MOVE_ATTRIBUTE) {
-            if (expectedUnfiltered.contains(new RefactoringRelationship(RefactoringType.MOVE_CLASS, parentOf(r.getEntityBefore()), parentOf(r.getEntityAfter())))) {
-                return true;
-            }
-            if (expectedUnfiltered.contains(new RefactoringRelationship(RefactoringType.MOVE_CLASS, parentOf(parentOf(r.getEntityBefore())), parentOf(parentOf(r.getEntityAfter()))))) {
-                return true;
-            }
-            return expectedUnfiltered.contains(new RefactoringRelationship(RefactoringType.MOVE_SOURCE_FOLDER, parentOf(r.getEntityBefore()), parentOf(r.getEntityAfter())));
-        }
-        return false;
-    }
-    
-    private String getProjectRevisionId(String project, String revision) {
-        return project.substring(0, project.length() - 4) + "/commit/" + revision;
-    }
-
-    private String getResultId(String project, String revision, String groupId) {
-        return project.substring(0, project.length() - 4) + "/commit/" + revision + ";" + groupId;
-    }
-
-    public static class CompareResult {
-        private final Set<Object> truePositives;
-        private final Set<Object> falsePositives;
-        private final Set<Object> falseNegatives;
-
-        public CompareResult(Set<Object> truePositives, Set<Object> falsePositives, Set<Object> falseNegatives) {
-            this.truePositives = truePositives;
-            this.falsePositives = falsePositives;
-            this.falseNegatives = falseNegatives;
-        }
-
-        public int getTPCount() {
-            return this.truePositives.size();
-        }
-
-        public int getFPCount() {
-            return this.falsePositives.size();
-        }
-
-        public int getFNCount() {
-            return this.falseNegatives.size();
-        }
-
-        public double getPrecision() {
-            int tp = this.truePositives.size();
-            int fp = this.falsePositives.size();
-            int fn = this.falseNegatives.size();
-            return ResultComparator.getPrecision(tp, fp, fn);
-        }
-        
-        public double getRecall() {
-            int tp = this.truePositives.size();
-            int fp = this.falsePositives.size();
-            int fn = this.falseNegatives.size();
-            return ResultComparator.getRecall(tp, fp, fn);
-        }
-        
-        public double getF1() {
-            int tp = this.truePositives.size();
-            int fp = this.falsePositives.size();
-            int fn = this.falseNegatives.size();
-            return ResultComparator.getF1(tp, fp, fn);
-        }
-
-        public int getTPCount(RefactoringType rt) {
-            return (int) this.truePositives.stream().filter(r -> r.toString().startsWith(rt.getDisplayName())).count();
-        }
-
-        public int getFPCount(RefactoringType rt) {
-            return (int) this.falsePositives.stream().filter(r -> r.toString().startsWith(rt.getDisplayName())).count();
-        }
-
-        public int getFNCount(RefactoringType rt) {
-            return (int) this.falseNegatives.stream().filter(r -> r.toString().startsWith(rt.getDisplayName())).count();
-        }
-    }
-
-    public static RefactoringSet collectRmResult(GitHistoryRefactoringMiner rm, String cloneUrl, String commitId) {
-        GitService git = new GitServiceImpl();
-        String tempDir = "tmp";
-        String resultCacheDir = "tmpResult";
-        String projectName = cloneUrl.substring(cloneUrl.lastIndexOf('/') + 1, cloneUrl.lastIndexOf('.'));
-        File cachedResult = new File(resultCacheDir + "/" + rm.getConfigId() + "-" + projectName + "-" + commitId);
-        if (cachedResult.exists()) {
-            RefactoringSet rs = new RefactoringSet(cloneUrl, commitId);
-            rs.readFromFile(cachedResult);
-            return rs;
-        } else {
-            String folder = tempDir + "/" + projectName;
-            final RefactoringCollector rc = new RefactoringCollector(cloneUrl, commitId);
-            try (Repository repo = git.cloneIfNotExists(folder, cloneUrl)) {
-                rm.detectAtCommit(repo, commitId, rc);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-            RefactoringSet rs = rc.assertAndGetResult();
-            rs.saveToFile(cachedResult);
-            return rs;
-        }
-    }
-
-    public static RefactoringSet[] collectRmResult(GitHistoryRefactoringMiner rm, RefactoringSet[] oracle) {
-        RefactoringSet[] result = new RefactoringSet[oracle.length];
-        for (int i = 0; i < result.length; i++) {
-            result[i] = collectRmResult(rm, oracle[i].getProject(), oracle[i].getRevision());
-        }
-        return result;
-    }
-
     public boolean isGroupRefactorings() {
         return groupRefactorings;
     }
@@ -384,6 +325,63 @@ public class ResultComparator {
 
     public void setIgnoreMoveToRenamedType(boolean ignoreMoveToRenamedType) {
         this.ignoreMoveToRenamedType = ignoreMoveToRenamedType;
+    }
+
+    public static class CompareResult {
+        private final Set<Object> truePositives;
+        private final Set<Object> falsePositives;
+        private final Set<Object> falseNegatives;
+
+        public CompareResult(Set<Object> truePositives, Set<Object> falsePositives, Set<Object> falseNegatives) {
+            this.truePositives = truePositives;
+            this.falsePositives = falsePositives;
+            this.falseNegatives = falseNegatives;
+        }
+
+        public int getTPCount() {
+            return this.truePositives.size();
+        }
+
+        public int getFPCount() {
+            return this.falsePositives.size();
+        }
+
+        public int getFNCount() {
+            return this.falseNegatives.size();
+        }
+
+        public double getPrecision() {
+            int tp = this.truePositives.size();
+            int fp = this.falsePositives.size();
+            int fn = this.falseNegatives.size();
+            return ResultComparator.getPrecision(tp, fp, fn);
+        }
+
+        public double getRecall() {
+            int tp = this.truePositives.size();
+            int fp = this.falsePositives.size();
+            int fn = this.falseNegatives.size();
+            return ResultComparator.getRecall(tp, fp, fn);
+        }
+
+        public double getF1() {
+            int tp = this.truePositives.size();
+            int fp = this.falsePositives.size();
+            int fn = this.falseNegatives.size();
+            return ResultComparator.getF1(tp, fp, fn);
+        }
+
+        public int getTPCount(RefactoringType rt) {
+            return (int) this.truePositives.stream().filter(r -> r.toString().startsWith(rt.getDisplayName())).count();
+        }
+
+        public int getFPCount(RefactoringType rt) {
+            return (int) this.falsePositives.stream().filter(r -> r.toString().startsWith(rt.getDisplayName())).count();
+        }
+
+        public int getFNCount(RefactoringType rt) {
+            return (int) this.falseNegatives.stream().filter(r -> r.toString().startsWith(rt.getDisplayName())).count();
+        }
     }
 
 }

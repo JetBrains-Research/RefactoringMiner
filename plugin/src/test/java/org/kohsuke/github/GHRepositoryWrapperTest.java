@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class GHRepositoryWrapperTest {
-	private final GitHistoryRefactoringMinerImpl gitHistoryRefactoringMiner = new GitHistoryRefactoringMinerImpl();
     private final static List<Triple<String, String, Integer>> TEST_CASES_LIST = new ArrayList<>();
 
     static {
@@ -25,6 +24,8 @@ public class GHRepositoryWrapperTest {
         TEST_CASES_LIST.add(Triple.of("https://github.com/checkstyle/checkstyle.git", "6893affeac7285afd16f8a389c7d65023d0c327a", 366));
     }
 
+    private final GitHistoryRefactoringMinerImpl gitHistoryRefactoringMiner = new GitHistoryRefactoringMinerImpl();
+
     @Test
     public void testNumberOfChangedFiles() {
         int numberOfTestCase = 0;
@@ -35,13 +36,12 @@ public class GHRepositoryWrapperTest {
         Assert.assertEquals(10, numberOfTestCase);
     }
 
-
     private int getNumberOfChangedFile(String cloneUrl, String commitId) {
         try {
             List<GHCommit.File> commitFiles = new ArrayList<>();
             GHRepository ghRepository = gitHistoryRefactoringMiner.getGitHubRepository(cloneUrl);
             GHRepositoryWrapper ghRepositoryWrapper = new GHRepositoryWrapper(ghRepository);
-			ghRepositoryWrapper.getCommit(commitId, commitFiles);
+            ghRepositoryWrapper.getCommit(commitId, commitFiles);
             return commitFiles.size();
         } catch (IOException e) {
             return -1;

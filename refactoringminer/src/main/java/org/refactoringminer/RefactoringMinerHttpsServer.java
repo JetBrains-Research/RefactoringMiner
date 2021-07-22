@@ -34,46 +34,46 @@ import java.util.concurrent.TimeUnit;
 
 public class RefactoringMinerHttpsServer {
 
-	public static void main(String[] args) throws Exception {
-		Properties prop = new Properties();
-		InputStream input = new FileInputStream("server.properties");
-		prop.load(input);
-		String hostName = prop.getProperty("hostname");
-		int port = Integer.parseInt(prop.getProperty("port"));
-		String keystore = prop.getProperty("keystore");
-		String keyStorePass = prop.getProperty("keystore-password");
-		
-		InetSocketAddress inetSocketAddress = new InetSocketAddress(InetAddress.getByName(hostName), port);
-		HttpsServer server = HttpsServer.create(inetSocketAddress, 0);
-		SSLContext sslContext = SSLContext.getInstance("TLS");
+    public static void main(String[] args) throws Exception {
+        Properties prop = new Properties();
+        InputStream input = new FileInputStream("server.properties");
+        prop.load(input);
+        String hostName = prop.getProperty("hostname");
+        int port = Integer.parseInt(prop.getProperty("port"));
+        String keystore = prop.getProperty("keystore");
+        String keyStorePass = prop.getProperty("keystore-password");
 
-		// initialize the keystore
-		char[] password = keyStorePass.toCharArray();
-		KeyStore ks = KeyStore.getInstance("JKS");
-		FileInputStream fis = new FileInputStream(keystore);
-		ks.load(fis, password);
+        InetSocketAddress inetSocketAddress = new InetSocketAddress(InetAddress.getByName(hostName), port);
+        HttpsServer server = HttpsServer.create(inetSocketAddress, 0);
+        SSLContext sslContext = SSLContext.getInstance("TLS");
 
-		// setup the key manager factory
-		KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-		kmf.init(ks, password);
+        // initialize the keystore
+        char[] password = keyStorePass.toCharArray();
+        KeyStore ks = KeyStore.getInstance("JKS");
+        FileInputStream fis = new FileInputStream(keystore);
+        ks.load(fis, password);
 
-		// setup the trust manager factory
-		TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
-		tmf.init(ks);
+        // setup the key manager factory
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+        kmf.init(ks, password);
 
-		// setup the HTTPS context and parameters
-		sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
-		server.setHttpsConfigurator(new HttpsConfigurator(sslContext) {
-			public void configure(HttpsParameters params) {
-				try {
-					// initialize the SSL context
-					SSLContext context = getSSLContext();
-					SSLEngine engine = context.createSSLEngine();
-					params.setNeedClientAuth(false);
-					params.setCipherSuites(engine.getEnabledCipherSuites());
-					params.setProtocols(engine.getEnabledProtocols());
+        // setup the trust manager factory
+        TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+        tmf.init(ks);
 
-					// Set the SSL parameters
+        // setup the HTTPS context and parameters
+        sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+        server.setHttpsConfigurator(new HttpsConfigurator(sslContext) {
+            public void configure(HttpsParameters params) {
+                try {
+                    // initialize the SSL context
+                    SSLContext context = getSSLContext();
+                    SSLEngine engine = context.createSSLEngine();
+                    params.setNeedClientAuth(false);
+                    params.setCipherSuites(engine.getEnabledCipherSuites());
+                    params.setProtocols(engine.getEnabledProtocols());
+
+                    // Set the SSL parameters
                     SSLParameters sslParameters = context.getSupportedSSLParameters();
                     params.setSSLParameters(sslParameters);
 
@@ -89,9 +89,65 @@ public class RefactoringMinerHttpsServer {
         System.out.println(InetAddress.getLocalHost());
     }
 
-	static class MyHandler implements HttpHandler {
-		@Override
-		public void handle(HttpExchange exchange) throws IOException {
+    private static Map<String, String> queryToMap(String query) {
+        Map<String, String> result = new HashMap<>();
+        for (String param : query.split("&")) {
+            String[] entry = param.split("=");
+            if (entry.length > 1) {
+                result.put(entry[0], entry[1]);
+            } else {
+                result.put(entry[0], "");
+            }
+        }
+        return result;
+    }
+
+    private static String JSON(String gitURL, String currentCommitId, List<Refactoring> refactoringsAtRevision) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{").append("\n");
+        sb.append("\"").append("commits").append("\"").append(": ");
+        sb.append("[");
+        sb.append("{");
+        sb.append("\t").append("\"").append("repository").append("\"").append(": ").append("\"").append(gitURL).append("\"").append(",").append("\n");
+        sb.append("\t").append("\"").append("sha1").append("\"").append(": ").append("\"").append(currentCommitId).append("\"").append(",").append("\n");
+        String url = GitHistoryRefactoringMinerImpl.extractCommitURL(gitURL, currentCommitId);
+        sb.append("\t").append("\"").append("url").append("\"").append(": ").append("\"").append(url).append("\"").append(",").append("\n");
+        sb.append("\t").append("\"").append("refactorings").append("\"").append(": ");
+        sb.append("[");
+        int counter = 0;
+        for (Refactoring refactoring : refactoringsAtRevision) {
+            sb.append(refactoring.toJSON());
+            if (counter < refactoringsAtRevision.size() - 1) {
+                sb.append(",");
+            }
+            sb.append("\n");
+            counter++;
+        }
+        sb.append("]");
+        sb.append("}");
+        sb.append("]").append("\n");
+        sb.append("}");
+        return sb.toString();
+    }
+
+    private static void printRequestInfo(HttpExchange exchange) {
+        System.out.println("-- headers --");
+        Headers requestHeaders = exchange.getRequestHeaders();
+        requestHeaders.entrySet().forEach(System.out::println);
+
+        System.out.println("-- HTTP method --");
+        String requestMethod = exchange.getRequestMethod();
+        System.out.println(requestMethod);
+
+        System.out.println("-- query --");
+        URI requestURI = exchange.getRequestURI();
+        String query = requestURI.getQuery();
+        System.out.println(query);
+    }
+
+    static class MyHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
             printRequestInfo(exchange);
             URI requestURI = exchange.getRequestURI();
             String query = requestURI.getQuery();
@@ -111,69 +167,12 @@ public class RefactoringMinerHttpsServer {
             }, timeout);
 
             String response = JSON(gitURL, commitId, detectedRefactorings);
-			System.out.println(response);
-			exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-			exchange.sendResponseHeaders(200, response.length());
-			OutputStream os = exchange.getResponseBody();
-			os.write(response.getBytes());
-			os.close();
-		}
-	}
-
-	private static Map<String, String> queryToMap(String query) {
-		Map<String, String> result = new HashMap<>();
-		for (String param : query.split("&")) {
-			String[] entry = param.split("=");
-			if (entry.length > 1) {
-				result.put(entry[0], entry[1]);
-			}
-			else {
-				result.put(entry[0], "");
-			}
-		}
-		return result;
-	}
-
-	private static String JSON(String gitURL, String currentCommitId, List<Refactoring> refactoringsAtRevision) {
-		StringBuilder sb = new StringBuilder();
-		sb.append("{").append("\n");
-		sb.append("\"").append("commits").append("\"").append(": ");
-		sb.append("[");
-		sb.append("{");
-		sb.append("\t").append("\"").append("repository").append("\"").append(": ").append("\"").append(gitURL).append("\"").append(",").append("\n");
-		sb.append("\t").append("\"").append("sha1").append("\"").append(": ").append("\"").append(currentCommitId).append("\"").append(",").append("\n");
-		String url = GitHistoryRefactoringMinerImpl.extractCommitURL(gitURL, currentCommitId);
-		sb.append("\t").append("\"").append("url").append("\"").append(": ").append("\"").append(url).append("\"").append(",").append("\n");
-		sb.append("\t").append("\"").append("refactorings").append("\"").append(": ");
-		sb.append("[");
-		int counter = 0;
-		for(Refactoring refactoring : refactoringsAtRevision) {
-			sb.append(refactoring.toJSON());
-			if(counter < refactoringsAtRevision.size()-1) {
-				sb.append(",");
-			}
-			sb.append("\n");
-			counter++;
-		}
-		sb.append("]");
-		sb.append("}");
-		sb.append("]").append("\n");
-		sb.append("}");
-		return sb.toString();
-	}
-
-	private static void printRequestInfo(HttpExchange exchange) {
-		System.out.println("-- headers --");
-		Headers requestHeaders = exchange.getRequestHeaders();
-		requestHeaders.entrySet().forEach(System.out::println);
-
-		System.out.println("-- HTTP method --");
-		String requestMethod = exchange.getRequestMethod();
-		System.out.println(requestMethod);
-
-		System.out.println("-- query --");
-		URI requestURI = exchange.getRequestURI();
-		String query = requestURI.getQuery();
-		System.out.println(query);
-	}
+            System.out.println(response);
+            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
+            exchange.sendResponseHeaders(200, response.length());
+            OutputStream os = exchange.getResponseBody();
+            os.write(response.getBytes());
+            os.close();
+        }
+    }
 }

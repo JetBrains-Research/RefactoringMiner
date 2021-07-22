@@ -26,24 +26,24 @@ public class UMLJavadoc implements LocationInfoProvider {
     }
 
     public List<UMLTagElement> getTags() {
-		return tags;
-	}
+        return tags;
+    }
 
-	public boolean contains(String s) {
-		for(UMLTagElement tag : tags) {
-			if(tag.contains(s)) {
-				return true;
-			}
-		}
-		return false;
-	}
+    public boolean contains(String s) {
+        for (UMLTagElement tag : tags) {
+            if (tag.contains(s)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-	public boolean containsIgnoreCase(String s) {
-		for(UMLTagElement tag : tags) {
-			if(tag.containsIgnoreCase(s)) {
-				return true;
-			}
-		}
-		return false;
-	}
+    public boolean containsIgnoreCase(String s) {
+        for (UMLTagElement tag : tags) {
+            if (tag.containsIgnoreCase(s)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

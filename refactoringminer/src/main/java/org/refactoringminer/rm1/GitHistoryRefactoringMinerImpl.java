@@ -71,6 +71,9 @@ import java.util.zip.ZipFile;
 
 public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMiner {
 
+	private static final String systemFileSeparator = Matcher.quoteReplacement(File.separator);
+	private static final String GITHUB_URL = "https://github.com/";
+	private static final String BITBUCKET_URL = "https://bitbucket.org/";
 	final Logger logger = LoggerFactory.getLogger(GitHistoryRefactoringMinerImpl.class);
 	private Set<RefactoringType> refactoringTypesToConsider = null;
 	private GitHub gitHub;
@@ -83,7 +86,40 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 		this.refactoringTypesToConsider = new HashSet<>();
 		this.refactoringTypesToConsider.addAll(Arrays.asList(types));
 	}
-	
+
+	public static String extractCommitURL(String cloneURL, String commitId) {
+		int indexOfDotGit = cloneURL.length();
+		if (cloneURL.endsWith(".git")) {
+			indexOfDotGit = cloneURL.indexOf(".git");
+		} else if (cloneURL.endsWith("/")) {
+			indexOfDotGit = cloneURL.length() - 1;
+		}
+		String commitResource = "/";
+		if (cloneURL.startsWith(GITHUB_URL)) {
+			commitResource = "/commit/";
+		} else if (cloneURL.startsWith(BITBUCKET_URL)) {
+			commitResource = "/commits/";
+		}
+		String commitURL = cloneURL.substring(0, indexOfDotGit) + commitResource + commitId;
+		return commitURL;
+	}
+
+	@Override
+	public void detectAll(Repository repository, String branch, final RefactoringHandler handler) throws Exception {
+		GitService gitService = new GitServiceImpl() {
+			@Override
+			public boolean isCommitAnalyzed(String sha1) {
+				return handler.skipCommit(sha1);
+			}
+		};
+		RevWalk walk = gitService.createAllRevsWalk(repository, branch);
+		try {
+			detect(gitService, repository, handler, walk.iterator());
+		} finally {
+			walk.dispose();
+		}
+	}
+
 	private void detect(GitService gitService, Repository repository, final RefactoringHandler handler, Iterator<RevCommit> i) {
 		int commitsCount = 0;
 		int errorCommitsCount = 0;
@@ -92,17 +128,17 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 		File metadataFolder = repository.getDirectory();
 		File projectFolder = metadataFolder.getParentFile();
 		String projectName = projectFolder.getName();
-		
+
 		long time = System.currentTimeMillis();
 		while (i.hasNext()) {
 			RevCommit currentCommit = i.next();
 			try {
 				List<Refactoring> refactoringsAtRevision = detectRefactorings(gitService, repository, handler, projectFolder, currentCommit);
 				refactoringsCount += refactoringsAtRevision.size();
-				
+
 			} catch (Exception e) {
 				logger.warn(String.format("Ignored revision %s due to error", currentCommit.getId().getName()), e);
-				handler.handleException(currentCommit.getId().getName(),e);
+				handler.handleException(currentCommit.getId().getName(), e);
 				errorCommitsCount++;
 			}
 
@@ -140,7 +176,7 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 				List<MoveSourceFolderRefactoring> moveSourceFolderRefactorings = processIdenticalFiles(fileContentsBefore, fileContentsCurrent, renamedFilesHint);
 				UMLModel parentUMLModel = createModel(fileContentsBefore, repositoryDirectoriesBefore);
 				UMLModel currentUMLModel = createModel(fileContentsCurrent, repositoryDirectoriesCurrent);
-				
+
 				UMLModelDiff modelDiff = parentUMLModel.diff(currentUMLModel, renamedFilesHint);
 				refactoringsAtRevision = modelDiff.getRefactorings();
 				refactoringsAtRevision.addAll(moveSourceFolderRefactorings);
@@ -150,7 +186,7 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 				refactoringsAtRevision = Collections.emptyList();
 			}
 			handler.handle(commitId, refactoringsAtRevision);
-			
+
 			walk.dispose();
 		}
 		return refactoringsAtRevision;
@@ -181,18 +217,18 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 			if (movedPath.contains("/")) {
 				movedPathPrefix = movedPath.substring(0, movedPath.lastIndexOf('/'));
 			}
-			if(!originalPathPrefix.equals(movedPathPrefix)) {
+			if (!originalPathPrefix.equals(movedPathPrefix)) {
 				MovedClassToAnotherSourceFolder refactoring = new MovedClassToAnotherSourceFolder(null, null, originalPathPrefix, movedPathPrefix);
 				RenamePattern renamePattern = refactoring.getRenamePattern();
 				boolean foundInMatchingMoveSourceFolderRefactoring = false;
-				for(MoveSourceFolderRefactoring moveSourceFolderRefactoring : moveSourceFolderRefactorings) {
-					if(moveSourceFolderRefactoring.getPattern().equals(renamePattern)) {
+				for (MoveSourceFolderRefactoring moveSourceFolderRefactoring : moveSourceFolderRefactorings) {
+					if (moveSourceFolderRefactoring.getPattern().equals(renamePattern)) {
 						moveSourceFolderRefactoring.putIdenticalFilePaths(originalPath, movedPath);
 						foundInMatchingMoveSourceFolderRefactoring = true;
 						break;
 					}
 				}
-				if(!foundInMatchingMoveSourceFolderRefactoring) {
+				if (!foundInMatchingMoveSourceFolderRefactoring) {
 					MoveSourceFolderRefactoring moveSourceFolderRefactoring = new MoveSourceFolderRefactoring(renamePattern);
 					moveSourceFolderRefactoring.putIdenticalFilePaths(originalPath, movedPath);
 					moveSourceFolderRefactorings.add(moveSourceFolderRefactoring);
@@ -203,7 +239,7 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 	}
 
 	private void populateFileContents(Repository repository, RevCommit commit,
-			List<String> filePaths, Map<String, String> fileContents, Set<String> repositoryDirectories) throws Exception {
+									  List<String> filePaths, Map<String, String> fileContents, Set<String> repositoryDirectories) throws Exception {
 		logger.info("Processing {} {} ...", repository.getDirectory().getParent(), commit.getName());
 		RevTree parentTree = commit.getTree();
 		try (TreeWalk treeWalk = new TreeWalk(repository)) {
@@ -245,16 +281,67 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 		return filteredList;
 	}
 
-	private void populateFileContents(File projectFolder, List<String> filePaths, Map<String, String> fileContents, Set<String> repositoryDirectories) throws IOException {
-		for (String path : filePaths) {
-			String fullPath = projectFolder + File.separator + path.replaceAll("/", systemFileSeparator);
-			String contents = FileUtils.readFileToString(new File(fullPath));
-			fileContents.put(path, contents);
-			String directory = path;
-			while (directory.contains("/")) {
-				directory = directory.substring(0, directory.lastIndexOf("/"));
-				repositoryDirectories.add(directory);
+	protected UMLModel createModel(Map<String, String> fileContents, Set<String> repositoryDirectories) throws Exception {
+		return new UMLModelASTReader(fileContents, repositoryDirectories).getUmlModel();
+	}
+
+	@Override
+	public void fetchAndDetectNew(Repository repository, final RefactoringHandler handler) throws Exception {
+		GitService gitService = new GitServiceImpl() {
+			@Override
+			public boolean isCommitAnalyzed(String sha1) {
+				return handler.skipCommit(sha1);
 			}
+		};
+		RevWalk walk = gitService.fetchAndCreateNewRevsWalk(repository);
+		try {
+			detect(gitService, repository, handler, walk.iterator());
+		} finally {
+			walk.dispose();
+		}
+	}
+
+	public void detectAtCommit(Repository repository, String commitId, RefactoringHandler handler, int timeout) {
+		ExecutorService service = Executors.newSingleThreadExecutor();
+		Future<?> f = null;
+		try {
+			Runnable r = () -> detectAtCommit(repository, commitId, handler);
+			f = service.submit(r);
+			f.get(timeout, TimeUnit.SECONDS);
+		} catch (TimeoutException e) {
+			f.cancel(true);
+		} catch (ExecutionException | InterruptedException e) {
+			e.printStackTrace();
+		} finally {
+			service.shutdown();
+		}
+	}
+
+	@Override
+	public void detectAtCommit(Repository repository, String commitId, RefactoringHandler handler) {
+		String cloneURL = repository.getConfig().getString("remote", "origin", "url");
+		File metadataFolder = repository.getDirectory();
+		File projectFolder = metadataFolder.getParentFile();
+		GitService gitService = new GitServiceImpl();
+		RevWalk walk = new RevWalk(repository);
+		try {
+			RevCommit commit = walk.parseCommit(repository.resolve(commitId));
+			if (commit.getParentCount() > 0) {
+				walk.parseCommit(commit.getParent(0));
+				this.detectRefactorings(gitService, repository, handler, projectFolder, commit);
+			} else {
+				logger.warn(String.format("Ignored revision %s because it has no parent", commitId));
+			}
+		} catch (MissingObjectException moe) {
+			this.detectRefactorings(handler, projectFolder, cloneURL, commitId);
+		} catch (RefactoringMinerTimedOutException e) {
+			logger.warn(String.format("Ignored revision %s due to timeout", commitId), e);
+		} catch (Exception e) {
+			logger.warn(String.format("Ignored revision %s due to error", commitId), e);
+			handler.handleException(commitId, e);
+		} finally {
+			walk.close();
+			walk.dispose();
 		}
 	}
 
@@ -289,8 +376,7 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 				refactoringsAtRevision = modelDiff.getRefactorings();
 				refactoringsAtRevision.addAll(moveSourceFolderRefactorings);
 				refactoringsAtRevision = filter(refactoringsAtRevision);
-			}
-			else {
+			} else {
 				logger.warn(String.format("Folder %s not found", currentFolder.getPath()));
 			}
 		} catch (Exception e) {
@@ -302,38 +388,16 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 		return refactoringsAtRevision;
 	}
 
-	public static class ChangedFileInfo {
-		private String parentCommitId;
-		private List<String> filesBefore;
-		private List<String> filesCurrent;
-		private Map<String, String> renamedFilesHint;
-
-		public ChangedFileInfo() {
-
-		}
-
-		public ChangedFileInfo(String parentCommitId, List<String> filesBefore,
-							   List<String> filesCurrent, Map<String, String> renamedFilesHint) {
-			this.filesBefore = filesBefore;
-			this.filesCurrent = filesCurrent;
-			this.renamedFilesHint = renamedFilesHint;
-			this.parentCommitId = parentCommitId;
-		}
-
-		public String getParentCommitId() {
-			return parentCommitId;
-		}
-
-		public List<String> getFilesBefore() {
-			return filesBefore;
-		}
-
-		public List<String> getFilesCurrent() {
-			return filesCurrent;
-		}
-
-		public Map<String, String> getRenamedFilesHint() {
-			return renamedFilesHint;
+	private void populateFileContents(File projectFolder, List<String> filePaths, Map<String, String> fileContents, Set<String> repositoryDirectories) throws IOException {
+		for (String path : filePaths) {
+			String fullPath = projectFolder + File.separator + path.replaceAll("/", systemFileSeparator);
+			String contents = FileUtils.readFileToString(new File(fullPath));
+			fileContents.put(path, contents);
+			String directory = path;
+			while (directory.contains("/")) {
+				directory = directory.substring(0, directory.lastIndexOf("/"));
+				repositoryDirectories.add(directory);
+			}
 		}
 	}
 
@@ -363,28 +427,21 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 		}
 	}
 
-	private GitHub connectToGitHub() {
-		if (gitHub == null) {
-			try {
-				Properties prop = new Properties();
-				InputStream input = new FileInputStream("github-oauth.properties");
-				prop.load(input);
-				String oAuthToken = prop.getProperty("OAuthToken");
-				if (oAuthToken != null) {
-					gitHub = GitHub.connectUsingOAuth(oAuthToken);
-					if (gitHub.isCredentialValid()) {
-						logger.info("Connected to GitHub with OAuth token");
-					}
-				} else {
-					gitHub = GitHub.connect();
-				}
-			} catch (FileNotFoundException e) {
-				logger.warn("File github-oauth.properties was not found in RefactoringMiner's execution directory", e);
-			} catch (IOException ioe) {
-				ioe.printStackTrace();
-			}
+	private static String extractDownloadLink(String cloneURL, String commitId) {
+		int indexOfDotGit = cloneURL.length();
+		if (cloneURL.endsWith(".git")) {
+			indexOfDotGit = cloneURL.indexOf(".git");
+		} else if (cloneURL.endsWith("/")) {
+			indexOfDotGit = cloneURL.length() - 1;
 		}
-		return gitHub;
+		String downloadResource = "/";
+		if (cloneURL.startsWith(GITHUB_URL)) {
+			downloadResource = "/archive/";
+		} else if (cloneURL.startsWith(BITBUCKET_URL)) {
+			downloadResource = "/get/";
+		}
+		String downloadLink = cloneURL.substring(0, indexOfDotGit) + downloadResource + commitId + ".zip";
+		return downloadLink;
 	}
 
 	private ChangedFileInfo populateWithGitHubAPI(File projectFolder, String cloneURL, String currentCommitId) throws IOException {
@@ -395,8 +452,7 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 			final ObjectMapper mapper = new ObjectMapper();
 			ChangedFileInfo changedFileInfo = mapper.readValue(jsonFile, ChangedFileInfo.class);
 			return changedFileInfo;
-		}
-		else {
+		} else {
 			GHRepository repository = getGitHubRepository(cloneURL);
 			List<GHCommit.File> commitFiles = new ArrayList<>();
 			GHCommit commit = new GHRepositoryWrapper(repository).getCommit(currentCommitId, commitFiles);
@@ -431,119 +487,83 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 			return changedFileInfo;
 		}
 	}
-	
-	@Override
-	public void detectAll(Repository repository, String branch, final RefactoringHandler handler) throws Exception {
-		GitService gitService = new GitServiceImpl() {
-			@Override
-			public boolean isCommitAnalyzed(String sha1) {
-				return handler.skipCommit(sha1);
-			}
-		};
-		RevWalk walk = gitService.createAllRevsWalk(repository, branch);
-		try {
-			detect(gitService, repository, handler, walk.iterator());
-		} finally {
-			walk.dispose();
-		}
+
+	public GHRepository getGitHubRepository(String cloneURL) throws IOException {
+		GitHub gitHub = connectToGitHub();
+		String repoName = extractRepositoryName(cloneURL);
+		return gitHub.getRepository(repoName);
 	}
 
-	@Override
-	public void fetchAndDetectNew(Repository repository, final RefactoringHandler handler) throws Exception {
-		GitService gitService = new GitServiceImpl() {
-			@Override
-			public boolean isCommitAnalyzed(String sha1) {
-				return handler.skipCommit(sha1);
+	private GitHub connectToGitHub() {
+		if (gitHub == null) {
+			try {
+				Properties prop = new Properties();
+				InputStream input = new FileInputStream("github-oauth.properties");
+				prop.load(input);
+				String oAuthToken = prop.getProperty("OAuthToken");
+				if (oAuthToken != null) {
+					gitHub = GitHub.connectUsingOAuth(oAuthToken);
+					if (gitHub.isCredentialValid()) {
+						logger.info("Connected to GitHub with OAuth token");
+					}
+				} else {
+					gitHub = GitHub.connect();
+				}
+			} catch (FileNotFoundException e) {
+				logger.warn("File github-oauth.properties was not found in RefactoringMiner's execution directory", e);
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
 			}
-		};
-		RevWalk walk = gitService.fetchAndCreateNewRevsWalk(repository);
-		try {
-			detect(gitService, repository, handler, walk.iterator());
-		} finally {
-			walk.dispose();
 		}
+		return gitHub;
 	}
 
-	protected UMLModel createModel(Map<String, String> fileContents, Set<String> repositoryDirectories) throws Exception {
-		return new UMLModelASTReader(fileContents, repositoryDirectories).getUmlModel();
-	}
-
-	private static final String systemFileSeparator = Matcher.quoteReplacement(File.separator);
-
-	@Override
-	public void detectAtCommit(Repository repository, String commitId, RefactoringHandler handler) {
-		String cloneURL = repository.getConfig().getString("remote", "origin", "url");
-		File metadataFolder = repository.getDirectory();
-		File projectFolder = metadataFolder.getParentFile();
-		GitService gitService = new GitServiceImpl();
-		RevWalk walk = new RevWalk(repository);
-		try {
-			RevCommit commit = walk.parseCommit(repository.resolve(commitId));
-			if (commit.getParentCount() > 0) {
-				walk.parseCommit(commit.getParent(0));
-				this.detectRefactorings(gitService, repository, handler, projectFolder, commit);
-			}
-			else {
-				logger.warn(String.format("Ignored revision %s because it has no parent", commitId));
-			}
-		} catch (MissingObjectException moe) {
-			this.detectRefactorings(handler, projectFolder, cloneURL, commitId);
-		} catch (RefactoringMinerTimedOutException e) {
-			logger.warn(String.format("Ignored revision %s due to timeout", commitId), e);
-		} catch (Exception e) {
-			logger.warn(String.format("Ignored revision %s due to error", commitId), e);
-			handler.handleException(commitId, e);
-		} finally {
-			walk.close();
-			walk.dispose();
+	private static String extractRepositoryName(String cloneURL) {
+		int hostLength = 0;
+		if (cloneURL.startsWith(GITHUB_URL)) {
+			hostLength = GITHUB_URL.length();
+		} else if (cloneURL.startsWith(BITBUCKET_URL)) {
+			hostLength = BITBUCKET_URL.length();
 		}
-	}
-
-	public void detectAtCommit(Repository repository, String commitId, RefactoringHandler handler, int timeout) {
-		ExecutorService service = Executors.newSingleThreadExecutor();
-		Future<?> f = null;
-		try {
-			Runnable r = () -> detectAtCommit(repository, commitId, handler);
-			f = service.submit(r);
-			f.get(timeout, TimeUnit.SECONDS);
-		} catch (TimeoutException e) {
-			f.cancel(true);
-		} catch (ExecutionException | InterruptedException e) {
-			e.printStackTrace();
-		} finally {
-			service.shutdown();
+		int indexOfDotGit = cloneURL.length();
+		if (cloneURL.endsWith(".git")) {
+			indexOfDotGit = cloneURL.indexOf(".git");
+		} else if (cloneURL.endsWith("/")) {
+			indexOfDotGit = cloneURL.length() - 1;
 		}
+		String repoName = cloneURL.substring(hostLength, indexOfDotGit);
+		return repoName;
 	}
 
 	@Override
 	public String getConfigId() {
-	    return "RM1";
+		return "RM1";
 	}
 
 	@Override
 	public void detectBetweenTags(Repository repository, String startTag, String endTag, RefactoringHandler handler)
-			throws Exception {
+		throws Exception {
 		GitService gitService = new GitServiceImpl() {
 			@Override
 			public boolean isCommitAnalyzed(String sha1) {
 				return handler.skipCommit(sha1);
 			}
 		};
-		
+
 		Iterable<RevCommit> walk = gitService.createRevsWalkBetweenTags(repository, startTag, endTag);
 		detect(gitService, repository, handler, walk.iterator());
 	}
 
 	@Override
 	public void detectBetweenCommits(Repository repository, String startCommitId, String endCommitId,
-			RefactoringHandler handler) throws Exception {
+									 RefactoringHandler handler) throws Exception {
 		GitService gitService = new GitServiceImpl() {
 			@Override
 			public boolean isCommitAnalyzed(String sha1) {
 				return handler.skipCommit(sha1);
 			}
 		};
-		
+
 		Iterable<RevCommit> walk = gitService.createRevsWalkBetweenCommits(repository, startCommitId, endCommitId);
 		detect(gitService, repository, handler, walk.iterator());
 	}
@@ -557,8 +577,7 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 			if (commit.getParentCount() > 0) {
 				walk.parseCommit(commit.getParent(0));
 				return gitService.churn(repository, commit);
-			}
-			else {
+			} else {
 				logger.warn(String.format("Ignored revision %s because it has no parent", commitId));
 			}
 		} catch (MissingObjectException moe) {
@@ -572,6 +591,26 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 		}
 		return null;
 	}
+	/*
+	private void allRepositoryDirectories(GHTree tree, String pathFromRoot, Set<String> repositoryDirectories) throws IOException {
+		for(GHTreeEntry entry : tree.getTree()) {
+			String path = null;
+			if(pathFromRoot.equals("")) {
+				path = entry.getPath();
+			}
+			else {
+				path = pathFromRoot + "/" + entry.getPath();
+			}
+			GHTree asTree = entry.asTree();
+			if(asTree != null) {
+				allRepositoryDirectories(asTree, path, repositoryDirectories);
+			}
+			else if(path.endsWith(".java")) {
+				repositoryDirectories.add(path.substring(0, path.lastIndexOf("/")));
+			}
+		}
+	}
+	*/
 
 	@Override
 	public void detectAtCommit(String gitURL, String commitId, RefactoringHandler handler, int timeout) {
@@ -607,12 +646,10 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 			refactoringsAtRevision = modelDiff.getRefactorings();
 			refactoringsAtRevision.addAll(moveSourceFolderRefactorings);
 			refactoringsAtRevision = filter(refactoringsAtRevision);
-		}
-		catch(RefactoringMinerTimedOutException e) {
+		} catch (RefactoringMinerTimedOutException e) {
 			logger.warn(String.format("Ignored revision %s due to timeout", currentCommitId), e);
 			handler.handleException(currentCommitId, e);
-		}
-		catch (Exception e) {
+		} catch (Exception e) {
 			logger.warn(String.format("Ignored revision %s due to error", currentCommitId), e);
 			handler.handleException(currentCommitId, e);
 		}
@@ -622,8 +659,8 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 	}
 
 	private void populateWithGitHubAPI(String cloneURL, String currentCommitId,
-			Map<String, String> filesBefore, Map<String, String> filesCurrent, Map<String, String> renamedFilesHint,
-			Set<String> repositoryDirectoriesBefore, Set<String> repositoryDirectoriesCurrent) throws IOException, InterruptedException {
+									   Map<String, String> filesBefore, Map<String, String> filesCurrent, Map<String, String> renamedFilesHint,
+									   Set<String> repositoryDirectoriesBefore, Set<String> repositoryDirectoriesCurrent) throws IOException, InterruptedException {
 		logger.info("Processing {} {} ...", cloneURL, currentCommitId);
 		GHRepository repository = getGitHubRepository(cloneURL);
 		List<GHCommit.File> commitFiles = new ArrayList<>();
@@ -720,7 +757,7 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 	}
 
 	private void repositoryDirectories(GHTree tree, String pathFromRoot, Set<String> repositoryDirectories, Set<String> targetPaths) throws IOException {
-		for(GHTreeEntry entry : tree.getTree()) {
+		for (GHTreeEntry entry : tree.getTree()) {
 			String path;
 			if (pathFromRoot.equals("")) {
 				path = entry.getPath();
@@ -730,11 +767,10 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 			if (atLeastOneStartsWith(targetPaths, path)) {
 				if (targetPaths.contains(path)) {
 					repositoryDirectories.add(path);
-				}
-				else {
+				} else {
 					repositoryDirectories.add(path);
 					GHTree asTree = entry.asTree();
-					if(asTree != null) {
+					if (asTree != null) {
 						repositoryDirectories(asTree, path, repositoryDirectories, targetPaths);
 					}
 				}
@@ -743,110 +779,58 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
 	}
 
 	private boolean atLeastOneStartsWith(Set<String> targetPaths, String path) {
-		for(String targetPath : targetPaths) {
-			if(path.endsWith("/") && targetPath.startsWith(path)) {
+		for (String targetPath : targetPaths) {
+			if (path.endsWith("/") && targetPath.startsWith(path)) {
 				return true;
-			}
-			else if(!path.endsWith("/") && targetPath.startsWith(path + "/")) {
+			} else if (!path.endsWith("/") && targetPath.startsWith(path + "/")) {
 				return true;
 			}
 		}
 		return false;
 	}
-	/*
-	private void allRepositoryDirectories(GHTree tree, String pathFromRoot, Set<String> repositoryDirectories) throws IOException {
-		for(GHTreeEntry entry : tree.getTree()) {
-			String path = null;
-			if(pathFromRoot.equals("")) {
-				path = entry.getPath();
-			}
-			else {
-				path = pathFromRoot + "/" + entry.getPath();
-			}
-			GHTree asTree = entry.asTree();
-			if(asTree != null) {
-				allRepositoryDirectories(asTree, path, repositoryDirectories);
-			}
-			else if(path.endsWith(".java")) {
-				repositoryDirectories.add(path.substring(0, path.lastIndexOf("/")));
-			}
-		}
-	}
-	*/
 
 	@Override
 	public void detectAtPullRequest(String cloneURL, int pullRequestId, RefactoringHandler handler, int timeout) throws IOException {
 		GHRepository repository = getGitHubRepository(cloneURL);
 		GHPullRequest pullRequest = repository.getPullRequest(pullRequestId);
 		PagedIterable<GHPullRequestCommitDetail> commits = pullRequest.listCommits();
-		for(GHPullRequestCommitDetail commit : commits) {
+		for (GHPullRequestCommitDetail commit : commits) {
 			detectAtCommit(cloneURL, commit.getSha(), handler, timeout);
 		}
 	}
 
-	public GHRepository getGitHubRepository(String cloneURL) throws IOException {
-		GitHub gitHub = connectToGitHub();
-		String repoName = extractRepositoryName(cloneURL);
-		return gitHub.getRepository(repoName);
-	}
+	public static class ChangedFileInfo {
+		private String parentCommitId;
+		private List<String> filesBefore;
+		private List<String> filesCurrent;
+		private Map<String, String> renamedFilesHint;
 
-	private static final String GITHUB_URL = "https://github.com/";
-	private static final String BITBUCKET_URL = "https://bitbucket.org/";
+		public ChangedFileInfo() {
 
-	private static String extractRepositoryName(String cloneURL) {
-		int hostLength = 0;
-		if(cloneURL.startsWith(GITHUB_URL)) {
-			hostLength = GITHUB_URL.length();
 		}
-		else if(cloneURL.startsWith(BITBUCKET_URL)) {
-			hostLength = BITBUCKET_URL.length();
-		}
-		int indexOfDotGit = cloneURL.length();
-		if(cloneURL.endsWith(".git")) {
-			indexOfDotGit = cloneURL.indexOf(".git");
-		}
-		else if(cloneURL.endsWith("/")) {
-			indexOfDotGit = cloneURL.length() - 1;
-		}
-		String repoName = cloneURL.substring(hostLength, indexOfDotGit);
-		return repoName;
-	}
 
-	public static String extractCommitURL(String cloneURL, String commitId) {
-		int indexOfDotGit = cloneURL.length();
-		if(cloneURL.endsWith(".git")) {
-			indexOfDotGit = cloneURL.indexOf(".git");
+		public ChangedFileInfo(String parentCommitId, List<String> filesBefore,
+							   List<String> filesCurrent, Map<String, String> renamedFilesHint) {
+			this.filesBefore = filesBefore;
+			this.filesCurrent = filesCurrent;
+			this.renamedFilesHint = renamedFilesHint;
+			this.parentCommitId = parentCommitId;
 		}
-		else if(cloneURL.endsWith("/")) {
-			indexOfDotGit = cloneURL.length() - 1;
-		}
-		String commitResource = "/";
-		if(cloneURL.startsWith(GITHUB_URL)) {
-			commitResource = "/commit/";
-		}
-		else if(cloneURL.startsWith(BITBUCKET_URL)) {
-			commitResource = "/commits/";
-		}
-		String commitURL = cloneURL.substring(0, indexOfDotGit) + commitResource + commitId;
-		return commitURL;
-	}
 
-	private static String extractDownloadLink(String cloneURL, String commitId) {
-		int indexOfDotGit = cloneURL.length();
-		if(cloneURL.endsWith(".git")) {
-			indexOfDotGit = cloneURL.indexOf(".git");
+		public String getParentCommitId() {
+			return parentCommitId;
 		}
-		else if(cloneURL.endsWith("/")) {
-			indexOfDotGit = cloneURL.length() - 1;
+
+		public List<String> getFilesBefore() {
+			return filesBefore;
 		}
-		String downloadResource = "/";
-		if(cloneURL.startsWith(GITHUB_URL)) {
-			downloadResource = "/archive/";
+
+		public List<String> getFilesCurrent() {
+			return filesCurrent;
 		}
-		else if(cloneURL.startsWith(BITBUCKET_URL)) {
-			downloadResource = "/get/";
+
+		public Map<String, String> getRenamedFilesHint() {
+			return renamedFilesHint;
 		}
-		String downloadLink = cloneURL.substring(0, indexOfDotGit) + downloadResource + commitId + ".zip";
-		return downloadLink;
 	}
 }

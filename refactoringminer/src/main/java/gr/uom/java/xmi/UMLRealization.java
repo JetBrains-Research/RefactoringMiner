@@ -13,28 +13,28 @@ public class UMLRealization implements Comparable<UMLRealization> {
         return supplier;
     }
 
-	public UMLClass getClient() {
+    public UMLClass getClient() {
         return client;
     }
 
     public boolean equals(Object o) {
-    	if(this == o) {
-    		return true;
-    	}
-    	
-    	if(o instanceof UMLRealization) {
-    		UMLRealization umlRealization = (UMLRealization)o;
-    		return this.client.equals(umlRealization.client) &&
-    			this.supplier.equals(umlRealization.supplier);
-    	}
-    	return false;
+        if (this == o) {
+            return true;
+        }
+
+        if (o instanceof UMLRealization) {
+            UMLRealization umlRealization = (UMLRealization) o;
+            return this.client.equals(umlRealization.client) &&
+                this.supplier.equals(umlRealization.supplier);
+        }
+        return false;
+    }
+
+    public int compareTo(UMLRealization realization) {
+        return this.toString().compareTo(realization.toString());
     }
 
     public String toString() {
-    	return client + "->" + supplier;
+        return client + "->" + supplier;
     }
-
-	public int compareTo(UMLRealization realization) {
-		return this.toString().compareTo(realization.toString());
-	}
 }

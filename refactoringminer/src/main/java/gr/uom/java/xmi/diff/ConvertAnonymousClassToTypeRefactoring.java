@@ -19,57 +19,57 @@ public class ConvertAnonymousClassToTypeRefactoring implements Refactoring {
         this.addedClass = addedClass;
     }
 
+    public String toString() {
+        String sb = getName() + "\t" +
+            anonymousClass +
+            " was converted to " +
+            addedClass;
+        return sb;
+    }
+
+    public String getName() {
+        return this.getRefactoringType().getDisplayName();
+    }
+
+    public RefactoringType getRefactoringType() {
+        return RefactoringType.CONVERT_ANONYMOUS_CLASS_TO_TYPE;
+    }
+
+    public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        pairs.add(new ImmutablePair<>(getAnonymousClass().getLocationInfo().getFilePath(), getAnonymousClass().getName()));
+        return pairs;
+    }
+
     public UMLAnonymousClass getAnonymousClass() {
         return anonymousClass;
+    }
+
+    public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        pairs.add(new ImmutablePair<>(getAddedClass().getLocationInfo().getFilePath(), getAddedClass().getName()));
+        return pairs;
     }
 
     public UMLClass getAddedClass() {
         return addedClass;
     }
 
-    public String toString() {
-		String sb = getName() + "\t" +
-			anonymousClass +
-			" was converted to " +
-			addedClass;
-		return sb;
-	}
+    @Override
+    public List<CodeRange> leftSide() {
+        List<CodeRange> ranges = new ArrayList<>();
+        ranges.add(anonymousClass.codeRange()
+            .setDescription("anonymous class declaration")
+            .setCodeElement(anonymousClass.getName()));
+        return ranges;
+    }
 
-	public String getName() {
-		return this.getRefactoringType().getDisplayName();
-	}
-
-	public RefactoringType getRefactoringType() {
-		return RefactoringType.CONVERT_ANONYMOUS_CLASS_TO_TYPE;
-	}
-
-	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
-		pairs.add(new ImmutablePair<>(getAnonymousClass().getLocationInfo().getFilePath(), getAnonymousClass().getName()));
-		return pairs;
-	}
-
-	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
-		pairs.add(new ImmutablePair<>(getAddedClass().getLocationInfo().getFilePath(), getAddedClass().getName()));
-		return pairs;
-	}
-
-	@Override
-	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<>();
-		ranges.add(anonymousClass.codeRange()
-			.setDescription("anonymous class declaration")
-			.setCodeElement(anonymousClass.getName()));
-		return ranges;
-	}
-
-	@Override
-	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<>();
-		ranges.add(addedClass.codeRange()
-			.setDescription("added type declaration")
-			.setCodeElement(addedClass.getName()));
-		return ranges;
-	}
+    @Override
+    public List<CodeRange> rightSide() {
+        List<CodeRange> ranges = new ArrayList<>();
+        ranges.add(addedClass.codeRange()
+            .setDescription("added type declaration")
+            .setCodeElement(addedClass.getName()));
+        return ranges;
+    }
 }

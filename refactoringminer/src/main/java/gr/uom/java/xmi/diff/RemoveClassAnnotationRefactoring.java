@@ -11,112 +11,112 @@ import java.util.List;
 import java.util.Set;
 
 public class RemoveClassAnnotationRefactoring implements Refactoring {
-	private final UMLAnnotation annotation;
-	private final UMLClass classBefore;
-	private final UMLClass classAfter;
+    private final UMLAnnotation annotation;
+    private final UMLClass classBefore;
+    private final UMLClass classAfter;
 
-	public RemoveClassAnnotationRefactoring(UMLAnnotation annotation, UMLClass classBefore, UMLClass classAfter) {
-		this.annotation = annotation;
-		this.classBefore = classBefore;
-		this.classAfter = classAfter;
-	}
+    public RemoveClassAnnotationRefactoring(UMLAnnotation annotation, UMLClass classBefore, UMLClass classAfter) {
+        this.annotation = annotation;
+        this.classBefore = classBefore;
+        this.classAfter = classAfter;
+    }
 
-	public UMLAnnotation getAnnotation() {
-		return annotation;
-	}
+    public UMLAnnotation getAnnotation() {
+        return annotation;
+    }
 
-	public UMLClass getClassBefore() {
-		return classBefore;
-	}
+    @Override
+    public List<CodeRange> leftSide() {
+        List<CodeRange> ranges = new ArrayList<>();
+        ranges.add(annotation.codeRange()
+            .setDescription("removed annotation")
+            .setCodeElement(annotation.toString()));
+        ranges.add(classBefore.codeRange()
+            .setDescription("original class declaration")
+            .setCodeElement(classBefore.toString()));
+        return ranges;
+    }
 
-	public UMLClass getClassAfter() {
-		return classAfter;
-	}
+    @Override
+    public List<CodeRange> rightSide() {
+        List<CodeRange> ranges = new ArrayList<>();
+        ranges.add(classAfter.codeRange()
+            .setDescription("class declaration with removed annotation")
+            .setCodeElement(classAfter.toString()));
+        return ranges;
+    }
 
-	@Override
-	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<>();
-		ranges.add(annotation.codeRange()
-			.setDescription("removed annotation")
-			.setCodeElement(annotation.toString()));
-		ranges.add(classBefore.codeRange()
-			.setDescription("original class declaration")
-			.setCodeElement(classBefore.toString()));
-		return ranges;
-	}
+    @Override
+    public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        pairs.add(new ImmutablePair<>(getClassBefore().getLocationInfo().getFilePath(), getClassBefore().getName()));
+        return pairs;
+    }
 
-	@Override
-	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<>();
-		ranges.add(classAfter.codeRange()
-			.setDescription("class declaration with removed annotation")
-			.setCodeElement(classAfter.toString()));
-		return ranges;
-	}
+    public UMLClass getClassBefore() {
+        return classBefore;
+    }
 
-	@Override
-	public RefactoringType getRefactoringType() {
-		return RefactoringType.REMOVE_CLASS_ANNOTATION;
-	}
+    @Override
+    public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        pairs.add(new ImmutablePair<>(getClassAfter().getLocationInfo().getFilePath(), getClassAfter().getName()));
+        return pairs;
+    }
 
-	@Override
-	public String getName() {
-		return this.getRefactoringType().getDisplayName();
-	}
+    public UMLClass getClassAfter() {
+        return classAfter;
+    }
 
-	@Override
-	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
-		pairs.add(new ImmutablePair<>(getClassBefore().getLocationInfo().getFilePath(), getClassBefore().getName()));
-		return pairs;
-	}
+    public String toString() {
+        String sb = getName() + "\t" +
+            annotation +
+            " in class " +
+            classBefore.getName();
+        return sb;
+    }
 
-	@Override
-	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
-		pairs.add(new ImmutablePair<>(getClassAfter().getLocationInfo().getFilePath(), getClassAfter().getName()));
-		return pairs;
-	}
+    @Override
+    public String getName() {
+        return this.getRefactoringType().getDisplayName();
+    }
 
-	public String toString() {
-		String sb = getName() + "\t" +
-			annotation +
-			" in class " +
-			classBefore.getName();
-		return sb;
-	}
+    @Override
+    public RefactoringType getRefactoringType() {
+        return RefactoringType.REMOVE_CLASS_ANNOTATION;
+    }
 
-	@Override
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((annotation == null) ? 0 : annotation.hashCode());
-		result = prime * result + ((classAfter == null) ? 0 : classAfter.hashCode());
-		result = prime * result + ((classBefore == null) ? 0 : classBefore.hashCode());
-		return result;
-	}
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((annotation == null) ? 0 : annotation.hashCode());
+        result = prime * result + ((classAfter == null) ? 0 : classAfter.hashCode());
+        result = prime * result + ((classBefore == null) ? 0 : classBefore.hashCode());
+        return result;
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (getClass() != obj.getClass())
-			return false;
-		RemoveClassAnnotationRefactoring other = (RemoveClassAnnotationRefactoring) obj;
-		if (annotation == null) {
-			if (other.annotation != null)
-				return false;
-		} else if (!annotation.equals(other.annotation))
-			return false;
-		if (classAfter == null) {
-			if (other.classAfter != null)
-				return false;
-		} else if (!classAfter.equals(other.classAfter))
-			return false;
-		if (classBefore == null) {
-			return other.classBefore == null;
-		} else return classBefore.equals(other.classBefore);
-	}
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (obj == null)
+            return false;
+        if (getClass() != obj.getClass())
+            return false;
+        RemoveClassAnnotationRefactoring other = (RemoveClassAnnotationRefactoring) obj;
+        if (annotation == null) {
+            if (other.annotation != null)
+                return false;
+        } else if (!annotation.equals(other.annotation))
+            return false;
+        if (classAfter == null) {
+            if (other.classAfter != null)
+                return false;
+        } else if (!classAfter.equals(other.classAfter))
+            return false;
+        if (classBefore == null) {
+            return other.classBefore == null;
+        } else return classBefore.equals(other.classBefore);
+    }
 }

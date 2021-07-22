@@ -44,65 +44,41 @@ public class UMLParameterDiff {
                 varArgsChanged = true;
             }
             if (!removedParameter.isVarargs() && addedParameter.isVarargs()) {
-				varArgsChanged = true;
-			}
-		}
-		if(!removedParameter.getName().equals(addedParameter.getName()))
-			nameChanged = true;
-		if(removedParameter.isFinal() != addedParameter.isFinal())
-			finalChanged = true;
-		this.annotationListDiff = new UMLAnnotationListDiff(removedParameter.getAnnotations(), addedParameter.getAnnotations());
-	}
+                varArgsChanged = true;
+            }
+        }
+        if (!removedParameter.getName().equals(addedParameter.getName()))
+            nameChanged = true;
+        if (removedParameter.isFinal() != addedParameter.isFinal())
+            finalChanged = true;
+        this.annotationListDiff = new UMLAnnotationListDiff(removedParameter.getAnnotations(), addedParameter.getAnnotations());
+    }
 
-	public UMLParameter getRemovedParameter() {
-		return removedParameter;
-	}
+    public boolean isEmpty() {
+        return !nameChanged && !typeChanged && !qualifiedTypeChanged && !varArgsChanged && !finalChanged && annotationListDiff.isEmpty();
+    }
 
-	public UMLParameter getAddedParameter() {
-		return addedParameter;
-	}
-
-	public boolean isTypeChanged() {
-		return typeChanged;
-	}
-
-	public boolean isQualifiedTypeChanged() {
-		return qualifiedTypeChanged;
-	}
-
-	public boolean isVarArgsChanged() {
-		return varArgsChanged;
-	}
-
-	public boolean isNameChanged() {
-		return nameChanged;
-	}
-
-	public boolean isEmpty() {
-		return !nameChanged && !typeChanged && !qualifiedTypeChanged && !varArgsChanged && !finalChanged && annotationListDiff.isEmpty();
-	}
-
-	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		if (typeChanged || nameChanged || qualifiedTypeChanged)
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        if (typeChanged || nameChanged || qualifiedTypeChanged)
             sb.append("\t\t").append("parameter ").append(removedParameter).append(":").append("\n");
         if (typeChanged || qualifiedTypeChanged)
             sb.append("\t\t").append("type changed from ").append(removedParameter.getType()).append(" to ").append(addedParameter.getType()).append("\n");
         if (nameChanged)
             sb.append("\t\t").append("name changed from ").append(removedParameter.getName()).append(" to ").append(addedParameter.getName()).append("\n");
-		for(UMLAnnotation annotation : annotationListDiff.getRemovedAnnotations()) {
+        for (UMLAnnotation annotation : annotationListDiff.getRemovedAnnotations()) {
             sb.append("\t").append("annotation ").append(annotation).append(" removed").append("\n");
         }
-		for(UMLAnnotation annotation : annotationListDiff.getAddedAnnotations()) {
+        for (UMLAnnotation annotation : annotationListDiff.getAddedAnnotations()) {
             sb.append("\t").append("annotation ").append(annotation).append(" added").append("\n");
         }
-		for(UMLAnnotationDiff annotationDiff : annotationListDiff.getAnnotationDiffList()) {
+        for (UMLAnnotationDiff annotationDiff : annotationListDiff.getAnnotationDiffList()) {
             sb.append("\t").append("annotation ").append(annotationDiff.getRemovedAnnotation()).append(" modified to ").append(annotationDiff.getAddedAnnotation()).append("\n");
         }
-		return sb.toString();
-	}
+        return sb.toString();
+    }
 
-	public Set<Refactoring> getRefactorings() {
+    public Set<Refactoring> getRefactorings() {
         Set<Refactoring> refactorings = new LinkedHashSet<>();
         VariableDeclaration originalVariable = getRemovedParameter().getVariableDeclaration();
         VariableDeclaration newVariable = getAddedParameter().getVariableDeclaration();
@@ -113,59 +89,81 @@ public class UMLParameterDiff {
                 renameRefactoring = new RenameVariableRefactoring(originalVariable, newVariable, removedOperation, addedOperation, references);
                 refactorings.add(renameRefactoring);
             } else {
-				RemoveParameterRefactoring removeParameter = new RemoveParameterRefactoring(removedParameter, removedOperation, addedOperation);
-				AddParameterRefactoring addParameter = new AddParameterRefactoring(addedParameter, removedOperation, addedOperation);
-				refactorings.add(removeParameter);
-				refactorings.add(addParameter);
-			}
-		}
-		if((isTypeChanged() || isQualifiedTypeChanged() || isVarArgsChanged()) && !inconsistentReplacement(originalVariable, newVariable)) {
-			ChangeVariableTypeRefactoring refactoring = new ChangeVariableTypeRefactoring(originalVariable, newVariable, removedOperation, addedOperation, references);
-			if(renameRefactoring != null) {
-				refactoring.addRelatedRefactoring(renameRefactoring);
-			}
-			refactorings.add(refactoring);
-		}
-		for(UMLAnnotation annotation : annotationListDiff.getAddedAnnotations()) {
-			AddVariableAnnotationRefactoring refactoring = new AddVariableAnnotationRefactoring(annotation, originalVariable, newVariable, removedOperation, addedOperation);
-			refactorings.add(refactoring);
-		}
-		for(UMLAnnotation annotation : annotationListDiff.getRemovedAnnotations()) {
-			RemoveVariableAnnotationRefactoring refactoring = new RemoveVariableAnnotationRefactoring(annotation, originalVariable, newVariable, removedOperation, addedOperation);
-			refactorings.add(refactoring);
-		}
-		for(UMLAnnotationDiff annotationDiff : annotationListDiff.getAnnotationDiffList()) {
-			ModifyVariableAnnotationRefactoring refactoring = new ModifyVariableAnnotationRefactoring(annotationDiff.getRemovedAnnotation(), annotationDiff.getAddedAnnotation(), originalVariable, newVariable, removedOperation, addedOperation);
-			refactorings.add(refactoring);
-		}
-		if(finalChanged) {
-			if(newVariable.isFinal()) {
-				AddVariableModifierRefactoring ref = new AddVariableModifierRefactoring("final", originalVariable, newVariable, removedOperation, addedOperation);
-				refactorings.add(ref);
-			}
-			else if(originalVariable.isFinal()) {
-				RemoveVariableModifierRefactoring ref = new RemoveVariableModifierRefactoring("final", originalVariable, newVariable, removedOperation, addedOperation);
-				refactorings.add(ref);
-			}
-		}
-		return refactorings;
-	}
+                RemoveParameterRefactoring removeParameter = new RemoveParameterRefactoring(removedParameter, removedOperation, addedOperation);
+                AddParameterRefactoring addParameter = new AddParameterRefactoring(addedParameter, removedOperation, addedOperation);
+                refactorings.add(removeParameter);
+                refactorings.add(addParameter);
+            }
+        }
+        if ((isTypeChanged() || isQualifiedTypeChanged() || isVarArgsChanged()) && !inconsistentReplacement(originalVariable, newVariable)) {
+            ChangeVariableTypeRefactoring refactoring = new ChangeVariableTypeRefactoring(originalVariable, newVariable, removedOperation, addedOperation, references);
+            if (renameRefactoring != null) {
+                refactoring.addRelatedRefactoring(renameRefactoring);
+            }
+            refactorings.add(refactoring);
+        }
+        for (UMLAnnotation annotation : annotationListDiff.getAddedAnnotations()) {
+            AddVariableAnnotationRefactoring refactoring = new AddVariableAnnotationRefactoring(annotation, originalVariable, newVariable, removedOperation, addedOperation);
+            refactorings.add(refactoring);
+        }
+        for (UMLAnnotation annotation : annotationListDiff.getRemovedAnnotations()) {
+            RemoveVariableAnnotationRefactoring refactoring = new RemoveVariableAnnotationRefactoring(annotation, originalVariable, newVariable, removedOperation, addedOperation);
+            refactorings.add(refactoring);
+        }
+        for (UMLAnnotationDiff annotationDiff : annotationListDiff.getAnnotationDiffList()) {
+            ModifyVariableAnnotationRefactoring refactoring = new ModifyVariableAnnotationRefactoring(annotationDiff.getRemovedAnnotation(), annotationDiff.getAddedAnnotation(), originalVariable, newVariable, removedOperation, addedOperation);
+            refactorings.add(refactoring);
+        }
+        if (finalChanged) {
+            if (newVariable.isFinal()) {
+                AddVariableModifierRefactoring ref = new AddVariableModifierRefactoring("final", originalVariable, newVariable, removedOperation, addedOperation);
+                refactorings.add(ref);
+            } else if (originalVariable.isFinal()) {
+                RemoveVariableModifierRefactoring ref = new RemoveVariableModifierRefactoring("final", originalVariable, newVariable, removedOperation, addedOperation);
+                refactorings.add(ref);
+            }
+        }
+        return refactorings;
+    }
 
-	private boolean inconsistentReplacement(VariableDeclaration originalVariable, VariableDeclaration newVariable) {
-		if(removedOperation.isStatic() || addedOperation.isStatic()) {
-			for(AbstractCodeMapping mapping : mappings) {
-				for(Replacement replacement : mapping.getReplacements()) {
-					if(replacement.getType().equals(ReplacementType.VARIABLE_NAME)) {
-						if(replacement.getBefore().equals(originalVariable.getVariableName()) && !replacement.getAfter().equals(newVariable.getVariableName())) {
-							return true;
-						}
-						else if(!replacement.getBefore().equals(originalVariable.getVariableName()) && replacement.getAfter().equals(newVariable.getVariableName())) {
-							return true;
-						}
-					}
-				}
-			}
-		}
-		return false;
-	}
+    public UMLParameter getRemovedParameter() {
+        return removedParameter;
+    }
+
+    public UMLParameter getAddedParameter() {
+        return addedParameter;
+    }
+
+    public boolean isTypeChanged() {
+        return typeChanged;
+    }
+
+    public boolean isQualifiedTypeChanged() {
+        return qualifiedTypeChanged;
+    }
+
+    public boolean isVarArgsChanged() {
+        return varArgsChanged;
+    }
+
+    public boolean isNameChanged() {
+        return nameChanged;
+    }
+
+    private boolean inconsistentReplacement(VariableDeclaration originalVariable, VariableDeclaration newVariable) {
+        if (removedOperation.isStatic() || addedOperation.isStatic()) {
+            for (AbstractCodeMapping mapping : mappings) {
+                for (Replacement replacement : mapping.getReplacements()) {
+                    if (replacement.getType().equals(ReplacementType.VARIABLE_NAME)) {
+                        if (replacement.getBefore().equals(originalVariable.getVariableName()) && !replacement.getAfter().equals(newVariable.getVariableName())) {
+                            return true;
+                        } else if (!replacement.getBefore().equals(originalVariable.getVariableName()) && replacement.getAfter().equals(newVariable.getVariableName())) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
 }

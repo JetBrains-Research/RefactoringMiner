@@ -19,74 +19,74 @@ public class MoveClassRefactoring implements PackageLevelRefactoring {
     }
 
     public String toString() {
-		String sb = getName() + "\t" +
-			originalClass.getName() +
-			" moved to " +
-			movedClass.getName();
-		return sb;
-	}
+        String sb = getName() + "\t" +
+            originalClass.getName() +
+            " moved to " +
+            movedClass.getName();
+        return sb;
+    }
+
+    public String getName() {
+        return this.getRefactoringType().getDisplayName();
+    }
+
+    public RefactoringType getRefactoringType() {
+        return RefactoringType.MOVE_CLASS;
+    }
 
     public RenamePattern getRenamePattern() {
         int separatorPos = PrefixSuffixUtils.separatorPosOfCommonSuffix('.', originalClass.getName(), movedClass.getName());
         if (separatorPos == -1) {
             return new RenamePattern(originalClass.getName(), movedClass.getName());
         }
-		String originalPath = originalClass.getName().substring(0, originalClass.getName().length() - separatorPos);
-		String movedPath = movedClass.getName().substring(0, movedClass.getName().length() - separatorPos);
-		return new RenamePattern(originalPath, movedPath);
-	}
+        String originalPath = originalClass.getName().substring(0, originalClass.getName().length() - separatorPos);
+        String movedPath = movedClass.getName().substring(0, movedClass.getName().length() - separatorPos);
+        return new RenamePattern(originalPath, movedPath);
+    }
 
-	public String getName() {
-		return this.getRefactoringType().getDisplayName();
-	}
+    public String getOriginalClassName() {
+        return originalClass.getName();
+    }
 
-	public RefactoringType getRefactoringType() {
-		return RefactoringType.MOVE_CLASS;
-	}
+    public String getMovedClassName() {
+        return movedClass.getName();
+    }
 
-	public String getOriginalClassName() {
-		return originalClass.getName();
-	}
+    public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        pairs.add(new ImmutablePair<>(getOriginalClass().getLocationInfo().getFilePath(), getOriginalClass().getName()));
+        return pairs;
+    }
 
-	public String getMovedClassName() {
-		return movedClass.getName();
-	}
+    public UMLClass getOriginalClass() {
+        return originalClass;
+    }
 
-	public UMLClass getOriginalClass() {
-		return originalClass;
-	}
+    public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        pairs.add(new ImmutablePair<>(getMovedClass().getLocationInfo().getFilePath(), getMovedClass().getName()));
+        return pairs;
+    }
 
-	public UMLClass getMovedClass() {
-		return movedClass;
-	}
+    public UMLClass getMovedClass() {
+        return movedClass;
+    }
 
-	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
-		pairs.add(new ImmutablePair<>(getOriginalClass().getLocationInfo().getFilePath(), getOriginalClass().getName()));
-		return pairs;
-	}
+    @Override
+    public List<CodeRange> leftSide() {
+        List<CodeRange> ranges = new ArrayList<>();
+        ranges.add(originalClass.codeRange()
+            .setDescription("original type declaration")
+            .setCodeElement(originalClass.getName()));
+        return ranges;
+    }
 
-	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
-		pairs.add(new ImmutablePair<>(getMovedClass().getLocationInfo().getFilePath(), getMovedClass().getName()));
-		return pairs;
-	}
-
-	@Override
-	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<>();
-		ranges.add(originalClass.codeRange()
-			.setDescription("original type declaration")
-			.setCodeElement(originalClass.getName()));
-		return ranges;
-	}
-
-	@Override
-	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<>();
-		ranges.add(movedClass.codeRange()
-			.setDescription("moved type declaration")
-			.setCodeElement(movedClass.getName()));
-		return ranges;
-	}
+    @Override
+    public List<CodeRange> rightSide() {
+        List<CodeRange> ranges = new ArrayList<>();
+        ranges.add(movedClass.codeRange()
+            .setDescription("moved type declaration")
+            .setCodeElement(movedClass.getName()));
+        return ranges;
+    }
 }

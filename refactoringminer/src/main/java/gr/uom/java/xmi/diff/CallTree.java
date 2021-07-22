@@ -27,17 +27,17 @@ public class CallTree {
 
     public boolean containsInPathToRootOrSibling(CallTreeNode parent, UMLOperation invokedOperation) {
         for (CallTreeNode sibling : parent.getChildren()) {
-			if(sibling.getInvokedOperation().equals(invokedOperation)) {
-				return true;
-			}
-		}
-		CallTreeNode currentParent = parent;
-		while(currentParent != null) {
-			if(currentParent.getInvokedOperation().equals(invokedOperation)) {
-				return true;
-			}
-			currentParent = currentParent.getParent();
-		}
-		return false;
-	}
+            if (sibling.getInvokedOperation().equals(invokedOperation)) {
+                return true;
+            }
+        }
+        CallTreeNode currentParent = parent;
+        while (currentParent != null) {
+            if (currentParent.getInvokedOperation().equals(invokedOperation)) {
+                return true;
+            }
+            currentParent = currentParent.getParent();
+        }
+        return false;
+    }
 }

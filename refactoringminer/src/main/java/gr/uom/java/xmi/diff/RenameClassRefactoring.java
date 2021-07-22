@@ -20,64 +20,64 @@ public class RenameClassRefactoring implements Refactoring {
     }
 
     public String toString() {
-		String sb = getName() + "\t" +
-			originalClass.getName() +
-			" renamed to " +
-			renamedClass.getName();
-		return sb;
-	}
+        String sb = getName() + "\t" +
+            originalClass.getName() +
+            " renamed to " +
+            renamedClass.getName();
+        return sb;
+    }
 
     public String getName() {
         return this.getRefactoringType().getDisplayName();
     }
 
     public RefactoringType getRefactoringType() {
-		return RefactoringType.RENAME_CLASS;
-	}
+        return RefactoringType.RENAME_CLASS;
+    }
 
-	public String getOriginalClassName() {
-		return originalClass.getName();
-	}
+    public String getOriginalClassName() {
+        return originalClass.getName();
+    }
 
-	public String getRenamedClassName() {
-		return renamedClass.getName();
-	}
+    public String getRenamedClassName() {
+        return renamedClass.getName();
+    }
 
-	public UMLClass getOriginalClass() {
-		return originalClass;
-	}
+    public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        pairs.add(new ImmutablePair<>(getOriginalClass().getLocationInfo().getFilePath(), getOriginalClass().getName()));
+        return pairs;
+    }
 
-	public UMLClass getRenamedClass() {
-		return renamedClass;
-	}
+    public UMLClass getOriginalClass() {
+        return originalClass;
+    }
 
-	public Set<ImmutablePair<String, String>> getInvolvedClassesBeforeRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
-		pairs.add(new ImmutablePair<>(getOriginalClass().getLocationInfo().getFilePath(), getOriginalClass().getName()));
-		return pairs;
-	}
+    public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
+        Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
+        pairs.add(new ImmutablePair<>(getRenamedClass().getLocationInfo().getFilePath(), getRenamedClass().getName()));
+        return pairs;
+    }
 
-	public Set<ImmutablePair<String, String>> getInvolvedClassesAfterRefactoring() {
-		Set<ImmutablePair<String, String>> pairs = new LinkedHashSet<>();
-		pairs.add(new ImmutablePair<>(getRenamedClass().getLocationInfo().getFilePath(), getRenamedClass().getName()));
-		return pairs;
-	}
+    public UMLClass getRenamedClass() {
+        return renamedClass;
+    }
 
-	@Override
-	public List<CodeRange> leftSide() {
-		List<CodeRange> ranges = new ArrayList<>();
-		ranges.add(originalClass.codeRange()
-			.setDescription("original type declaration")
-			.setCodeElement(originalClass.getName()));
-		return ranges;
-	}
+    @Override
+    public List<CodeRange> leftSide() {
+        List<CodeRange> ranges = new ArrayList<>();
+        ranges.add(originalClass.codeRange()
+            .setDescription("original type declaration")
+            .setCodeElement(originalClass.getName()));
+        return ranges;
+    }
 
-	@Override
-	public List<CodeRange> rightSide() {
-		List<CodeRange> ranges = new ArrayList<>();
-		ranges.add(renamedClass.codeRange()
-			.setDescription("renamed type declaration")
-			.setCodeElement(renamedClass.getName()));
-		return ranges;
-	}
+    @Override
+    public List<CodeRange> rightSide() {
+        List<CodeRange> ranges = new ArrayList<>();
+        ranges.add(renamedClass.codeRange()
+            .setDescription("renamed type declaration")
+            .setCodeElement(renamedClass.getName()));
+        return ranges;
+    }
 }

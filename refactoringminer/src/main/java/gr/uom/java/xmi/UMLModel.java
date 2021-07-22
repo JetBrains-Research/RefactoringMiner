@@ -16,11 +16,11 @@ public class UMLModel {
     private final List<UMLRealization> realizationList;
 
     public UMLModel(Set<String> repositoryDirectories) {
-		this.repositoryDirectories = repositoryDirectories;
-		classList = new ArrayList<>();
-		generalizationList = new ArrayList<>();
-		realizationList = new ArrayList<>();
-	}
+        this.repositoryDirectories = repositoryDirectories;
+        classList = new ArrayList<>();
+        generalizationList = new ArrayList<>();
+        realizationList = new ArrayList<>();
+    }
 
     public void addClass(UMLClass umlClass) {
         classList.add(umlClass);
@@ -31,16 +31,8 @@ public class UMLModel {
     }
 
     public void addRealization(UMLRealization umlRealization) {
-    	realizationList.add(umlRealization);
+        realizationList.add(umlRealization);
     }
-
-    public UMLClass getClass(UMLClass umlClassFromOtherModel) {
-		for (UMLClass umlClass : classList) {
-			if (umlClass.equals(umlClassFromOtherModel))
-				return umlClass;
-		}
-		return null;
-	}
 
     public List<UMLClass> getClassList() {
         return this.classList;
@@ -51,97 +43,105 @@ public class UMLModel {
     }
 
     public List<UMLRealization> getRealizationList() {
-		return realizationList;
-	}
+        return realizationList;
+    }
 
-	public UMLGeneralization matchGeneralization(UMLGeneralization otherGeneralization) {
-		for (UMLGeneralization generalization : generalizationList) {
-			if (generalization.getChild().equals(otherGeneralization.getChild())) {
-				String thisParent = generalization.getParent();
-				String otherParent = otherGeneralization.getParent();
-				String thisParentComparedString;
-				if (thisParent.contains("."))
-					thisParentComparedString = thisParent.substring(thisParent.lastIndexOf(".") + 1);
-				else
-					thisParentComparedString = thisParent;
-				String otherParentComparedString;
-				if (otherParent.contains("."))
-					otherParentComparedString = otherParent.substring(otherParent.lastIndexOf(".") + 1);
-				else
-					otherParentComparedString = otherParent;
-				if (thisParentComparedString.equals(otherParentComparedString))
-					return generalization;
-			}
-		}
-		return null;
-	}
+    public UMLGeneralization matchGeneralization(UMLGeneralization otherGeneralization) {
+        for (UMLGeneralization generalization : generalizationList) {
+            if (generalization.getChild().equals(otherGeneralization.getChild())) {
+                String thisParent = generalization.getParent();
+                String otherParent = otherGeneralization.getParent();
+                String thisParentComparedString;
+                if (thisParent.contains("."))
+                    thisParentComparedString = thisParent.substring(thisParent.lastIndexOf(".") + 1);
+                else
+                    thisParentComparedString = thisParent;
+                String otherParentComparedString;
+                if (otherParent.contains("."))
+                    otherParentComparedString = otherParent.substring(otherParent.lastIndexOf(".") + 1);
+                else
+                    otherParentComparedString = otherParent;
+                if (thisParentComparedString.equals(otherParentComparedString))
+                    return generalization;
+            }
+        }
+        return null;
+    }
 
     public UMLRealization matchRealization(UMLRealization otherRealization) {
-		for (UMLRealization realization : realizationList) {
-			if (realization.getClient().equals(otherRealization.getClient())) {
-				String thisSupplier = realization.getSupplier();
-				String otherSupplier = otherRealization.getSupplier();
-				String thisSupplierComparedString;
-				if (thisSupplier.contains("."))
-					thisSupplierComparedString = thisSupplier.substring(thisSupplier.lastIndexOf(".") + 1);
-				else
-					thisSupplierComparedString = thisSupplier;
-				String otherSupplierComparedString;
-				if (otherSupplier.contains("."))
-					otherSupplierComparedString = otherSupplier.substring(otherSupplier.lastIndexOf(".") + 1);
-				else
-					otherSupplierComparedString = otherSupplier;
-				if (thisSupplierComparedString.equals(otherSupplierComparedString))
-					return realization;
-			}
-		}
-		return null;
-	}
+        for (UMLRealization realization : realizationList) {
+            if (realization.getClient().equals(otherRealization.getClient())) {
+                String thisSupplier = realization.getSupplier();
+                String otherSupplier = otherRealization.getSupplier();
+                String thisSupplierComparedString;
+                if (thisSupplier.contains("."))
+                    thisSupplierComparedString = thisSupplier.substring(thisSupplier.lastIndexOf(".") + 1);
+                else
+                    thisSupplierComparedString = thisSupplier;
+                String otherSupplierComparedString;
+                if (otherSupplier.contains("."))
+                    otherSupplierComparedString = otherSupplier.substring(otherSupplier.lastIndexOf(".") + 1);
+                else
+                    otherSupplierComparedString = otherSupplier;
+                if (thisSupplierComparedString.equals(otherSupplierComparedString))
+                    return realization;
+            }
+        }
+        return null;
+    }
 
     public UMLModelDiff diff(UMLModel umlModel) throws RefactoringMinerTimedOutException {
         return this.diff(umlModel, Collections.emptyMap());
     }
 
-	public UMLModelDiff diff(UMLModel umlModel, Map<String, String> renamedFileHints) throws RefactoringMinerTimedOutException {
-    	UMLModelDiff modelDiff = new UMLModelDiff(this, umlModel);
-    	for(UMLClass umlClass : classList) {
-    		if(!umlModel.classList.contains(umlClass))
-    			modelDiff.reportRemovedClass(umlClass);
-    	}
-    	for(UMLClass umlClass : umlModel.classList) {
-    		if(!this.classList.contains(umlClass))
-    			modelDiff.reportAddedClass(umlClass);
-    	}
-    	modelDiff.checkForMovedClasses(renamedFileHints, umlModel.repositoryDirectories, new UMLClassMatcher.Move());
-    	modelDiff.checkForRenamedClasses(renamedFileHints, new UMLClassMatcher.Rename());
-    	for(UMLGeneralization umlGeneralization : generalizationList) {
-    		if(!umlModel.generalizationList.contains(umlGeneralization))
-    			modelDiff.reportRemovedGeneralization(umlGeneralization);
-    	}
-    	for(UMLGeneralization umlGeneralization : umlModel.generalizationList) {
-    		if(!this.generalizationList.contains(umlGeneralization))
-    			modelDiff.reportAddedGeneralization(umlGeneralization);
-    	}
-    	modelDiff.checkForGeneralizationChanges();
-    	for(UMLRealization umlRealization : realizationList) {
-    		if(!umlModel.realizationList.contains(umlRealization))
-    			modelDiff.reportRemovedRealization(umlRealization);
-    	}
-    	for(UMLRealization umlRealization : umlModel.realizationList) {
-    		if(!this.realizationList.contains(umlRealization))
-    			modelDiff.reportAddedRealization(umlRealization);
-    	}
-    	modelDiff.checkForRealizationChanges();
-    	for(UMLClass umlClass : classList) {
-    		if(umlModel.classList.contains(umlClass)) {
-    			UMLClassDiff classDiff = new UMLClassDiff(umlClass, umlModel.getClass(umlClass), modelDiff);
-    			classDiff.process();
-    			if(!classDiff.isEmpty())
-    				modelDiff.addUMLClassDiff(classDiff);
-    		}
-    	}
-    	modelDiff.checkForMovedClasses(renamedFileHints, umlModel.repositoryDirectories, new UMLClassMatcher.RelaxedMove());
-    	modelDiff.checkForRenamedClasses(renamedFileHints, new UMLClassMatcher.RelaxedRename());
-    	return modelDiff;
+    public UMLModelDiff diff(UMLModel umlModel, Map<String, String> renamedFileHints) throws RefactoringMinerTimedOutException {
+        UMLModelDiff modelDiff = new UMLModelDiff(this, umlModel);
+        for (UMLClass umlClass : classList) {
+            if (!umlModel.classList.contains(umlClass))
+                modelDiff.reportRemovedClass(umlClass);
+        }
+        for (UMLClass umlClass : umlModel.classList) {
+            if (!this.classList.contains(umlClass))
+                modelDiff.reportAddedClass(umlClass);
+        }
+        modelDiff.checkForMovedClasses(renamedFileHints, umlModel.repositoryDirectories, new UMLClassMatcher.Move());
+        modelDiff.checkForRenamedClasses(renamedFileHints, new UMLClassMatcher.Rename());
+        for (UMLGeneralization umlGeneralization : generalizationList) {
+            if (!umlModel.generalizationList.contains(umlGeneralization))
+                modelDiff.reportRemovedGeneralization(umlGeneralization);
+        }
+        for (UMLGeneralization umlGeneralization : umlModel.generalizationList) {
+            if (!this.generalizationList.contains(umlGeneralization))
+                modelDiff.reportAddedGeneralization(umlGeneralization);
+        }
+        modelDiff.checkForGeneralizationChanges();
+        for (UMLRealization umlRealization : realizationList) {
+            if (!umlModel.realizationList.contains(umlRealization))
+                modelDiff.reportRemovedRealization(umlRealization);
+        }
+        for (UMLRealization umlRealization : umlModel.realizationList) {
+            if (!this.realizationList.contains(umlRealization))
+                modelDiff.reportAddedRealization(umlRealization);
+        }
+        modelDiff.checkForRealizationChanges();
+        for (UMLClass umlClass : classList) {
+            if (umlModel.classList.contains(umlClass)) {
+                UMLClassDiff classDiff = new UMLClassDiff(umlClass, umlModel.getClass(umlClass), modelDiff);
+                classDiff.process();
+                if (!classDiff.isEmpty())
+                    modelDiff.addUMLClassDiff(classDiff);
+            }
+        }
+        modelDiff.checkForMovedClasses(renamedFileHints, umlModel.repositoryDirectories, new UMLClassMatcher.RelaxedMove());
+        modelDiff.checkForRenamedClasses(renamedFileHints, new UMLClassMatcher.RelaxedRename());
+        return modelDiff;
+    }
+
+    public UMLClass getClass(UMLClass umlClassFromOtherModel) {
+        for (UMLClass umlClass : classList) {
+            if (umlClass.equals(umlClassFromOtherModel))
+                return umlClass;
+        }
+        return null;
     }
 }

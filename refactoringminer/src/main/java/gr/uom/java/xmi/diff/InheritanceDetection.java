@@ -16,6 +16,23 @@ public class InheritanceDetection {
         generateNewInheritanceHierarchies(modelDiff);
     }
 
+    private void generateNewInheritanceHierarchies(UMLModelDiff modelDiff) {
+        List<UMLGeneralization> addedGeneralizations = modelDiff.getAddedGeneralizations();
+        for (UMLGeneralization generalization : addedGeneralizations) {
+            String superclass = generalization.getParent();
+            String subclass = generalization.getChild().getName();
+            if (modelDiff.getAddedClass(superclass) != null && modelDiff.getAddedClass(subclass) != null)
+                addSubclassToSuperclass(superclass, subclass);
+        }
+        List<UMLRealization> addedRealizations = modelDiff.getAddedRealizations();
+        for (UMLRealization realization : addedRealizations) {
+            String supplier = realization.getSupplier();
+            String client = realization.getClient().getName();
+            if (modelDiff.getAddedClass(supplier) != null && modelDiff.getAddedClass(client) != null)
+                addSubclassToSuperclass(supplier, client);
+        }
+    }
+
     private void addSubclassToSuperclass(String superclass, String subclass) {
         if (subclassMap.containsKey(superclass)) {
             LinkedHashSet<String> subclasses = subclassMap.get(superclass);
@@ -27,24 +44,7 @@ public class InheritanceDetection {
         }
     }
 
-    private void generateNewInheritanceHierarchies(UMLModelDiff modelDiff) {
-        List<UMLGeneralization> addedGeneralizations = modelDiff.getAddedGeneralizations();
-		for(UMLGeneralization generalization : addedGeneralizations) {
-			String superclass = generalization.getParent();
-			String subclass = generalization.getChild().getName();
-			if(modelDiff.getAddedClass(superclass) != null && modelDiff.getAddedClass(subclass) != null)
-				addSubclassToSuperclass(superclass, subclass);
-		}
-		List<UMLRealization> addedRealizations = modelDiff.getAddedRealizations();
-		for(UMLRealization realization : addedRealizations) {
-			String supplier = realization.getSupplier();
-			String client = realization.getClient().getName();
-			if(modelDiff.getAddedClass(supplier) != null && modelDiff.getAddedClass(client) != null)
-				addSubclassToSuperclass(supplier, client);
-		}
-	}
-
-	public Set<String> getRoots() {
-		return subclassMap.keySet();
-	}
+    public Set<String> getRoots() {
+        return subclassMap.keySet();
+    }
 }
