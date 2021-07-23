@@ -139,7 +139,10 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
                         }
                     }
                 } else if (declaredElement instanceof PsiClass) {
-                    // TODO:
+                    // Local classes
+                    AnonymousClassDeclarationObject anonymousObject =
+                        new AnonymousClassDeclarationObject(file, filePath, (PsiClass) declaredElement);
+                    anonymousClassDeclarations.add(anonymousObject);
                 } else {
                     throw new IllegalStateException();
                 }
@@ -148,15 +151,6 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
             AnonymousClassDeclarationObject anonymousObject =
                 new AnonymousClassDeclarationObject(file, filePath, (PsiAnonymousClass) element);
             anonymousClassDeclarations.add(anonymousObject);
-            if (!stackAnonymous.isEmpty()) {
-                stackAnonymous.getLast().getAnonymousClassDeclarations().add(anonymousObject);
-            }
-            stackAnonymous.addLast(anonymousObject);
-            for (PsiElement parent : builderPatternChains) {
-                if (PsiTreeUtil.isAncestor(parent, element, true)) {
-                    goInSubtree = false;
-                }
-            }
         } else if (element instanceof PsiLiteralExpression) {
             Object value = ((PsiLiteral) element).getValue();
             String source = element.getText();
@@ -234,16 +228,6 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
             OperationInvocation invocation = new OperationInvocation(file, filePath, methodCall);
             methodInvocationMap.compute(source, createOrAppend(invocation));
             // TODO: super, this constructor??
-        } else if (element instanceof PsiQualifiedNamedElement) {
-            PsiQualifiedNamedElement qualifiedNamedElement = (PsiQualifiedNamedElement) element;
-            String source = element.getText();
-            String qualifiedName = qualifiedNamedElement.getQualifiedName();
-            if (qualifiedName != null) {
-                if (Character.isUpperCase(qualifiedName.charAt(0))) {
-                    types.add(qualifiedName);
-                    variables.add(source);
-                } // TODO: big else
-            }
         } else if (element instanceof PsiTypeCastExpression) {
             variables.add(element.getText());
         } else if (element instanceof PsiLambdaExpression) {
