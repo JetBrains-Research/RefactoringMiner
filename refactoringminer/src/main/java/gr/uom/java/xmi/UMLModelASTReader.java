@@ -41,6 +41,9 @@ public class UMLModelASTReader {
     }
 
     private void processFile(String sourceFilePath, PsiFile file, String javaFileContent) {
+        if (PsiTreeUtil.hasErrorElements(file)) {
+            throw new IllegalArgumentException("PsiFile contains errors");
+        }
         List<UMLComment> comments = extractInternalComments(file, sourceFilePath, javaFileContent);
         String packageName = getPackageName(file);
         Collection<PsiImportStatement> imports = PsiTreeUtil.findChildrenOfType(file, PsiImportStatement.class);
