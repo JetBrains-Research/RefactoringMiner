@@ -1,7 +1,7 @@
 package gr.uom.java.xmi.decomposition;
 
 import com.intellij.psi.*;
-import com.intellij.psi.util.PsiTreeUtil;
+import gr.uom.java.xmi.Formatter;
 import org.jetbrains.annotations.NotNull;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -67,19 +67,19 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
     public void visitElement(@NotNull PsiElement element) {
         boolean goInSubtree = true;
         if (element instanceof PsiArrayAccessExpression) {
-            String source = element.getText();
+            String source = Formatter.format(element);
             arrayAccesses.add(source);
             if (!stackAnonymous.isEmpty()) {
                 stackAnonymous.getLast().getArrayAccesses().add(source);
             }
         } else if (element instanceof PsiPrefixExpression) {
-            String source = element.getText();
+            String source = Formatter.format(element);
             prefixExpressions.add(source);
             if (!stackAnonymous.isEmpty()) {
                 stackAnonymous.getLast().getPrefixExpressions().add(source);
             }
         } else if (element instanceof PsiPostfixExpression) {
-            String source = element.getText();
+            String source = Formatter.format(element);
             postfixExpressions.add(source);
             if (!stackAnonymous.isEmpty()) {
                 stackAnonymous.getLast().getPostfixExpressions().add(source);
@@ -92,7 +92,7 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
                 stackAnonymous.getLast().getTernaryOperatorExpressions().add(ternaryOperator);
             }
         } else if (element instanceof PsiBinaryExpression) {
-            String source = element.getText();
+            String source = Formatter.format(element);
             String operation =
                 ((PsiBinaryExpression) element).getOperationSign().getTokenType().toString();
             infixExpressions.add(source);
@@ -103,12 +103,12 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
             }
         } else if (element instanceof PsiPolyadicExpression) {
             PsiPolyadicExpression polyadic = (PsiPolyadicExpression) element;
-            infixExpressions.add(polyadic.getText());
+            infixExpressions.add(Formatter.format(polyadic));
             infixOperators.add(polyadic.getOperationTokenType().toString());
         } else if (element instanceof PsiNewExpression) {
             PsiNewExpression newExpression = (PsiNewExpression) element;
             ObjectCreation creation = new ObjectCreation(file, filePath, newExpression);
-            String source = element.getText();
+            String source = Formatter.format(element);
             creationMap.compute(source, createOrAppend(creation));
             if (!stackAnonymous.isEmpty()) {
                 stackAnonymous.getLast().getCreationMap().compute(source, createOrAppend(creation));
@@ -153,7 +153,7 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
             anonymousClassDeclarations.add(anonymousObject);
         } else if (element instanceof PsiLiteralExpression) {
             Object value = ((PsiLiteral) element).getValue();
-            String source = element.getText();
+            String source = Formatter.format(element);
             if (value == null) {
                 nullLiterals.add(source);
                 if (!stackAnonymous.isEmpty()) {
@@ -176,13 +176,13 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
                 }
             }
         } else if (element instanceof PsiClassObjectAccessExpression) {
-            String source = element.getText();
+            String source = Formatter.format(element);
             typeLiterals.add(source);
             if (!stackAnonymous.isEmpty()) {
                 stackAnonymous.getLast().getTypeLiterals().add(source);
             }
         } else if (element instanceof PsiThisExpression) {
-            String source = element.getText();
+            String source = Formatter.format(element);
             if (!(element.getParent() instanceof PsiReference)) {
                 variables.add(source);
                 if (!stackAnonymous.isEmpty()) {
@@ -194,15 +194,15 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
         } else if (element instanceof PsiReferenceExpression) {
             PsiElement firstChild = element.getFirstChild();
             if (firstChild instanceof PsiThisExpression) {
-                variables.add(element.getText());
+                variables.add(Formatter.format(element));
             } else if (element.getChildren().length == 2) {
                 // find identifier and add to variables
                 if (firstChild instanceof PsiIdentifier) {
-                    variables.add(firstChild.getText());
+                    variables.add(Formatter.format(firstChild));
                 } else {
                     PsiElement lastChild = element.getLastChild();
                     if (lastChild instanceof PsiIdentifier) {
-                        variables.add(lastChild.getText());
+                        variables.add(Formatter.format(lastChild));
                     }
                 }
             }
@@ -211,10 +211,10 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
             goInSubtree = false;
             assert !(reference.getParent() instanceof PsiReference);
             if (!(reference.getParent() instanceof PsiTypeElement)) {
-                types.add(reference.getText());
+                types.add(Formatter.format(reference));
             }
         } else if (element instanceof PsiTypeElement) {
-            String source = element.getText();
+            String source = Formatter.format(element);
             goInSubtree = false;
             types.add(source);
         } else if (element instanceof PsiMethodCallExpression) {
@@ -223,13 +223,13 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
             for (PsiExpression argument : arguments) {
                 processArgument(argument);
             }
-            String source = element.getText();
+            String source = Formatter.format(element);
             // TODO: adding to builder pattern chains & stopping
             OperationInvocation invocation = new OperationInvocation(file, filePath, methodCall);
             methodInvocationMap.compute(source, createOrAppend(invocation));
             // TODO: super, this constructor??
         } else if (element instanceof PsiTypeCastExpression) {
-            variables.add(element.getText());
+            variables.add(Formatter.format(element));
         } else if (element instanceof PsiLambdaExpression) {
             LambdaExpressionObject lambda = new LambdaExpressionObject(file, filePath, (PsiLambdaExpression) element);
             lambdas.add(lambda);
@@ -240,7 +240,7 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
     }
 
     private void processIdentifier(@NotNull PsiIdentifier identifier) {
-        String source = identifier.getText();
+        String source = Formatter.format(identifier);
         PsiElement parent = identifier.getParent();
         if (!(parent instanceof PsiMethod || parent instanceof PsiParameter || parent instanceof PsiReference)) {
             variables.add(source);
@@ -251,7 +251,7 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
         if (!(argument instanceof PsiLiteral
             || argument instanceof PsiReference
             || argument instanceof PsiThisExpression)) {
-            arguments.add(argument.getText());
+            arguments.add(Formatter.format(argument));
         }
     }
 

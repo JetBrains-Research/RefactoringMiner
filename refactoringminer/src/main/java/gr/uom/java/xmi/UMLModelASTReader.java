@@ -129,7 +129,7 @@ public class UMLModelASTReader {
             UMLTagElement mainText = new UMLTagElement(null);
             for (PsiElement descriptionElement : javaDoc.getDescriptionElements()) {
                 if (!(descriptionElement instanceof PsiWhiteSpace)) {
-                    mainText.addFragment(descriptionElement.getText());
+                    mainText.addFragment(Formatter.format(descriptionElement));
                 }
             }
 
@@ -138,7 +138,7 @@ public class UMLModelASTReader {
                 UMLTagElement tagElement = new UMLTagElement(tag.getName());
                 PsiElement[] fragments = tag.getDataElements();
                 for (PsiElement docElement : fragments) {
-                    tagElement.addFragment(docElement.getText());
+                    tagElement.addFragment(Formatter.format(docElement));
                 }
                 doc.addTag(tagElement);
             }

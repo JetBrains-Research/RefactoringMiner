@@ -5,6 +5,7 @@ import com.intellij.psi.PsiExpression;
 import com.intellij.psi.PsiExpressionList;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiNewExpression;
+import gr.uom.java.xmi.Formatter;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.TypeUtils;
@@ -28,12 +29,12 @@ public class ObjectCreation extends AbstractCall {
             if (argList != null) {
                 PsiExpression[] args = argList.getExpressions();
                 for (PsiExpression argument : args) {
-                    this.arguments.add(argument.getText());
+                    this.arguments.add(Formatter.format(argument));
                 }
             }
             PsiAnonymousClass anonymous = creation.getAnonymousClass();
             if (anonymous != null) {
-                anonymousClassDeclaration = anonymous.getText();
+                anonymousClassDeclaration = Formatter.format(anonymous);
             }
         } else {
             this.locationInfo = new LocationInfo(file, filePath, creation, CodeElementType.ARRAY_CREATION);

@@ -2,6 +2,7 @@ package gr.uom.java.xmi.decomposition;
 
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
+import gr.uom.java.xmi.Formatter;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.diff.CodeRange;
@@ -58,7 +59,7 @@ public class StatementObject extends AbstractStatement {
         this.ternaryOperatorExpressions = visitor.getTernaryOperatorExpressions();
         this.lambdas = visitor.getLambdas();
         setDepth(depth);
-        this.statement = statement.getText();
+        this.statement = Formatter.format(statement);
     }
 
     @Override

@@ -17,7 +17,7 @@ public class TypeUtils {
             PsiElement[] children = newExpression.getChildren();
             if (children[3] instanceof PsiKeyword) {
                 // array of primitives
-                String typeString = newExpression.getText()
+                String typeString = Formatter.format(newExpression)
                     .substring(children[3].getStartOffsetInParent(), children[3].getStartOffsetInParent() + children[3].getTextLength())
                     .replaceAll("\\d", "");
                 return UMLType.extractTypeObject(typeString);

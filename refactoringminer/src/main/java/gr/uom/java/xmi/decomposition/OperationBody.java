@@ -1,6 +1,7 @@
 package gr.uom.java.xmi.decomposition;
 
 import com.intellij.psi.*;
+import gr.uom.java.xmi.Formatter;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import java.util.ArrayList;
@@ -208,7 +209,7 @@ public class OperationBody {
             addStatementInVariableScopes(child);
         } else if (statement instanceof PsiLabeledStatement) {
             PsiLabeledStatement labeledStatement = (PsiLabeledStatement) statement;
-            CodeElementType elementType = CodeElementType.LABELED_STATEMENT.setName(labeledStatement.getLabelIdentifier().getText());
+            CodeElementType elementType = CodeElementType.LABELED_STATEMENT.setName(Formatter.format(labeledStatement.getLabelIdentifier()));
             CompositeStatementObject child = new CompositeStatementObject(file, filePath, labeledStatement, parent.getDepth() + 1, elementType);
             parent.addStatement(child);
             addStatementInVariableScopes(child);

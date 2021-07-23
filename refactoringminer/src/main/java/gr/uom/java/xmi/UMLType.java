@@ -150,7 +150,7 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
             if (innermostType != null) {
                 return extractTypeObject(file, filePath, innermostType, type);
             } else {
-                return extractTypeObject(typeElement.getText());
+                return extractTypeObject(Formatter.format(typeElement));
             }
         }
     }
@@ -191,7 +191,7 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
             myArrayType.arrayDimension = arrayType.getArrayDimensions();
             return myArrayType;
         } else if (type instanceof PsiClassType) {
-            return extractTypeObject(typeElement.getText());
+            return extractTypeObject(Formatter.format(typeElement));
         } else {
             System.out.println(type.getClass().getName());
             throw new IllegalStateException();

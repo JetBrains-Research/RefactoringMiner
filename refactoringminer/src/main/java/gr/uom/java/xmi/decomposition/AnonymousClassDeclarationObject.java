@@ -3,6 +3,7 @@ package gr.uom.java.xmi.decomposition;
 import com.intellij.psi.PsiAnonymousClass;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiFile;
+import gr.uom.java.xmi.Formatter;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.LocationInfoProvider;
@@ -37,7 +38,7 @@ public class AnonymousClassDeclarationObject implements LocationInfoProvider {
 
     public AnonymousClassDeclarationObject(PsiFile file, String filePath, PsiAnonymousClass anonymous) {
         this.locationInfo = new LocationInfo(file, filePath, anonymous, CodeElementType.ANONYMOUS_CLASS_DECLARATION);
-        this.astNodeString = anonymous.getText();
+        this.astNodeString = Formatter.format(anonymous);
     }
 
     /**

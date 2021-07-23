@@ -5,6 +5,8 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiMethodCallExpression;
 import com.intellij.psi.PsiNewExpression;
 import com.intellij.psi.PsiSuperExpression;
+import com.intellij.psi.PsiThisExpression;
+import gr.uom.java.xmi.Formatter;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.UMLAbstractClass;
 import gr.uom.java.xmi.UMLClass;
@@ -81,9 +83,9 @@ public class OperationInvocation extends AbstractCall {
         this.arguments = new ArrayList<>();
         PsiExpression[] args = invocation.getArgumentList().getExpressions();
         for (PsiExpression argument : args) {
-            this.arguments.add(argument.getText());
+            this.arguments.add(Formatter.format(argument));
         }
-        this.expression = invocation.getMethodExpression().getText();
+        this.expression = Formatter.format(invocation.getMethodExpression());
         processSubExpression(invocation.getMethodExpression().getQualifierExpression());
     }
 
@@ -95,14 +97,16 @@ public class OperationInvocation extends AbstractCall {
             PsiExpression subExpression = methodCallExpression.getMethodExpression().getQualifierExpression();
             if (subExpression != null) {
                 processSubExpression(subExpression);
-                subExpressions.add(expression.getText().substring(subExpression.getText().length() + 1));
+                subExpressions.add(Formatter.format(expression.getText().substring(subExpression.getTextLength() + 1)));
             } else {
-                subExpressions.add(expression.getText());
+                subExpressions.add(Formatter.format(expression));
             }
         } else if (expression instanceof PsiNewExpression) {
-            subExpressions.add(expression.getText());
+            subExpressions.add(Formatter.format(expression));
         } else if (expression instanceof PsiSuperExpression) {
-            subExpressions.add(expression.getText());
+            subExpressions.add(Formatter.format(expression));
+        } else if (expression instanceof PsiThisExpression) {
+            subExpressions.add(Formatter.format(expression));
         }
     }
 
