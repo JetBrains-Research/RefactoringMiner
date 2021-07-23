@@ -35,8 +35,9 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
      */
     public static UMLType extractTypeObject(String qualifiedName) {
         qualifiedName = qualifiedName.replaceAll("\\s", "");
+        int arrayDimension = 0;
         if (qualifiedName.endsWith("...")) {
-            // TODO: remove setVararg and do arrayDimension++
+            arrayDimension++;
             qualifiedName = qualifiedName.substring(0, qualifiedName.length() - 3);
         }
 
@@ -45,7 +46,6 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
             qualifiedName = qualifiedName.substring(qualifiedName.lastIndexOf('.'));
         }
 
-        int arrayDimension = 0;
         while (qualifiedName.endsWith("[]")) {
             qualifiedName = qualifiedName.substring(0, qualifiedName.length() - 2);
             arrayDimension++;
@@ -212,10 +212,6 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
 
     public CodeRange codeRange() {
         return locationInfo.codeRange();
-    }
-
-    public void setVarargs() {
-        arrayDimension++;
     }
 
     protected boolean equalTypeArgumentsAndArrayDimension(UMLType typeObject) {
