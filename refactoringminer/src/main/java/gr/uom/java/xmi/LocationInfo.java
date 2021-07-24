@@ -4,6 +4,8 @@ import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiJavaCodeReferenceElement;
+import com.intellij.psi.PsiVariable;
 import gr.uom.java.xmi.diff.CodeRange;
 import org.jetbrains.annotations.NotNull;
 
@@ -24,7 +26,8 @@ public class LocationInfo {
                         @NotNull CodeElementType codeElementType) {
         this.filePath = filePath;
         this.codeElementType = codeElementType;
-        TextRange range = node.getTextRange();
+
+        TextRange range = getEclipseRange(node);
         this.startOffset = range.getStartOffset();
         this.endOffset = range.getEndOffset();
 
@@ -40,6 +43,23 @@ public class LocationInfo {
             this.startColumn = 0;
             this.endColumn = 0;
         }
+    }
+
+    public static TextRange getEclipseRange(@NotNull PsiElement node) {
+        if (node instanceof PsiVariable) {
+            // initializer in range
+            return new TextRange(
+                ((PsiVariable) node).getNameIdentifier().getTextOffset(),
+                node.getLastChild().getTextOffset()
+            );
+        } else if (node instanceof PsiJavaCodeReferenceElement) {
+            // array brackets in range
+            return new TextRange(
+                node.getTextOffset(),
+                node.getParent().getLastChild().getTextRange().getEndOffset()
+            );
+        }
+        return node.getTextRange();
     }
 
     public int getStartOffset() {
