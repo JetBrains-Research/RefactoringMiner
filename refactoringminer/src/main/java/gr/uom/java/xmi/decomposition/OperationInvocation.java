@@ -85,6 +85,7 @@ public class OperationInvocation extends AbstractCall {
         for (PsiExpression argument : args) {
             this.arguments.add(Formatter.format(argument));
         }
+        // TODO: inconsistent with original (for Math.exp() should be Math)
         this.expression = Formatter.format(invocation.getMethodExpression());
         processSubExpression(invocation.getMethodExpression().getQualifierExpression());
     }

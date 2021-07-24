@@ -287,6 +287,7 @@ public class OperationBody {
             }
         } else if (statement instanceof PsiDeclarationStatement) {
             PsiDeclarationStatement variableDeclarationStatement = (PsiDeclarationStatement) statement;
+            // TODO: inconsistent element type with other places
             StatementObject child = new StatementObject(file, filePath, variableDeclarationStatement, parent.getDepth() + 1, CodeElementType.VARIABLE_DECLARATION_STATEMENT);
             parent.addStatement(child);
             addStatementInVariableScopes(child);
