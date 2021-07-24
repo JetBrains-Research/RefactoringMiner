@@ -4,6 +4,7 @@ import com.intellij.psi.PsiAnonymousClass;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiJavaCodeReferenceElement;
+import com.intellij.psi.PsiJavaToken;
 import com.intellij.psi.PsiKeyword;
 import com.intellij.psi.PsiNewExpression;
 import org.jetbrains.annotations.NotNull;
@@ -17,8 +18,8 @@ public class TypeUtils {
             PsiElement[] children = newExpression.getChildren();
             if (children[3] instanceof PsiKeyword) {
                 // array of primitives
-                String typeString = Formatter.format(newExpression)
-                    .substring(children[3].getStartOffsetInParent(), children[3].getStartOffsetInParent() + children[3].getTextLength())
+                String typeString = newExpression.getText()
+                    .substring(children[3].getStartOffsetInParent())
                     .replaceAll("\\d", "");
                 return UMLType.extractTypeObject(typeString);
             } else if (children[3] instanceof PsiAnonymousClass) {
@@ -34,7 +35,19 @@ public class TypeUtils {
     }
 
     @NotNull
-    private static UMLType extractType(PsiFile file, String filePath, PsiAnonymousClass anonymousClass) {
-        return UMLType.extractTypeObject(file, filePath, anonymousClass.getBaseClassReference(), anonymousClass.getBaseClassType());
+    public static UMLType extractType(PsiFile file, String filePath, PsiAnonymousClass anonymousClass) {
+        return UMLType.extractTypeObject(file, filePath, anonymousClass.getBaseClassReference());
+    }
+
+    public static int arrayDimensions(PsiJavaCodeReferenceElement reference) {
+        int arrayDimensions = 0;
+        PsiElement next = reference.getNextSibling();
+        while (next != null) {
+            if (next instanceof PsiJavaToken && ((PsiJavaToken) next).getTokenType().toString().equals("LBRACKET")) {
+                arrayDimensions++;
+            }
+            next = next.getNextSibling();
+        }
+        return arrayDimensions;
     }
 }

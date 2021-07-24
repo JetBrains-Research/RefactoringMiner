@@ -173,11 +173,9 @@ public class UMLModelASTReader {
             return Collections.emptyList();
         }
         PsiJavaCodeReferenceElement[] superInterfaceElements = list.getReferenceElements();
-        PsiClassType[] superInterfaceTypes = list.getReferencedTypes();
-        assert superInterfaceTypes.length == superInterfaceElements.length;
-        List<UMLType> types = new ArrayList<>(superInterfaceTypes.length);
-        for (int i = 0; i < superInterfaceTypes.length; i++) {
-            types.add(UMLType.extractTypeObject(file, sourceFile, superInterfaceElements[i], superInterfaceTypes[i]));
+        List<UMLType> types = new ArrayList<>(superInterfaceElements.length);
+        for (PsiJavaCodeReferenceElement superInterfaceElement : superInterfaceElements) {
+            types.add(UMLType.extractTypeObject(file, sourceFile, superInterfaceElement));
         }
         return types;
     }

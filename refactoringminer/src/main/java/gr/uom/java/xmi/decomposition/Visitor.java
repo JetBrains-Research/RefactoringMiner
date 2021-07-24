@@ -1,7 +1,9 @@
 package gr.uom.java.xmi.decomposition;
 
+import com.google.common.base.Strings;
 import com.intellij.psi.*;
 import gr.uom.java.xmi.Formatter;
+import gr.uom.java.xmi.TypeUtils;
 import org.jetbrains.annotations.NotNull;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -208,10 +210,8 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
         } else if (element instanceof PsiJavaCodeReferenceElement) {
             PsiJavaCodeReferenceElement reference = (PsiJavaCodeReferenceElement) element;
             goInSubtree = false;
-            assert !(reference.getParent() instanceof PsiReference);
-            if (!(reference.getParent() instanceof PsiTypeElement)) {
-                types.add(Formatter.format(reference));
-            }
+            assert !(reference.getParent() instanceof PsiReference) && !(reference.getParent() instanceof PsiTypeElement);
+            types.add(Formatter.format(reference) + Strings.repeat("[]", TypeUtils.arrayDimensions(reference)));
         } else if (element instanceof PsiTypeElement) {
             String source = Formatter.format(element);
             goInSubtree = false;
