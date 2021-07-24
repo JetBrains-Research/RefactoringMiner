@@ -43,7 +43,7 @@ public class ObjectCreation extends AbstractCall {
             this.arguments = new ArrayList<>();
             PsiExpression[] args = creation.getArrayDimensions();
             for (PsiExpression argument : args) {
-                this.arguments.add(argument.toString());
+                this.arguments.add(Formatter.format(argument));
             }
         }
     }
