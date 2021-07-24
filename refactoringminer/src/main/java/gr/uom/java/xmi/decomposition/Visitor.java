@@ -93,8 +93,7 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
             }
         } else if (element instanceof PsiBinaryExpression) {
             String source = Formatter.format(element);
-            String operation =
-                ((PsiBinaryExpression) element).getOperationSign().getTokenType().toString();
+            String operation = Formatter.format(((PsiBinaryExpression) element).getOperationSign());
             infixExpressions.add(source);
             infixOperators.add(operation);
             if (!stackAnonymous.isEmpty()) {
@@ -104,7 +103,7 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
         } else if (element instanceof PsiPolyadicExpression) {
             PsiPolyadicExpression polyadic = (PsiPolyadicExpression) element;
             infixExpressions.add(Formatter.format(polyadic));
-            infixOperators.add(polyadic.getOperationTokenType().toString());
+            infixOperators.add(Formatter.format(polyadic.getTokenBeforeOperand(polyadic.getOperands()[1])));
         } else if (element instanceof PsiNewExpression) {
             PsiNewExpression newExpression = (PsiNewExpression) element;
             ObjectCreation creation = new ObjectCreation(file, filePath, newExpression);
