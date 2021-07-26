@@ -80,7 +80,9 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
     }
 
     private static CodeElementType extractVariableDeclarationType(PsiVariable variableDeclaration) {
-        if (variableDeclaration instanceof PsiParameter) {
+        if (variableDeclaration instanceof PsiEnumConstant) {
+            return CodeElementType.ENUM_CONSTANT_DECLARATION;
+        } else if (variableDeclaration instanceof PsiParameter) {
             return CodeElementType.SINGLE_VARIABLE_DECLARATION;
         } else if (variableDeclaration instanceof PsiLocalVariable) {
             return CodeElementType.VARIABLE_DECLARATION_STATEMENT;
