@@ -93,15 +93,6 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
             if (!stackAnonymous.isEmpty()) {
                 stackAnonymous.getLast().getTernaryOperatorExpressions().add(ternaryOperator);
             }
-        } else if (element instanceof PsiBinaryExpression) {
-            String source = Formatter.format(element);
-            String operation = Formatter.format(((PsiBinaryExpression) element).getOperationSign());
-            infixExpressions.add(source);
-            infixOperators.add(operation);
-            if (!stackAnonymous.isEmpty()) {
-                stackAnonymous.getLast().getInfixExpressions().add(source);
-                stackAnonymous.getLast().getInfixOperators().add(operation);
-            }
         } else if (element instanceof PsiPolyadicExpression) {
             PsiPolyadicExpression polyadic = (PsiPolyadicExpression) element;
             infixExpressions.add(Formatter.format(polyadic));
