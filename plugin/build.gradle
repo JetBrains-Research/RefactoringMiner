@@ -1,9 +1,0 @@
-dependencies {
-    implementation(project(":refactoringminer"))
-}
-
-runIde {
-    runIde.args "RefactoringMiner"
-    runIde.jvmArgs "-Djava.awt.headless=true"
-    maxHeapSize = "2g"
-}

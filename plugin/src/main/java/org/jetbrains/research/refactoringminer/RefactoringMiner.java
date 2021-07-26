@@ -14,6 +14,11 @@ public class RefactoringMiner implements ApplicationStarter {
 
     @Override
     public void main(@NotNull List<String> args) {
-        System.out.println("Empty main");
+        try {
+            org.refactoringminer.RefactoringMiner.main(args.subList(1, args.size()).toArray(String[]::new));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        System.out.println("Finished");
     }
 }
