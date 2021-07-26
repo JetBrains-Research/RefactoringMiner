@@ -470,7 +470,7 @@ public class UMLModelASTReader {
         PsiExpressionList argumentList = psiEnumConstant.getArgumentList();
         if (argumentList != null) {
             for (PsiExpression argument : argumentList.getExpressions()) {
-                enumConstant.addArgument(argument.toString());
+                enumConstant.addArgument(Formatter.format(argument));
             }
         }
         enumConstant.setClassName(umlClass.getName());
