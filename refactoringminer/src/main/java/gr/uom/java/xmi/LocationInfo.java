@@ -3,11 +3,19 @@ package gr.uom.java.xmi;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiExpression;
+import com.intellij.psi.PsiField;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiIdentifier;
 import com.intellij.psi.PsiJavaCodeReferenceElement;
+import com.intellij.psi.PsiJavaToken;
+import com.intellij.psi.PsiTypeElement;
 import com.intellij.psi.PsiVariable;
 import gr.uom.java.xmi.diff.CodeRange;
 import org.jetbrains.annotations.NotNull;
+
+import static gr.uom.java.xmi.decomposition.PsiUtils.findLastCArrayBracket;
+import static gr.uom.java.xmi.decomposition.PsiUtils.isToken;
 
 /**
  * Provides an information about the element's location in the file.
@@ -46,18 +54,40 @@ public class LocationInfo {
     }
 
     public static TextRange getEclipseRange(@NotNull PsiElement node) {
-        if (node instanceof PsiVariable) {
-            // initializer in range
-            return new TextRange(
-                ((PsiVariable) node).getNameIdentifier().getTextOffset(),
-                node.getLastChild().getTextOffset()
-            );
+        if (node instanceof PsiField) {
+            // initializer and CArray brackets in range
+            PsiVariable variable = (PsiVariable) node;
+            PsiExpression initializer = variable.getInitializer();
+            PsiIdentifier identifier = variable.getNameIdentifier();
+            if (initializer != null) {
+                return new TextRange(
+                    variable.getNameIdentifier().getTextOffset(),
+                    initializer.getTextRange().getEndOffset()
+                );
+            } else {
+                PsiJavaToken lastCArrayRbracket = findLastCArrayBracket(identifier);
+                if (lastCArrayRbracket == null) {
+                    return variable.getNameIdentifier().getTextRange();
+                } else {
+                    return new TextRange(
+                        variable.getNameIdentifier().getTextOffset(),
+                        lastCArrayRbracket.getTextRange().getEndOffset()
+                    );
+                }
+            }
         } else if (node instanceof PsiJavaCodeReferenceElement) {
             // array brackets in range
             return new TextRange(
                 node.getTextOffset(),
                 node.getParent().getLastChild().getTextRange().getEndOffset()
             );
+        } else if (node instanceof PsiTypeElement) {
+            // ellipsis not in type
+            if (isToken(node.getLastChild(), "ELLIPSIS")) {
+                return node.getFirstChild().getTextRange();
+            } else {
+                return node.getTextRange();
+            }
         }
         return node.getTextRange();
     }

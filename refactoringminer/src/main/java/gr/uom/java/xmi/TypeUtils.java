@@ -4,10 +4,11 @@ import com.intellij.psi.PsiAnonymousClass;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiJavaCodeReferenceElement;
-import com.intellij.psi.PsiJavaToken;
 import com.intellij.psi.PsiKeyword;
 import com.intellij.psi.PsiNewExpression;
 import org.jetbrains.annotations.NotNull;
+
+import static gr.uom.java.xmi.decomposition.PsiUtils.isToken;
 
 public class TypeUtils {
     public static UMLType extractType(PsiFile file, String filePath, PsiNewExpression newExpression) {
@@ -43,7 +44,7 @@ public class TypeUtils {
         int arrayDimensions = 0;
         PsiElement next = reference.getNextSibling();
         while (next != null) {
-            if (next instanceof PsiJavaToken && ((PsiJavaToken) next).getTokenType().toString().equals("LBRACKET")) {
+            if (isToken(next, "LBRACKET")) {
                 arrayDimensions++;
             }
             next = next.getNextSibling();
