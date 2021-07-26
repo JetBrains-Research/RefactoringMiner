@@ -3,12 +3,14 @@ package gr.uom.java.xmi;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiEnumConstant;
 import com.intellij.psi.PsiExpression;
 import com.intellij.psi.PsiField;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiIdentifier;
 import com.intellij.psi.PsiJavaCodeReferenceElement;
 import com.intellij.psi.PsiJavaToken;
+import com.intellij.psi.PsiNewExpression;
 import com.intellij.psi.PsiTypeElement;
 import com.intellij.psi.PsiVariable;
 import gr.uom.java.xmi.diff.CodeRange;
@@ -54,7 +56,7 @@ public class LocationInfo {
     }
 
     public static TextRange getEclipseRange(@NotNull PsiElement node) {
-        if (node instanceof PsiField) {
+        if (node instanceof PsiField && !(node instanceof PsiEnumConstant)) {
             // initializer and CArray brackets in range
             PsiVariable variable = (PsiVariable) node;
             PsiExpression initializer = variable.getInitializer();
@@ -77,16 +79,17 @@ public class LocationInfo {
             }
         } else if (node instanceof PsiJavaCodeReferenceElement) {
             // array brackets in range
-            return new TextRange(
-                node.getTextOffset(),
-                node.getParent().getLastChild().getTextRange().getEndOffset()
-            );
+            PsiElement parent = node.getParent();
+            if (parent instanceof PsiNewExpression) {
+                return new TextRange(
+                    node.getTextOffset(),
+                    parent.getLastChild().getTextRange().getEndOffset()
+                );
+            }
         } else if (node instanceof PsiTypeElement) {
             // ellipsis not in type
             if (isToken(node.getLastChild(), "ELLIPSIS")) {
                 return node.getFirstChild().getTextRange();
-            } else {
-                return node.getTextRange();
             }
         }
         return node.getTextRange();
