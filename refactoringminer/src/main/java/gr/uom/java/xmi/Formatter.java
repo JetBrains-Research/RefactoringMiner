@@ -18,6 +18,7 @@ public class Formatter {
     public static String format(String text) {
         text = text.trim();
         text = spaces.matcher(text).replaceAll(" ");
+        text = text.replace(" = ", "=");
         text = text.replace(", ", ",");
         text = statementEnd.matcher(text).replaceAll(";\n");
         return text;
