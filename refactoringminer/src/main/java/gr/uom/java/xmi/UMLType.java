@@ -10,6 +10,7 @@ import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiModifierList;
 import com.intellij.psi.PsiType;
 import com.intellij.psi.PsiTypeElement;
+import com.intellij.psi.PsiWhiteSpace;
 import com.intellij.psi.PsiWildcardType;
 import gr.uom.java.xmi.ListCompositeType.Kind;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
@@ -173,12 +174,18 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
             } else {
                 return new WildcardType(null, false);
             }
-        } else if (type instanceof PsiArrayType) {
-            UMLType commonType = extractArrayDimensions(Formatter.format(typeElement));
-            commonType.arrayDimension = type.getArrayDimensions();
-            return commonType;
         } else {
-            return extractQualifiedName(Formatter.format(typeElement));
+            String typeString = Arrays.stream(typeElement.getChildren())
+                .filter(child -> !(child instanceof PsiAnnotation) && !(child instanceof PsiWhiteSpace))
+                .map(Formatter::format)
+                .collect(Collectors.joining());
+            if (type instanceof PsiArrayType) {
+                UMLType commonType = extractArrayDimensions(typeString);
+                commonType.arrayDimension = type.getArrayDimensions();
+                return commonType;
+            } else {
+                return extractQualifiedName(typeString);
+            }
         }
     }
 
