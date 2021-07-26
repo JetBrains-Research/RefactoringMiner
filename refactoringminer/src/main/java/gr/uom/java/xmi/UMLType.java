@@ -55,11 +55,32 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
     }
 
     @NotNull
+    private static UMLType extractQualifiedName(String qualifiedName) {
+        List<String> elements = splitCapturing(qualifiedName, '.');
+        UMLType left = null;
+        for (int i = 0; i < elements.size(); i++) {
+            // All names before first with generics marks as package names (Eclipse compatibility)
+            if (left == null && !elements.get(i).contains("<")) {
+                continue;
+            }
+            if (left == null) {
+                left = extractGenerics(String.join(".", elements.subList(0, i + 1)));
+            } else {
+                left = new CompositeType(left, extractGenerics(elements.get(i)));
+            }
+        }
+        if (left == null) {
+            left = extractGenerics(qualifiedName);
+        }
+        return left;
+    }
+
+    @NotNull
     private static List<String> splitCapturing(String qualifiedName, char separator) {
         List<String> parts = new ArrayList<>();
         int sum = 0;
-        int last = qualifiedName.length();
-        for (int i = qualifiedName.length() - 1; i > -1; i--) {
+        int last = -1;
+        for (int i = 0; i < qualifiedName.length(); i++) {
             char character = qualifiedName.charAt(i);
             switch (character) {
                 case '>': {
@@ -72,24 +93,12 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
                 }
             }
             if (character == separator && sum == 0) {
-                parts.add(qualifiedName.substring(i + 1, last));
+                parts.add(qualifiedName.substring(last + 1, i));
                 last = i;
             }
         }
-        parts.add(qualifiedName.substring(0, last));
+        parts.add(qualifiedName.substring(last + 1));
         return parts;
-    }
-
-    @NotNull
-    private static UMLType extractQualifiedName(String qualifiedName) {
-        List<String> elements = splitCapturing(qualifiedName, '.');
-        UMLType left = extractGenerics(elements.get(0));
-        for (int i = 1; i < elements.size(); i++) {
-            // TODO: in original composite type uses only when preventing types contains generics
-            // TODO: preventing package names
-            left = new CompositeType(left, extractGenerics(elements.get(i)));
-        }
-        return left;
     }
 
     @NotNull
@@ -100,7 +109,6 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
                 .map(UMLType::extractArrayDimensions)
                 .collect(Collectors.toList());
             LeafType typeObject = extractSimpleType(qualifiedName.substring(0, qualifiedName.indexOf('<')));
-            Collections.reverse(typeArgumentsList); //
             typeObject.typeArguments = typeArgumentsList;
             return typeObject;
         } else {
