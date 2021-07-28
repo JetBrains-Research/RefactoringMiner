@@ -13,6 +13,7 @@ import com.intellij.psi.PsiVariable;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.LocationInfoProvider;
+import gr.uom.java.xmi.TypeUtils;
 import gr.uom.java.xmi.UMLAnnotation;
 import gr.uom.java.xmi.UMLType;
 import gr.uom.java.xmi.VariableDeclarationProvider;
@@ -40,8 +41,7 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
     }
 
     public VariableDeclaration(PsiFile file, String filePath, PsiVariable variable) {
-        this(file, filePath, variable,
-            UMLType.extractTypeObject(file, filePath, variable.getTypeElement(), variable.getType()));
+        this(file, filePath, variable, TypeUtils.extractType(file, filePath, variable));
     }
 
     public VariableDeclaration(PsiFile file, String filePath, PsiVariable variable, UMLType type) {

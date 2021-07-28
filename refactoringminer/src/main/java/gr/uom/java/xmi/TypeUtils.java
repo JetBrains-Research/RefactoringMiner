@@ -6,6 +6,8 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiJavaCodeReferenceElement;
 import com.intellij.psi.PsiKeyword;
 import com.intellij.psi.PsiNewExpression;
+import com.intellij.psi.PsiTypeElement;
+import com.intellij.psi.PsiVariable;
 import org.jetbrains.annotations.NotNull;
 
 import static gr.uom.java.xmi.decomposition.PsiUtils.isToken;
@@ -38,6 +40,15 @@ public class TypeUtils {
     @NotNull
     public static UMLType extractType(PsiFile file, String filePath, PsiAnonymousClass anonymousClass) {
         return UMLType.extractTypeObject(file, filePath, anonymousClass.getBaseClassReference());
+    }
+
+    public static UMLType extractType(PsiFile file, String filePath, PsiVariable variable) {
+        PsiTypeElement typeElement = variable.getTypeElement();
+        if (typeElement.isInferredType()) {
+            return new LeafType("var");
+        } else {
+            return UMLType.extractTypeObject(file, filePath, typeElement, variable.getType());
+        }
     }
 
     public static int arrayDimensions(PsiJavaCodeReferenceElement reference) {
