@@ -19,5 +19,6 @@ allprojects {
         downloadSources = true
         plugins = ["java"]
         updateSinceUntilBuild = true
+        buildSearchableOptions.enabled = false
     }
 }
