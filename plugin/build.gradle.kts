@@ -15,6 +15,8 @@ open class IOCliTask : org.jetbrains.intellij.tasks.RunIdeTask() {
     // Commit or tag for bt and bc options
     val endPosition: String? by project
 
+    val timeout: String? by project
+
     // Path to json for output
     val json: String? by project
 
@@ -34,14 +36,14 @@ open class IOCliTask : org.jetbrains.intellij.tasks.RunIdeTask() {
 tasks {
     register<IOCliTask>("refactoringminer-CLI") {
         dependsOn("buildPlugin")
-        args = listOfNotNull(
+        args = listOf(
             "RefactoringMiner",
-            "-$operation",
+            operation,
             pathToGit,
             position,
             endPosition,
-            "-json".takeIf { json != null },
+            timeout,
             json
-        )
+        ).map { it.orEmpty() }
     }
 }
