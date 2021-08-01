@@ -6,6 +6,7 @@ import com.intellij.psi.PsiDisjunctionType;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiJavaCodeReferenceElement;
+import com.intellij.psi.PsiKeyword;
 import com.intellij.psi.PsiMethod;
 import com.intellij.psi.PsiModifierList;
 import com.intellij.psi.PsiType;
@@ -105,20 +106,55 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
     private static LeafType extractGenerics(String qualifiedName) {
         if (qualifiedName.contains("<")) {
             String typeArguments = qualifiedName.substring(qualifiedName.indexOf('<') + 1, qualifiedName.lastIndexOf('>'));
-            List<UMLType> typeArgumentsList = splitCapturing(typeArguments, ',').stream()
-                .map(UMLType::extractArrayDimensions)
-                .collect(Collectors.toList());
+            List<UMLType> typeArgumentsList;
+            if (!typeArguments.isEmpty()) {
+                typeArgumentsList = splitCapturing(typeArguments, ',').stream()
+                    .map(UMLType::extractArrayDimensions)
+                    .collect(Collectors.toList());
+            } else {
+                typeArgumentsList = Collections.emptyList();
+            }
             LeafType typeObject = extractSimpleType(qualifiedName.substring(0, qualifiedName.indexOf('<')));
             typeObject.typeArguments = typeArgumentsList;
             return typeObject;
-        } else {
-            return extractSimpleType(qualifiedName);
         }
+        return extractSimpleType(qualifiedName);
     }
 
     @NotNull
     private static LeafType extractSimpleType(String qualifiedName) {
         return new LeafType(qualifiedName);
+    }
+
+    private static UMLType extractType(PsiFile file, String filePath, PsiTypeElement typeElement, PsiType type) {
+        if (type instanceof PsiDisjunctionType) {
+            List<UMLType> umlTypes = Arrays.stream(typeElement.getChildren())
+                .filter(element -> element instanceof PsiTypeElement)
+                .map(element -> (PsiTypeElement) element)
+                .map(dTypeElement -> extractTypeObject(file, filePath, dTypeElement))
+                .collect(Collectors.toList());
+            return new ListCompositeType(umlTypes, Kind.UNION);
+        } else if (type instanceof PsiWildcardType) {
+            PsiWildcardType wildcardType = (PsiWildcardType) type;
+            if (wildcardType.isBounded()) {
+                PsiTypeElement bound = (PsiTypeElement) typeElement.getLastChild();
+                return new WildcardType(extractTypeObject(file, filePath, bound, wildcardType.getBound()), wildcardType.isSuper());
+            } else {
+                return new WildcardType(null, false);
+            }
+        } else {
+            String typeString = Arrays.stream(typeElement.getChildren())
+                .filter(child -> !(child instanceof PsiAnnotation) && !(child instanceof PsiWhiteSpace))
+                .map(Formatter::format)
+                .collect(Collectors.joining());
+            if (type instanceof PsiArrayType) {
+                UMLType commonType = extractArrayDimensions(typeString);
+                commonType.arrayDimension = type.getArrayDimensions();
+                return commonType;
+            } else {
+                return extractQualifiedName(typeString);
+            }
+        }
     }
 
     /**
@@ -166,35 +202,8 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
         return null;
     }
 
-    private static UMLType extractType(PsiFile file, String filePath, PsiTypeElement typeElement, PsiType type) {
-        if (type instanceof PsiDisjunctionType) {
-            List<UMLType> umlTypes = Arrays.stream(typeElement.getChildren())
-                .filter(element -> element instanceof PsiTypeElement)
-                .map(element -> (PsiTypeElement) element)
-                .map(dTypeElement -> extractTypeObject(file, filePath, dTypeElement, dTypeElement.getType()))
-                .collect(Collectors.toList());
-            return new ListCompositeType(umlTypes, Kind.UNION);
-        } else if (type instanceof PsiWildcardType) {
-            PsiWildcardType wildcardType = (PsiWildcardType) type;
-            if (wildcardType.isBounded()) {
-                PsiTypeElement bound = (PsiTypeElement) typeElement.getLastChild();
-                return new WildcardType(extractTypeObject(file, filePath, bound, wildcardType.getBound()), wildcardType.isSuper());
-            } else {
-                return new WildcardType(null, false);
-            }
-        } else {
-            String typeString = Arrays.stream(typeElement.getChildren())
-                .filter(child -> !(child instanceof PsiAnnotation) && !(child instanceof PsiWhiteSpace))
-                .map(Formatter::format)
-                .collect(Collectors.joining());
-            if (type instanceof PsiArrayType) {
-                UMLType commonType = extractArrayDimensions(typeString);
-                commonType.arrayDimension = type.getArrayDimensions();
-                return commonType;
-            } else {
-                return extractQualifiedName(typeString);
-            }
-        }
+    public static UMLType extractTypeObject(PsiFile file, String filePath, PsiTypeElement typeElement) {
+        return extractTypeObject(file, filePath, typeElement, typeElement.getType());
     }
 
     /**
@@ -220,6 +229,25 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
             .filter(element -> element instanceof PsiAnnotation)
             .map(annotation -> new UMLAnnotation(file, filePath, (PsiAnnotation) annotation))
             .forEach(umlType.annotations::add);
+        return umlType;
+    }
+
+    public static LeafType extractTypeObject(PsiFile file, String filePath, PsiKeyword typeKeyword) {
+        LeafType umlType = extractSimpleType(Formatter.format(typeKeyword));
+        umlType.locationInfo = new LocationInfo(file, filePath, typeKeyword, CodeElementType.TYPE);
+        umlType.arrayDimension = TypeUtils.arrayDimensions(typeKeyword);
+        Arrays.stream(typeKeyword.getParent().getChildren())
+            .filter(element -> element instanceof PsiAnnotation)
+            .map(annotation -> new UMLAnnotation(file, filePath, (PsiAnnotation) annotation))
+            .forEach(umlType.annotations::add);
+        return umlType;
+    }
+
+    public static LeafType extractVarType(PsiFile file, String filePath, PsiTypeElement varElement) {
+        LeafType umlType = new LeafType("var");
+        umlType.locationInfo = new LocationInfo(file, filePath, varElement, CodeElementType.TYPE);
+        // TODO: in original it always empty
+        addAnnotations(file, filePath, varElement, umlType);
         return umlType;
     }
 

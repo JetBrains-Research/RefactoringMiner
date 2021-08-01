@@ -1,5 +1,6 @@
 package gr.uom.java.xmi;
 
+import com.intellij.psi.JavaTokenType;
 import com.intellij.psi.PsiAnonymousClass;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -8,9 +9,8 @@ import com.intellij.psi.PsiKeyword;
 import com.intellij.psi.PsiNewExpression;
 import com.intellij.psi.PsiTypeElement;
 import com.intellij.psi.PsiVariable;
+import com.intellij.psi.util.PsiUtil;
 import org.jetbrains.annotations.NotNull;
-
-import static gr.uom.java.xmi.decomposition.PsiUtils.isToken;
 
 public class TypeUtils {
     public static UMLType extractType(PsiFile file, String filePath, PsiNewExpression newExpression) {
@@ -21,10 +21,7 @@ public class TypeUtils {
             PsiElement[] children = newExpression.getChildren();
             if (children[3] instanceof PsiKeyword) {
                 // array of primitives
-                String typeString = newExpression.getText()
-                    .substring(children[3].getStartOffsetInParent())
-                    .replaceAll("\\d", "");
-                return UMLType.extractTypeObject(typeString);
+                return UMLType.extractTypeObject(file, filePath, (PsiKeyword) children[3]);
             } else if (children[3] instanceof PsiAnonymousClass) {
                 // anonymous class
                 return extractType(file, filePath, (PsiAnonymousClass) children[3]);
@@ -45,17 +42,17 @@ public class TypeUtils {
     public static UMLType extractType(PsiFile file, String filePath, PsiVariable variable) {
         PsiTypeElement typeElement = variable.getTypeElement();
         if (typeElement.isInferredType()) {
-            return new LeafType("var");
+            return UMLType.extractVarType(file, filePath, typeElement);
         } else {
             return UMLType.extractTypeObject(file, filePath, typeElement, variable.getType());
         }
     }
 
-    public static int arrayDimensions(PsiJavaCodeReferenceElement reference) {
+    public static int arrayDimensions(PsiElement element) {
         int arrayDimensions = 0;
-        PsiElement next = reference.getNextSibling();
+        PsiElement next = element.getNextSibling();
         while (next != null) {
-            if (isToken(next, "LBRACKET")) {
+            if (PsiUtil.isJavaToken(next, JavaTokenType.LBRACKET)) {
                 arrayDimensions++;
             }
             next = next.getNextSibling();
