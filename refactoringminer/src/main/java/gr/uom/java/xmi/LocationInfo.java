@@ -2,6 +2,8 @@ package gr.uom.java.xmi;
 
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.util.TextRange;
+import com.intellij.psi.JavaTokenType;
+import com.intellij.psi.PsiAnonymousClass;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiEnumConstant;
 import com.intellij.psi.PsiExpression;
@@ -10,14 +12,16 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiIdentifier;
 import com.intellij.psi.PsiJavaCodeReferenceElement;
 import com.intellij.psi.PsiJavaToken;
+import com.intellij.psi.PsiLocalVariable;
 import com.intellij.psi.PsiNewExpression;
 import com.intellij.psi.PsiTypeElement;
 import com.intellij.psi.PsiVariable;
+import com.intellij.psi.util.PsiUtil;
+import gr.uom.java.xmi.decomposition.PsiUtils;
 import gr.uom.java.xmi.diff.CodeRange;
 import org.jetbrains.annotations.NotNull;
 
 import static gr.uom.java.xmi.decomposition.PsiUtils.findLastCArrayBracket;
-import static gr.uom.java.xmi.decomposition.PsiUtils.isToken;
 
 /**
  * Provides an information about the element's location in the file.
@@ -56,7 +60,9 @@ public class LocationInfo {
     }
 
     public static TextRange getEclipseRange(@NotNull PsiElement node) {
-        if (node instanceof PsiField && !(node instanceof PsiEnumConstant)) {
+        PsiElement parent = node.getParent();
+        if ((node instanceof PsiField || node instanceof PsiLocalVariable)
+            && !(node instanceof PsiEnumConstant)) {
             // initializer and CArray brackets in range
             PsiVariable variable = (PsiVariable) node;
             PsiExpression initializer = variable.getInitializer();
@@ -67,30 +73,48 @@ public class LocationInfo {
                     initializer.getTextRange().getEndOffset()
                 );
             } else {
-                PsiJavaToken lastCArrayRbracket = findLastCArrayBracket(identifier);
-                if (lastCArrayRbracket == null) {
+                PsiJavaToken lastCArrayRBracket = findLastCArrayBracket(identifier);
+                if (lastCArrayRBracket == null) {
                     return variable.getNameIdentifier().getTextRange();
                 } else {
                     return new TextRange(
                         variable.getNameIdentifier().getTextOffset(),
+                        lastCArrayRBracket.getTextRange().getEndOffset()
+                    );
+                }
+            }
+        } else if (node instanceof PsiJavaCodeReferenceElement || PsiUtils.isTypeKeyword(node)) {
+            if (parent instanceof PsiNewExpression) {
+                // array brackets in range
+                PsiJavaToken lastCArrayRbracket = findLastCArrayBracket(node);
+                if (lastCArrayRbracket != null) {
+                    return new TextRange(
+                        node.getTextOffset(),
                         lastCArrayRbracket.getTextRange().getEndOffset()
                     );
                 }
             }
-        } else if (node instanceof PsiJavaCodeReferenceElement) {
-            // array brackets in range
-            PsiElement parent = node.getParent();
-            if (parent instanceof PsiNewExpression) {
-                return new TextRange(
-                    node.getTextOffset(),
-                    parent.getLastChild().getTextRange().getEndOffset()
-                );
-            }
         } else if (node instanceof PsiTypeElement) {
             // ellipsis not in type
-            if (isToken(node.getLastChild(), "ELLIPSIS")) {
+            if (PsiUtil.isJavaToken(node.getLastChild(), JavaTokenType.ELLIPSIS)) {
                 return node.getFirstChild().getTextRange();
             }
+        } else if (PsiUtils.isForInitializer(node)) {
+            PsiElement lastChild = node.getLastChild().getLastChild();
+            assert PsiUtil.isJavaToken(lastChild, JavaTokenType.SEMICOLON);
+            return new TextRange(
+                node.getTextOffset(),
+                lastChild.getTextOffset()
+            );
+        } else if (PsiUtils.isConstructor(node)) {
+            return getEclipseRange(node.getParent());
+        } else if (node instanceof PsiAnonymousClass) {
+            PsiJavaToken lBrace = PsiUtils.findFirstForwardSiblingToken(node.getFirstChild(), JavaTokenType.LBRACE);
+            PsiJavaToken rBrace = PsiUtils.findFirstForwardSiblingToken(node.getFirstChild(), JavaTokenType.RBRACE);
+            return new TextRange(
+                lBrace.getTextOffset(),
+                rBrace.getTextOffset() + 1
+            );
         }
         return node.getTextRange();
     }
