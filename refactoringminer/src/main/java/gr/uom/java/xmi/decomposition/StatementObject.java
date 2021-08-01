@@ -1,7 +1,7 @@
 package gr.uom.java.xmi.decomposition;
 
-import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiStatement;
 import gr.uom.java.xmi.Formatter;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
@@ -34,7 +34,7 @@ public class StatementObject extends AbstractStatement {
     private final List<TernaryOperatorExpression> ternaryOperatorExpressions;
     private final List<LambdaExpressionObject> lambdas;
 
-    public StatementObject(PsiFile file, String filePath, PsiElement statement, int depth, CodeElementType codeElementType) {
+    public StatementObject(PsiFile file, String filePath, PsiStatement statement, int depth, CodeElementType codeElementType) {
         super();
         this.locationInfo = new LocationInfo(file, filePath, statement, codeElementType);
         Visitor visitor = new Visitor(file, filePath);
