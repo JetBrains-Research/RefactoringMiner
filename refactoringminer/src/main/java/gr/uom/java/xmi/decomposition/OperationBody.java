@@ -10,6 +10,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static gr.uom.java.xmi.decomposition.PsiUtils.isSuperConstructorInvocation;
+import static gr.uom.java.xmi.decomposition.PsiUtils.isThisConstructorInvocation;
+
 public class OperationBody {
 
     private final CompositeStatementObject compositeStatement;
@@ -88,22 +91,22 @@ public class OperationBody {
         }
     }
 
-    private void processStatement(PsiFile file, String filePath, CompositeStatementObject parent, PsiExpression expression) {
-        if (expression instanceof PsiThisExpression) {
-            PsiThisExpression constructorInvocation = (PsiThisExpression) expression;
-            StatementObject child = new StatementObject(file, filePath, constructorInvocation, parent.getDepth() + 1, CodeElementType.CONSTRUCTOR_INVOCATION);
-            parent.addStatement(child);
-            addStatementInVariableScopes(child);
-        } else if (expression instanceof PsiSuperExpression) {
-            PsiSuperExpression superConstructorInvocation = (PsiSuperExpression) expression;
-            StatementObject child = new StatementObject(file, filePath, superConstructorInvocation, parent.getDepth() + 1, CodeElementType.SUPER_CONSTRUCTOR_INVOCATION);
-            parent.addStatement(child);
-            addStatementInVariableScopes(child);
-        } else {
-            StatementObject child = new StatementObject(file, filePath, expression, parent.getDepth() + 1, CodeElementType.EXPRESSION_STATEMENT);
-            parent.addStatement(child);
-            addStatementInVariableScopes(child);
+    private CodeElementType getCodeElementType(PsiExpression expression) {
+        if (expression instanceof PsiMethodCallExpression) {
+            PsiMethodCallExpression callExpression = (PsiMethodCallExpression) expression;
+            if (isThisConstructorInvocation(callExpression)) {
+                return CodeElementType.CONSTRUCTOR_INVOCATION;
+            } else if (isSuperConstructorInvocation(callExpression)) {
+                return CodeElementType.SUPER_CONSTRUCTOR_INVOCATION;
+            }
         }
+        return CodeElementType.EXPRESSION_STATEMENT;
+    }
+
+    private void processStatement(PsiFile file, String filePath, CompositeStatementObject parent, PsiExpression expression) {
+        StatementObject child = new StatementObject(file, filePath, (PsiExpressionStatement) expression.getParent(), parent.getDepth() + 1, getCodeElementType(expression));
+        parent.addStatement(child);
+        addStatementInVariableScopes(child);
     }
 
     private void processStatement(PsiFile file, String filePath, CompositeStatementObject parent, PsiStatement statement) {
@@ -127,7 +130,7 @@ public class OperationBody {
             parent.addStatement(child);
 
             PsiStatement initializer = forStatement.getInitialization();
-            if (initializer != null) {
+            if (initializer != null && !(initializer instanceof PsiEmptyStatement)) {
                 child.addExpression(new AbstractExpression(file, filePath, initializer, CodeElementType.FOR_STATEMENT_INITIALIZER));
             }
 
@@ -194,17 +197,12 @@ public class OperationBody {
                 processStatement(file, filePath, child, switchStatement2);
         } else if (statement instanceof PsiSwitchLabelStatement) {
             PsiSwitchLabelStatement switchCase = (PsiSwitchLabelStatement) statement;
-            PsiExpressionList caseValue = switchCase.getCaseValues();
-            if (caseValue != null) {
-                for (PsiExpression expression : caseValue.getExpressions()) {
-                    StatementObject child = new StatementObject(file, filePath, expression, parent.getDepth() + 1, CodeElementType.SWITCH_CASE);
-                    parent.addStatement(child);
-                    addStatementInVariableScopes(child);
-                }
-            }
+            StatementObject child = new StatementObject(file, filePath, switchCase, parent.getDepth() + 1, CodeElementType.SWITCH_CASE);
+            parent.addStatement(child);
+            addStatementInVariableScopes(child);
         } else if (statement instanceof PsiAssertStatement) {
             PsiAssertStatement assertStatement = (PsiAssertStatement) statement;
-            StatementObject child = new StatementObject(file, filePath, assertStatement.getAssertCondition(), parent.getDepth() + 1, CodeElementType.ASSERT_STATEMENT);
+            StatementObject child = new StatementObject(file, filePath, assertStatement, parent.getDepth() + 1, CodeElementType.ASSERT_STATEMENT);
             parent.addStatement(child);
             addStatementInVariableScopes(child);
         } else if (statement instanceof PsiLabeledStatement) {
@@ -229,7 +227,7 @@ public class OperationBody {
             processStatement(file, filePath, child, synchronizedStatement.getBody());
         } else if (statement instanceof PsiThrowStatement) {
             PsiThrowStatement throwStatement = (PsiThrowStatement) statement;
-            StatementObject child = new StatementObject(file, filePath, throwStatement.getException(), parent.getDepth() + 1, CodeElementType.THROW_STATEMENT);
+            StatementObject child = new StatementObject(file, filePath, throwStatement, parent.getDepth() + 1, CodeElementType.THROW_STATEMENT);
             parent.addStatement(child);
             addStatementInVariableScopes(child);
         } else if (statement instanceof PsiTryStatement) {
@@ -254,7 +252,7 @@ public class OperationBody {
             PsiCatchSection[] catchClauses = tryStatement.getCatchSections();
             for (PsiCatchSection catchClause : catchClauses) {
                 PsiParameter variableDeclaration = catchClause.getParameter();
-                CompositeStatementObject catchClauseStatementObject = new CompositeStatementObject(file, filePath, variableDeclaration, parent.getDepth() + 1, CodeElementType.CATCH_CLAUSE);
+                CompositeStatementObject catchClauseStatementObject = new CompositeStatementObject(file, filePath, catchClause.getCatchBlock(), parent.getDepth() + 1, CodeElementType.CATCH_CLAUSE);
                 child.addCatchClause(catchClauseStatementObject);
                 parent.addStatement(catchClauseStatementObject);
                 VariableDeclaration vd = new VariableDeclaration(file, filePath, variableDeclaration);
@@ -286,12 +284,15 @@ public class OperationBody {
                 }
             }
         } else if (statement instanceof PsiDeclarationStatement) {
-            PsiDeclarationStatement variableDeclarationStatement = (PsiDeclarationStatement) statement;
-            // TODO: inconsistent element type with other places
-            StatementObject child = new StatementObject(file, filePath, variableDeclarationStatement, parent.getDepth() + 1, CodeElementType.VARIABLE_DECLARATION_STATEMENT);
-            parent.addStatement(child);
-            addStatementInVariableScopes(child);
-            this.activeVariableDeclarations.addAll(child.getVariableDeclarations());
+            PsiDeclarationStatement declarationStatement = (PsiDeclarationStatement) statement;
+            // TODO: why local classes ignored
+            if (declarationStatement.getDeclaredElements()[0] instanceof PsiVariable) {
+                // TODO: inconsistent element type with other places
+                StatementObject child = new StatementObject(file, filePath, declarationStatement, parent.getDepth() + 1, CodeElementType.VARIABLE_DECLARATION_STATEMENT);
+                parent.addStatement(child);
+                addStatementInVariableScopes(child);
+                this.activeVariableDeclarations.addAll(child.getVariableDeclarations());
+            }
         } else if (statement instanceof PsiBreakStatement) {
             PsiBreakStatement breakStatement = (PsiBreakStatement) statement;
             StatementObject child = new StatementObject(file, filePath, breakStatement, parent.getDepth() + 1, CodeElementType.BREAK_STATEMENT);
