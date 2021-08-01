@@ -1,15 +1,7 @@
 package gr.uom.java.xmi.decomposition;
 
-import com.intellij.psi.PsiDeclarationStatement;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiEnumConstant;
-import com.intellij.psi.PsiExpression;
-import com.intellij.psi.PsiField;
-import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiLocalVariable;
-import com.intellij.psi.PsiModifier;
-import com.intellij.psi.PsiParameter;
-import com.intellij.psi.PsiVariable;
+import com.intellij.psi.*;
+import com.intellij.psi.util.PsiTreeUtil;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.LocationInfoProvider;
@@ -58,25 +50,35 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
         this.locationInfo = new LocationInfo(file, filePath, variable, declarationType);
 
         PsiElement scopeNode = getScopeNode(variable);
-        int startOffset;
-        if (declarationType.equals(CodeElementType.FIELD_DECLARATION)) {
-            startOffset = scopeNode.getTextRange().getStartOffset();
-        } else {
-            startOffset = variable.getTextRange().getStartOffset();
-        }
+        int startOffset = getStartOffset(variable, declarationType, scopeNode);
         int endOffset = scopeNode.getTextRange().getEndOffset();
         this.scope = new VariableScope(file, filePath, startOffset, endOffset);
 
-        this.isFinal = variable.hasModifierProperty(PsiModifier.FINAL);
+        PsiModifierList modifierList = PsiUtils.findFirstForwardSiblingOfType(variable.getFirstChild(), PsiModifierList.class);
+        if (modifierList != null) {
+            this.isFinal = modifierList.hasExplicitModifier(PsiModifier.FINAL);
+        } else {
+            this.isFinal = false;
+        }
         this.isEnumConstant = variable instanceof PsiEnumConstant;
         this.annotations = Arrays.stream(variable.getAnnotations())
             .map(annotation -> new UMLAnnotation(file, filePath, annotation))
             .collect(Collectors.toList());
     }
 
+    private int getStartOffset(PsiVariable variable, CodeElementType declarationType, PsiElement scopeNode) {
+        if (declarationType.equals(CodeElementType.FIELD_DECLARATION)) {
+            return scopeNode.getTextRange().getStartOffset();
+        } else {
+            return variable.getTextRange().getStartOffset();
+        }
+    }
+
     // TODO:
     private static PsiElement getScopeNode(PsiVariable variableDeclaration) {
-        return variableDeclaration.getParent().getParent();
+        return PsiTreeUtil.getParentOfType(variableDeclaration,
+            PsiMethod.class, PsiCodeBlock.class, PsiCatchSection.class,
+            PsiTryStatement.class, PsiClass.class, PsiForStatement.class);
     }
 
     private static CodeElementType extractVariableDeclarationType(PsiVariable variableDeclaration) {
@@ -86,8 +88,6 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
             return CodeElementType.SINGLE_VARIABLE_DECLARATION;
         } else if (variableDeclaration instanceof PsiLocalVariable) {
             return CodeElementType.VARIABLE_DECLARATION_STATEMENT;
-        } else if (variableDeclaration instanceof PsiDeclarationStatement) {
-            return CodeElementType.VARIABLE_DECLARATION_EXPRESSION;
         } else if (variableDeclaration instanceof PsiField) {
             return CodeElementType.FIELD_DECLARATION;
         }
