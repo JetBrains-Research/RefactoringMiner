@@ -1,7 +1,9 @@
 package gr.uom.java.xmi.decomposition;
 
+import com.intellij.psi.JavaTokenType;
 import com.intellij.psi.PsiExpression;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiJavaToken;
 import com.intellij.psi.PsiMethodCallExpression;
 import com.intellij.psi.PsiNewExpression;
 import com.intellij.psi.PsiSuperExpression;
@@ -26,6 +28,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+
+import static gr.uom.java.xmi.decomposition.PsiUtils.isSuperConstructorInvocation;
+import static gr.uom.java.xmi.decomposition.PsiUtils.isThisConstructorInvocation;
 
 public class OperationInvocation extends AbstractCall {
     private static final List<String> PRIMITIVE_TYPE_LIST;
@@ -77,17 +83,32 @@ public class OperationInvocation extends AbstractCall {
     private volatile int hashCode = 0;
 
     public OperationInvocation(PsiFile file, String filePath, PsiMethodCallExpression invocation) {
-        this.locationInfo = new LocationInfo(file, filePath, invocation, LocationInfo.CodeElementType.METHOD_INVOCATION);
         this.methodName = invocation.getMethodExpression().getReferenceName();
         this.typeArguments = invocation.getTypeArguments().length;
-        this.arguments = new ArrayList<>();
-        PsiExpression[] args = invocation.getArgumentList().getExpressions();
-        for (PsiExpression argument : args) {
-            this.arguments.add(Formatter.format(argument));
+        this.arguments = Arrays.stream(invocation.getArgumentList().getExpressions())
+            .map(Formatter::format)
+            .collect(Collectors.toList());
+
+        PsiExpression qualifierExpression = invocation.getMethodExpression().getQualifierExpression();
+        if (qualifierExpression != null) {
+            this.expression = Formatter.format(qualifierExpression);
+            processSubExpression(qualifierExpression);
         }
-        // TODO: inconsistent with original (for Math.exp() should be Math)
-        this.expression = Formatter.format(invocation.getMethodExpression());
-        processSubExpression(invocation.getMethodExpression().getQualifierExpression());
+
+        this.locationInfo =
+            new LocationInfo(file, filePath, invocation, getCodeElementType(invocation, qualifierExpression));
+    }
+
+    private LocationInfo.CodeElementType getCodeElementType(PsiMethodCallExpression expression, PsiExpression qualifierExpression) {
+        if (qualifierExpression instanceof PsiSuperExpression) {
+            return LocationInfo.CodeElementType.SUPER_METHOD_INVOCATION;
+        } else if (isThisConstructorInvocation(expression)) {
+            return LocationInfo.CodeElementType.CONSTRUCTOR_INVOCATION;
+        } else if (isSuperConstructorInvocation(expression)) {
+            return LocationInfo.CodeElementType.SUPER_CONSTRUCTOR_INVOCATION;
+        } else {
+            return LocationInfo.CodeElementType.METHOD_INVOCATION;
+        }
     }
 
     private OperationInvocation() {}
@@ -98,7 +119,9 @@ public class OperationInvocation extends AbstractCall {
             PsiExpression subExpression = methodCallExpression.getMethodExpression().getQualifierExpression();
             if (subExpression != null) {
                 processSubExpression(subExpression);
-                subExpressions.add(Formatter.format(expression.getText().substring(subExpression.getTextLength() + 1)));
+                PsiJavaToken dot = PsiUtils.findFirstForwardSiblingToken(subExpression, JavaTokenType.DOT);
+                String text = expression.getText().substring(dot.getTextOffset() + 1 - expression.getTextOffset());
+                subExpressions.add(Formatter.format(text));
             } else {
                 subExpressions.add(Formatter.format(expression));
             }
