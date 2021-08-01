@@ -6,16 +6,20 @@ import com.intellij.psi.javadoc.PsiDocComment;
 import com.intellij.psi.javadoc.PsiDocTag;
 import com.intellij.psi.util.PsiTreeUtil;
 import gr.uom.java.xmi.decomposition.OperationBody;
+import gr.uom.java.xmi.decomposition.PsiUtils;
 import gr.uom.java.xmi.decomposition.VariableDeclaration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class UMLModelASTReader {
     private final UMLModel umlModel;
@@ -46,11 +50,7 @@ public class UMLModelASTReader {
         }
         List<UMLComment> comments = extractInternalComments(file, sourceFilePath, javaFileContent);
         String packageName = getPackageName(file);
-        Collection<PsiImportStatement> imports = PsiTreeUtil.findChildrenOfType(file, PsiImportStatement.class);
-        List<String> importedTypes = new ArrayList<>();
-        for (PsiImportStatement importDeclaration : imports) {
-            importedTypes.add(importDeclaration.getQualifiedName());
-        }
+        List<String> importedTypes = getImports(file);
 
         PsiElement[] topLevelTypeDeclarations = file.getChildren();
         for (PsiElement element : topLevelTypeDeclarations) {
@@ -63,6 +63,16 @@ public class UMLModelASTReader {
                 }
             }
         }
+    }
+
+    @NotNull
+    private List<String> getImports(PsiFile file) {
+        PsiImportList imports = PsiUtils.findFirstForwardSiblingOfType(file.getFirstChild(), PsiImportList.class);
+        return Arrays.stream(imports.getAllImportStatements())
+            .map(imp -> imp.isOnDemand()
+                ? imp.getImportReference().getText() + ".*"
+                : imp.getImportReference().getText())
+            .collect(Collectors.toList());
     }
 
     @NotNull
@@ -260,7 +270,7 @@ public class UMLModelASTReader {
 
     @NotNull
     private UMLTypeParameter processTypeParameter(PsiFile file, String sourceFile, PsiTypeParameter typeParameter) {
-        UMLTypeParameter umlTypeParameter = new UMLTypeParameter(typeParameter.getQualifiedName());
+        UMLTypeParameter umlTypeParameter = new UMLTypeParameter(typeParameter.getName());
         List<UMLType> extendsList = getUMLTypesOfReferenceList(file, sourceFile, typeParameter.getExtendsList());
         extendsList.forEach(umlTypeParameter::addTypeBound);
         PsiAnnotation[] typeParameterAnnotations = typeParameter.getAnnotations();
@@ -302,8 +312,9 @@ public class UMLModelASTReader {
             }
             if (matchingOperation != null || matchingAttribute != null) {
                 String anonymousBinaryName = anonymousClassDeclaration.binaryName;
-                String anonymousCodePath = anonymous.getName();
-                UMLAnonymousClass anonymousClass = processAnonymousClassDeclaration(file, anonymous, packageName + "." + className, anonymousBinaryName, anonymousCodePath, sourceFile, comments);
+                String anonymousCodePath = getAnonymousCodePath(anonymous);
+                UMLAnonymousClass anonymousClass =
+                    processAnonymousClassDeclaration(file, anonymous, packageName + "." + className, anonymousBinaryName, anonymousCodePath, sourceFile, comments);
                 umlClass.addAnonymousClass(anonymousClass);
                 if (matchingOperation != null) {
                     matchingOperation.addAnonymousClass(anonymousClass);
@@ -321,6 +332,32 @@ public class UMLModelASTReader {
                 createdAnonymousClasses.add(anonymousClass);
             }
         }
+    }
+
+    private String getAnonymousCodePath(PsiAnonymousClass anonymous) {
+        LinkedList<String> elements = new LinkedList<>();
+        PsiElement parent = anonymous.getParent();
+        while (parent != null) {
+            if (parent instanceof PsiMethod) {
+                String methodName = ((PsiMethod) parent).getName();
+                elements.addFirst(methodName);
+            } else if (parent instanceof PsiField) {
+                String fieldName = ((PsiField) parent).getName();
+                elements.addFirst(fieldName);
+            } else if (parent instanceof PsiMethodCallExpression) {
+                PsiIdentifier identifier =
+                    PsiUtils.findFirstForwardSiblingOfType(
+                        ((PsiMethodCallExpression) parent).getMethodExpression(),
+                        PsiIdentifier.class
+                    );
+                if (identifier != null) {
+                    String invocationName = Formatter.format(identifier);
+                    elements.addFirst(invocationName);
+                }
+            }
+            parent = parent.getParent();
+        }
+        return String.join(".", elements);
     }
 
     private void processModifiers(PsiFile file, String sourceFile, PsiClass psiClass, UMLClass umlClass) {
