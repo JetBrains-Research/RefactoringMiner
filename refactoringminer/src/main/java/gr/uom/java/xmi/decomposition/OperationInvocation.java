@@ -84,10 +84,10 @@ public class OperationInvocation extends AbstractCall {
 
     public OperationInvocation(PsiFile file, String filePath, PsiMethodCallExpression invocation) {
         this.methodName = invocation.getMethodExpression().getReferenceName();
-        this.typeArguments = invocation.getTypeArguments().length;
         this.arguments = Arrays.stream(invocation.getArgumentList().getExpressions())
             .map(Formatter::format)
             .collect(Collectors.toList());
+        this.typeArguments = this.arguments.size();
 
         PsiExpression qualifierExpression = invocation.getMethodExpression().getQualifierExpression();
         if (qualifierExpression != null) {

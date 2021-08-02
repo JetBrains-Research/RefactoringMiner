@@ -23,7 +23,6 @@ public class ObjectCreation extends AbstractCall {
         this.type = TypeUtils.extractType(file, filePath, creation);
         if (!creation.isArrayCreation()) {
             this.locationInfo = new LocationInfo(file, filePath, creation, CodeElementType.CLASS_INSTANCE_CREATION);
-            this.typeArguments = creation.getTypeArguments().length;
             this.arguments = new ArrayList<>();
             PsiExpressionList argList = creation.getArgumentList();
             if (argList != null) {
@@ -32,6 +31,7 @@ public class ObjectCreation extends AbstractCall {
                     this.arguments.add(Formatter.format(argument));
                 }
             }
+            this.typeArguments = this.arguments.size();
             PsiAnonymousClass anonymous = creation.getAnonymousClass();
             if (anonymous != null) {
                 anonymousClassDeclaration = Formatter.format(anonymous);
@@ -39,12 +39,12 @@ public class ObjectCreation extends AbstractCall {
         } else {
             this.locationInfo = new LocationInfo(file, filePath, creation, CodeElementType.ARRAY_CREATION);
             this.isArray = true;
-            this.typeArguments = creation.getArrayDimensions().length;
             this.arguments = new ArrayList<>();
             PsiExpression[] args = creation.getArrayDimensions();
             for (PsiExpression argument : args) {
                 this.arguments.add(Formatter.format(argument));
             }
+            this.typeArguments = this.arguments.size();
         }
     }
 

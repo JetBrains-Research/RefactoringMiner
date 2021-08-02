@@ -15,6 +15,9 @@ import java.util.Map;
 import java.util.Set;
 
 public abstract class AbstractCall implements LocationInfoProvider {
+    /**
+     * Count of arguments
+     */
     protected int typeArguments;
     protected String expression;
     protected List<String> arguments;
