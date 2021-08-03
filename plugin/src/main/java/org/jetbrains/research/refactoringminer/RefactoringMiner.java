@@ -9,6 +9,8 @@ import org.refactoringminer.api.GitHistoryRefactoringMiner;
 import org.refactoringminer.api.GitService;
 import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 import org.refactoringminer.util.GitServiceImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,6 +22,7 @@ public class RefactoringMiner implements ApplicationStarter {
     private static final int END_POSITION = 4;
     private static final int TIMEOUT = 5;
     private static final int JSON = 6;
+    private static final Logger logger = LoggerFactory.getLogger(RefactoringMiner.class);
 
     @Override
     public String getCommandName() {
@@ -59,8 +62,10 @@ public class RefactoringMiner implements ApplicationStarter {
         } catch (IllegalArgumentException e) {
             System.out.println("Call help to show usage.");
             System.out.println(e.getMessage());
+            logger.error("Error processing arguments", e);
         } catch (Exception e) {
-            System.err.println(e.getMessage());
+            System.out.println(e.getMessage());
+            logger.error("Error processing arguments", e);
         }
     }
 
