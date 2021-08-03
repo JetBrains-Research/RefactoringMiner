@@ -10,6 +10,7 @@ import com.intellij.psi.PsiNewExpression;
 import com.intellij.psi.PsiTypeElement;
 import com.intellij.psi.PsiVariable;
 import com.intellij.psi.util.PsiUtil;
+import gr.uom.java.xmi.decomposition.PsiUtils;
 import org.jetbrains.annotations.NotNull;
 
 public class TypeUtils {
@@ -18,16 +19,16 @@ public class TypeUtils {
         if (typeElement != null) {
             return UMLType.extractTypeObject(file, filePath, typeElement, newExpression.getType());
         } else {
-            PsiElement[] children = newExpression.getChildren();
-            if (children[3] instanceof PsiKeyword) {
-                // array of primitives
-                return UMLType.extractTypeObject(file, filePath, (PsiKeyword) children[3]);
-            } else if (children[3] instanceof PsiAnonymousClass) {
-                // anonymous class
-                return extractType(file, filePath, (PsiAnonymousClass) children[3]);
-            } else if (children[5] instanceof PsiAnonymousClass) {
-                // `this.new` anonymous class
-                return extractType(file, filePath, (PsiAnonymousClass) children[5]);
+            PsiElement qualifyingElement = PsiUtils.findFirstForwardSibling(newExpression.getFirstChild(),
+                element -> element instanceof PsiAnonymousClass || PsiUtils.isTypeKeyword(element));
+            if (qualifyingElement != null) {
+                if (qualifyingElement instanceof PsiKeyword) {
+                    // array of primitives
+                    return UMLType.extractTypeObject(file, filePath, (PsiKeyword) qualifyingElement);
+                } else {
+                    // anonymous class
+                    return extractType(file, filePath, (PsiAnonymousClass) qualifyingElement);
+                }
             } else {
                 throw new IllegalArgumentException();
             }
