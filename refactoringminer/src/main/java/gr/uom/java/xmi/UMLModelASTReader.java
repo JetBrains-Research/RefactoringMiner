@@ -8,6 +8,7 @@ import com.intellij.psi.util.PsiTreeUtil;
 import gr.uom.java.xmi.decomposition.OperationBody;
 import gr.uom.java.xmi.decomposition.PsiUtils;
 import gr.uom.java.xmi.decomposition.VariableDeclaration;
+import org.apache.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
@@ -22,6 +23,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class UMLModelASTReader {
+    private static final Logger LOG = Logger.getLogger(UMLModelASTReader.class);
+
     private final UMLModel umlModel;
 
     public UMLModelASTReader(Map<String, String> javaFileContents, Set<String> repositoryDirectories) {
@@ -39,7 +42,7 @@ public class UMLModelASTReader {
             try {
                 processFile(file.getKey(), psiFile, file.getValue());
             } catch (Exception e) {
-                e.printStackTrace();
+                LOG.error("Error on file: " + file.getKey(), e);
             }
         }
     }
