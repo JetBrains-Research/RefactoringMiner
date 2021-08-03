@@ -27,7 +27,7 @@ open class IOCliTask : org.jetbrains.intellij.tasks.RunIdeTask() {
             "java.base/jdk.internal.vm=ALL-UNNAMED",
             "-Djdk.module.illegalAccess.silent=true"
         )
-        maxHeapSize = "2g"
+        maxHeapSize = "12g"
         standardInput = System.`in`
         standardOutput = System.`out`
     }
