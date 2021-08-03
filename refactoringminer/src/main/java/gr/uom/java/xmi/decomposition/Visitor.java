@@ -156,13 +156,8 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
                         onLastAnonymous(anonymous -> anonymous.getVariableDeclarations().add(variableDeclaration));
                     }
                 } else if (declaredElement instanceof PsiClass) {
-                    // Local classes
                     goInSubtree = false;
-                    // TODO: why local classes are ignored?
-                    /*AnonymousClassDeclarationObject anonymousObject =
-                        new AnonymousClassDeclarationObject(file, filePath, (PsiClass) declaredElement);
-                    anonymousClassDeclarations.add(anonymousObject);
-                    onLastAnonymous(anonymous -> anonymous.getAnonymousClassDeclarations().add(anonymousObject));*/
+                    // Local classes are not yet supported
                 } else {
                     throw new AssertionError("Unqualified declared element");
                 }
@@ -255,11 +250,9 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
                 processArgument(argument);
             }
             String source = Formatter.format(element);
-            // TODO: adding to builder pattern chains & stopping
             OperationInvocation invocation = new OperationInvocation(file, filePath, methodCall);
             methodInvocationMap.compute(source, createOrAppend(invocation));
             onLastAnonymous(anonymous -> anonymous.getMethodInvocationMap().compute(source, createOrAppend(invocation)));
-            // TODO: super, this constructor??
         } else if (element instanceof PsiTypeCastExpression) {
             String source = Formatter.format(element);
             variables.add(source);

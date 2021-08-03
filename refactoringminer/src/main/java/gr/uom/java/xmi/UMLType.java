@@ -166,7 +166,6 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
     public static UMLType extractTypeObject(PsiFile file, String filePath, PsiTypeElement typeElement, PsiType type) {
         UMLType umlType = extractType(file, filePath, typeElement, type);
         umlType.locationInfo = new LocationInfo(file, filePath, typeElement, CodeElementType.TYPE);
-        // TODO: in original it always empty
         addAnnotations(file, filePath, typeElement, umlType);
         return umlType;
     }
@@ -241,7 +240,6 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
     public static LeafType extractVarType(PsiFile file, String filePath, PsiTypeElement varElement) {
         LeafType umlType = new LeafType("var");
         umlType.locationInfo = new LocationInfo(file, filePath, varElement, CodeElementType.TYPE);
-        // TODO: in original it always empty
         addAnnotations(file, filePath, varElement, umlType);
         return umlType;
     }

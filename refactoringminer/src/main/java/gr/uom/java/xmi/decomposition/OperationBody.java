@@ -280,9 +280,8 @@ public class OperationBody {
             }
         } else if (statement instanceof PsiDeclarationStatement) {
             PsiDeclarationStatement declarationStatement = (PsiDeclarationStatement) statement;
-            // TODO: why local classes ignored
+            // Local classes are not yet supported
             if (declarationStatement.getDeclaredElements()[0] instanceof PsiVariable) {
-                // TODO: inconsistent element type with other places
                 StatementObject child = new StatementObject(file, filePath, declarationStatement, parent.getDepth() + 1, CodeElementType.VARIABLE_DECLARATION_STATEMENT);
                 parent.addStatement(child);
                 addStatementInVariableScopes(child);

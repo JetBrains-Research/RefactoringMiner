@@ -74,11 +74,11 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
         }
     }
 
-    // TODO:
     private static PsiElement getScopeNode(PsiVariable variableDeclaration) {
         return PsiTreeUtil.getParentOfType(variableDeclaration,
             PsiMethod.class, PsiCodeBlock.class, PsiCatchSection.class,
-            PsiTryStatement.class, PsiClass.class, PsiForStatement.class);
+            PsiTryStatement.class, PsiClass.class, PsiForStatement.class,
+            PsiLambdaExpression.class);
     }
 
     private static CodeElementType extractVariableDeclarationType(PsiVariable variableDeclaration) {
@@ -87,7 +87,7 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
         } else if (variableDeclaration instanceof PsiParameter) {
             return CodeElementType.SINGLE_VARIABLE_DECLARATION;
         } else if (variableDeclaration instanceof PsiLocalVariable) {
-            return CodeElementType.VARIABLE_DECLARATION_STATEMENT;
+            return CodeElementType.VARIABLE_DECLARATION_EXPRESSION;
         } else if (variableDeclaration instanceof PsiField) {
             return CodeElementType.FIELD_DECLARATION;
         }
