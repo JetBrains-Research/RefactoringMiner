@@ -91,7 +91,7 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
         } else if (variableDeclaration instanceof PsiField) {
             return CodeElementType.FIELD_DECLARATION;
         }
-        throw new IllegalStateException();
+        throw new AssertionError("Unqualified variable type");
     }
 
     public String getVariableName() {

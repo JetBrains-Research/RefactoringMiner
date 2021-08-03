@@ -21,16 +21,14 @@ public class TypeUtils {
         } else {
             PsiElement qualifyingElement = PsiUtils.findFirstForwardSibling(newExpression.getFirstChild(),
                 element -> element instanceof PsiAnonymousClass || PsiUtils.isTypeKeyword(element));
-            if (qualifyingElement != null) {
-                if (qualifyingElement instanceof PsiKeyword) {
-                    // array of primitives
-                    return UMLType.extractTypeObject(file, filePath, (PsiKeyword) qualifyingElement);
-                } else {
-                    // anonymous class
-                    return extractType(file, filePath, (PsiAnonymousClass) qualifyingElement);
-                }
+            // No more cases expected
+            assert qualifyingElement != null;
+            if (qualifyingElement instanceof PsiKeyword) {
+                // array of primitives
+                return UMLType.extractTypeObject(file, filePath, (PsiKeyword) qualifyingElement);
             } else {
-                throw new IllegalArgumentException();
+                // anonymous class
+                return extractType(file, filePath, (PsiAnonymousClass) qualifyingElement);
             }
         }
     }

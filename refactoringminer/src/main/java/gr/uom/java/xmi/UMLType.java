@@ -182,11 +182,8 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
                     .map(annotation -> new UMLAnnotation(file, filePath, (PsiAnnotation) annotation))
                     .forEach(umlType.annotations::add);
             } else {
-                if (typeElement.getParent() instanceof PsiTypeElement) {
-                    // parts of DisjunctionType
-                } else {
-                    throw new IllegalStateException();
-                }
+                // Only parts of DisjunctionType have not preventing modifiersList
+                assert typeElement.getParent() instanceof PsiTypeElement;
             }
         }
     }
@@ -213,8 +210,6 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
         UMLType umlType = extractTypeObject(file, filePath, typeElement);
         if (type instanceof PsiArrayType) {
             umlType.arrayDimension = type.getArrayDimensions();
-        } else {
-            assert type.getArrayDimensions() == 0;
         }
         return umlType;
     }

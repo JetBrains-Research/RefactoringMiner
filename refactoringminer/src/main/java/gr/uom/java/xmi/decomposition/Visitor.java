@@ -164,7 +164,7 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
                     anonymousClassDeclarations.add(anonymousObject);
                     onLastAnonymous(anonymous -> anonymous.getAnonymousClassDeclarations().add(anonymousObject));*/
                 } else {
-                    throw new IllegalStateException();
+                    throw new AssertionError("Unqualified declared element");
                 }
             }
         } else if (element instanceof PsiResourceVariable) {
@@ -230,7 +230,6 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
         } else if (element instanceof PsiJavaCodeReferenceElement) {
             PsiJavaCodeReferenceElement reference = (PsiJavaCodeReferenceElement) element;
             goInSubtree = false;
-            assert !(reference.getParent() instanceof PsiReference) && !(reference.getParent() instanceof PsiTypeElement);
             if (!(element.getParent() instanceof PsiAnnotation)) {
                 String typeStr =
                     Formatter.format(reference) + Strings.repeat("[]", TypeUtils.arrayDimensions(reference));

@@ -157,11 +157,6 @@ public class OperationBody {
             child.addVariableDeclaration(vd);
             AbstractExpression variableDeclarationName = new AbstractExpression(file, filePath, variableDeclaration.getNameIdentifier(), CodeElementType.ENHANCED_FOR_STATEMENT_PARAMETER_NAME);
             child.addExpression(variableDeclarationName);
-            assert variableDeclaration.getInitializer() == null;
-            /*if (variableDeclaration.getInitializer() != null) {
-                AbstractExpression variableDeclarationInitializer = new AbstractExpression(file, filePath, variableDeclaration.getInitializer(), CodeElementType.VARIABLE_DECLARATION_INITIALIZER);
-                child.addExpression(variableDeclarationInitializer);
-            }*/
             AbstractExpression abstractExpression = new AbstractExpression(file, filePath, foreachStatement.getIteratedValue(), CodeElementType.ENHANCED_FOR_STATEMENT_EXPRESSION);
             child.addExpression(abstractExpression);
             addStatementInVariableScopes(child);

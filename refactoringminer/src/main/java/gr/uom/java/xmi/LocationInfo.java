@@ -101,7 +101,6 @@ public class LocationInfo {
             }
         } else if (PsiUtils.isForInitializer(node)) {
             PsiElement lastChild = node.getLastChild().getLastChild();
-            assert PsiUtil.isJavaToken(lastChild, JavaTokenType.SEMICOLON);
             return new TextRange(
                 node.getTextOffset(),
                 lastChild.getTextOffset()

@@ -43,6 +43,8 @@ public class UMLModelASTReader {
                 processFile(file.getKey(), psiFile, file.getValue());
             } catch (Exception e) {
                 LOG.error("Error on file: " + file.getKey(), e);
+            } catch (AssertionError e) {
+                LOG.error("Assert failed on file: " + file.getKey(), e);
             }
         }
     }
@@ -386,63 +388,8 @@ public class UMLModelASTReader {
             umlClass.setVisibility("package");
         }
 
-        for (PsiAnnotation annotation : psiClass.getAnnotations()) {
-            umlClass.addAnnotation(new UMLAnnotation(file, sourceFile, annotation));
-        }
-    }
-
-    private void processModifiers(PsiFile file, String sourceFile, PsiModifierList modifiers, UMLOperation umlOperation) {
-        if (modifiers.hasExplicitModifier(PsiModifier.ABSTRACT)) {
-            umlOperation.setAbstract(true);
-        }
-        if (modifiers.hasExplicitModifier(PsiModifier.STATIC)) {
-            umlOperation.setStatic(true);
-        }
-        if (modifiers.hasExplicitModifier(PsiModifier.FINAL)) {
-            umlOperation.setFinal(true);
-        }
-        if (modifiers.hasExplicitModifier(PsiModifier.SYNCHRONIZED)) {
-            umlOperation.setSynchronized(true);
-        }
-
-        if (modifiers.hasModifierProperty(PsiModifier.PUBLIC)) {
-            umlOperation.setVisibility("public");
-        } else if (modifiers.hasExplicitModifier(PsiModifier.PROTECTED)) {
-            umlOperation.setVisibility("protected");
-        } else if (modifiers.hasExplicitModifier(PsiModifier.PRIVATE)) {
-            umlOperation.setVisibility("private");
-        } else {
-            umlOperation.setVisibility("package");
-        }
-
         for (PsiAnnotation annotation : modifiers.getAnnotations()) {
-            umlOperation.addAnnotation(new UMLAnnotation(file, sourceFile, annotation));
-        }
-    }
-
-    private void processModifiers(@Nullable PsiModifierList modifiers, UMLAttribute umlAttribute) {
-        assert modifiers != null;
-        if (modifiers.hasExplicitModifier(PsiModifier.STATIC)) {
-            umlAttribute.setStatic(true);
-        }
-        if (modifiers.hasExplicitModifier(PsiModifier.FINAL)) {
-            umlAttribute.setFinal(true);
-        }
-        if (modifiers.hasExplicitModifier(PsiModifier.VOLATILE)) {
-            umlAttribute.setVolatile(true);
-        }
-        if (modifiers.hasExplicitModifier(PsiModifier.TRANSIENT)) {
-            umlAttribute.setTransient(true);
-        }
-
-        if (modifiers.hasModifierProperty(PsiModifier.PUBLIC)) {
-            umlAttribute.setVisibility("public");
-        } else if (modifiers.hasExplicitModifier(PsiModifier.PROTECTED)) {
-            umlAttribute.setVisibility("protected");
-        } else if (modifiers.hasExplicitModifier(PsiModifier.PRIVATE)) {
-            umlAttribute.setVisibility("private");
-        } else {
-            umlAttribute.setVisibility("package");
+            umlClass.addAnnotation(new UMLAnnotation(file, sourceFile, annotation));
         }
     }
 
@@ -455,7 +402,7 @@ public class UMLModelASTReader {
         distributeComments(comments, locationInfo, umlOperation.getComments());
         umlOperation.setConstructor(psiMethod.isConstructor());
 
-        processModifiers(file, sourceFile, psiMethod.getModifierList(), umlOperation);
+        processModifiers(file, sourceFile, psiMethod, umlOperation);
 
         PsiTypeParameter[] typeParameters = psiMethod.getTypeParameters();
         for (PsiTypeParameter typeParameter : typeParameters) {
@@ -494,6 +441,54 @@ public class UMLModelASTReader {
         return umlOperation;
     }
 
+    private void processModifiers(PsiFile file, String sourceFile, PsiMethod method, UMLOperation umlOperation) {
+        PsiModifierList modifiers = method.getModifierList();
+        if (modifiers.hasExplicitModifier(PsiModifier.ABSTRACT)) {
+            umlOperation.setAbstract(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.STATIC)) {
+            umlOperation.setStatic(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.FINAL)) {
+            umlOperation.setFinal(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.SYNCHRONIZED)) {
+            umlOperation.setSynchronized(true);
+        }
+
+        if (modifiers.hasModifierProperty(PsiModifier.PUBLIC)) {
+            umlOperation.setVisibility("public");
+        } else if (modifiers.hasExplicitModifier(PsiModifier.PROTECTED)) {
+            umlOperation.setVisibility("protected");
+        } else if (modifiers.hasExplicitModifier(PsiModifier.PRIVATE)) {
+            umlOperation.setVisibility("private");
+        } else {
+            umlOperation.setVisibility("package");
+        }
+
+        for (PsiAnnotation annotation : modifiers.getAnnotations()) {
+            umlOperation.addAnnotation(new UMLAnnotation(file, sourceFile, annotation));
+        }
+    }
+
+    private List<UMLAttribute> processFieldDeclaration(PsiFile file, PsiField psiField,
+                                                       String sourceFile, List<UMLComment> comments) {
+        UMLJavadoc javadoc = generateJavadoc(file, psiField, sourceFile);
+        List<UMLAttribute> attributes = new ArrayList<>();
+        UMLType type = UMLType.extractTypeObject(file, sourceFile, psiField.getTypeElement(), psiField.getType());
+        String fieldName = psiField.getName();
+        LocationInfo locationInfo = new LocationInfo(file, sourceFile, psiField, LocationInfo.CodeElementType.FIELD_DECLARATION);
+        VariableDeclaration variableDeclaration = new VariableDeclaration(file, sourceFile, psiField);
+        variableDeclaration.setAttribute(true);
+        UMLAttribute umlAttribute = new UMLAttribute(fieldName, type, locationInfo);
+        umlAttribute.setVariableDeclaration(variableDeclaration);
+        umlAttribute.setJavadoc(javadoc);
+        distributeComments(comments, locationInfo, umlAttribute.getComments());
+        processModifiers(psiField, umlAttribute);
+        attributes.add(umlAttribute);
+        return attributes;
+    }
+
     private void processEnumConstantDeclaration(PsiFile file, PsiEnumConstant psiEnumConstant, String sourceFile,
                                                 UMLClass umlClass, List<UMLComment> comments) {
         UMLJavadoc javadoc = generateJavadoc(file, psiEnumConstant, sourceFile);
@@ -517,22 +512,31 @@ public class UMLModelASTReader {
         umlClass.addEnumConstant(enumConstant);
     }
 
-    private List<UMLAttribute> processFieldDeclaration(PsiFile file, PsiField psiField,
-                                                       String sourceFile, List<UMLComment> comments) {
-        UMLJavadoc javadoc = generateJavadoc(file, psiField, sourceFile);
-        List<UMLAttribute> attributes = new ArrayList<>();
-        UMLType type = UMLType.extractTypeObject(file, sourceFile, psiField.getTypeElement(), psiField.getType());
-        String fieldName = psiField.getName();
-        LocationInfo locationInfo = new LocationInfo(file, sourceFile, psiField, LocationInfo.CodeElementType.FIELD_DECLARATION);
-        VariableDeclaration variableDeclaration = new VariableDeclaration(file, sourceFile, psiField);
-        variableDeclaration.setAttribute(true);
-        UMLAttribute umlAttribute = new UMLAttribute(fieldName, type, locationInfo);
-        umlAttribute.setVariableDeclaration(variableDeclaration);
-        umlAttribute.setJavadoc(javadoc);
-        distributeComments(comments, locationInfo, umlAttribute.getComments());
-        processModifiers(psiField.getModifierList(), umlAttribute);
-        attributes.add(umlAttribute);
-        return attributes;
+    private void processModifiers(PsiField field, UMLAttribute umlAttribute) {
+        PsiModifierList modifiers = field.getModifierList();
+        assert modifiers != null;
+        if (modifiers.hasExplicitModifier(PsiModifier.STATIC)) {
+            umlAttribute.setStatic(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.FINAL)) {
+            umlAttribute.setFinal(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.VOLATILE)) {
+            umlAttribute.setVolatile(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.TRANSIENT)) {
+            umlAttribute.setTransient(true);
+        }
+
+        if (modifiers.hasModifierProperty(PsiModifier.PUBLIC)) {
+            umlAttribute.setVisibility("public");
+        } else if (modifiers.hasExplicitModifier(PsiModifier.PROTECTED)) {
+            umlAttribute.setVisibility("protected");
+        } else if (modifiers.hasExplicitModifier(PsiModifier.PRIVATE)) {
+            umlAttribute.setVisibility("private");
+        } else {
+            umlAttribute.setVisibility("package");
+        }
     }
 
     private UMLAnonymousClass processAnonymousClassDeclaration(PsiFile file, PsiAnonymousClass psiAnonymousClass,
