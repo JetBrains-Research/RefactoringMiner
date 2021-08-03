@@ -39,22 +39,22 @@ public class RefactoringMiner implements ApplicationStarter {
                 case "help":
                     printTips();
                     break;
-                case "a":
+                case "detectAll":
                     detectAll(out, args.get(PATH), args.get(POSITION));
                     break;
-                case "bc":
+                case "detectBetweenCommits":
                     detectBetweenCommits(out, args.get(PATH), args.get(POSITION), args.get(END_POSITION));
                     break;
-                case "bt":
+                case "detectBetweenTags":
                     detectBetweenTags(out, args.get(PATH), args.get(POSITION), args.get(END_POSITION));
                     break;
-                case "c":
+                case "detectAtCommit":
                     detectAtCommit(out, args.get(PATH), args.get(POSITION));
                     break;
-                case "gc":
+                case "detectAtGitHubCommit":
                     detectAtGitHubCommit(out, args.get(PATH), args.get(POSITION), Integer.parseInt(args.get(TIMEOUT)));
                     break;
-                case "gp":
+                case "detectAtGitHubPullRequest":
                     detectAtGitHubPullRequest(out, args.get(PATH),
                         Integer.parseInt(args.get(POSITION)), Integer.parseInt(args.get(TIMEOUT)));
                     break;
@@ -129,22 +129,22 @@ public class RefactoringMiner implements ApplicationStarter {
     private void printTips() {
         String delimiter = "  ";
         List<String> headers = List.of("operation", "pathToGit", "startPosition", "endPosition", "timeout", "output", "");
-        List<String> detectAll = List.of("a", "<git-repo-folder>", "<branch>?", "", "", "+",
+        List<String> detectAll = List.of("detectAll", "<git-repo-folder>", "<branch>?", "", "", "+",
             "Detect all refactorings at <branch> for <git-repo-folder>. " +
                 "If <branch> is not specified, commits from all branches are analyzed");
-        List<String> betweenCommits = List.of("bc", "<git-repo-folder>",
+        List<String> betweenCommits = List.of("detectBetweenCommits", "<git-repo-folder>",
             "<start-commit-sha1>", "<end-commit-sha1>", "", "+",
             "Detect refactorings between <start-commit-sha1> and <end-commit-sha1> for project <git-repo-folder>");
-        List<String> betweenTags = List.of("bt", "<git-repo-folder>", "<start-tag>", "<end-tag>", "", "+",
+        List<String> betweenTags = List.of("detectBetweenTags", "<git-repo-folder>", "<start-tag>", "<end-tag>", "", "+",
             "Detect refactorings between <start-tag> and <end-tag> for project <git-repo-folder>");
-        List<String> atCommit = List.of("c", "<git-repo-folder>", "<commit-sha1>", "", "", "+",
+        List<String> atCommit = List.of("detectAtCommit", "<git-repo-folder>", "<commit-sha1>", "", "", "+",
             "Detect refactorings at specified commit <commit-sha1> for project <git-repo-folder>");
-        List<String> githubCommit = List.of("gc", "<git-URL>", "<commit-sha1>", "", "+", "+",
+        List<String> githubCommit = List.of("detectAtGitHubCommit", "<git-URL>", "<commit-sha1>", "", "+", "+",
             "Detect refactorings at specified commit <commit-sha1> " +
                 "for project <git-URL> within the given <timeout> in seconds. " +
                 "All required information is obtained directly from GitHub " +
                 "using the OAuth token in github-oauth.properties");
-        List<String> githubPR = List.of("gp", "<git-URL>", "<pull-request>", "", "+", "+",
+        List<String> githubPR = List.of("detectAtGitHubPullRequest", "<git-URL>", "<pull-request>", "", "+", "+",
             "Detect refactorings at specified pull request <pull-request> " +
                 "for project <git-URL> within the given <timeout> in seconds for each commit in the pull request. " +
                 "All required information is obtained directly from GitHub " +
