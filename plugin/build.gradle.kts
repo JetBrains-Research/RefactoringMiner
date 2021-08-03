@@ -10,7 +10,7 @@ open class IOCliTask : org.jetbrains.intellij.tasks.RunIdeTask() {
     val pathToGit: String? by project
 
     // Commit, tag, branch or pull-request
-    val position: String? by project
+    val startPosition: String? by project
 
     // Commit or tag for bt and bc options
     val endPosition: String? by project
@@ -18,7 +18,7 @@ open class IOCliTask : org.jetbrains.intellij.tasks.RunIdeTask() {
     val timeout: String? by project
 
     // Path to json for output
-    val json: String? by project
+    val output: String? by project
 
     init {
         jvmArgs = listOf(
@@ -40,10 +40,10 @@ tasks {
             "RefactoringMiner",
             operation,
             pathToGit,
-            position,
+            startPosition,
             endPosition,
             timeout,
-            json
+            output
         ).map { it.orEmpty() }
     }
 }

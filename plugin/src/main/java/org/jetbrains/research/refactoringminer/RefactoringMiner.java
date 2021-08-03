@@ -128,7 +128,7 @@ public class RefactoringMiner implements ApplicationStarter {
 
     private void printTips() {
         String delimiter = "  ";
-        List<String> headers = List.of("operation", "pathToGit", "position", "endPosition", "timeout", "json", "");
+        List<String> headers = List.of("operation", "pathToGit", "startPosition", "endPosition", "timeout", "output", "");
         List<String> detectAll = List.of("a", "<git-repo-folder>", "<branch>?", "", "", "+",
             "Detect all refactorings at <branch> for <git-repo-folder>. " +
                 "If <branch> is not specified, commits from all branches are analyzed");
