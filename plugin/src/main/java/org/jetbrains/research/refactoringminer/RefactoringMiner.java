@@ -17,8 +17,8 @@ import java.util.stream.Collectors;
 
 public class RefactoringMiner implements ApplicationStarter {
     private static final int OPERATION = 1;
-    private static final int PATH = 2;
-    private static final int POSITION = 3;
+    private static final int PROJECT_PATH = 2;
+    private static final int START_POSITION = 3;
     private static final int END_POSITION = 4;
     private static final int TIMEOUT = 5;
     private static final int JSON = 6;
@@ -40,23 +40,25 @@ public class RefactoringMiner implements ApplicationStarter {
                     printTips();
                     break;
                 case "detectAll":
-                    detectAll(out, args.get(PATH), args.get(POSITION));
+                    detectAll(out, args.get(PROJECT_PATH), args.get(START_POSITION));
                     break;
                 case "detectBetweenCommits":
-                    detectBetweenCommits(out, args.get(PATH), args.get(POSITION), args.get(END_POSITION));
+                    detectBetweenCommits(out,
+                        args.get(PROJECT_PATH), args.get(START_POSITION), args.get(END_POSITION));
                     break;
                 case "detectBetweenTags":
-                    detectBetweenTags(out, args.get(PATH), args.get(POSITION), args.get(END_POSITION));
+                    detectBetweenTags(out, args.get(PROJECT_PATH), args.get(START_POSITION), args.get(END_POSITION));
                     break;
                 case "detectAtCommit":
-                    detectAtCommit(out, args.get(PATH), args.get(POSITION));
+                    detectAtCommit(out, args.get(PROJECT_PATH), args.get(START_POSITION));
                     break;
                 case "detectAtGitHubCommit":
-                    detectAtGitHubCommit(out, args.get(PATH), args.get(POSITION), Integer.parseInt(args.get(TIMEOUT)));
+                    detectAtGitHubCommit(out,
+                        args.get(PROJECT_PATH), args.get(START_POSITION), Integer.parseInt(args.get(TIMEOUT)));
                     break;
                 case "detectAtGitHubPullRequest":
-                    detectAtGitHubPullRequest(out, args.get(PATH),
-                        Integer.parseInt(args.get(POSITION)), Integer.parseInt(args.get(TIMEOUT)));
+                    detectAtGitHubPullRequest(out, args.get(PROJECT_PATH),
+                        Integer.parseInt(args.get(START_POSITION)), Integer.parseInt(args.get(TIMEOUT)));
                     break;
             }
         } catch (IllegalArgumentException e) {
@@ -128,7 +130,8 @@ public class RefactoringMiner implements ApplicationStarter {
 
     private void printTips() {
         String delimiter = "  ";
-        List<String> headers = List.of("operation", "pathToGit", "startPosition", "endPosition", "timeout", "output", "");
+        List<String> headers =
+            List.of("operation", "projectPath", "startPosition", "endPosition", "timeout", "output", "");
         List<String> detectAll = List.of("detectAll", "<git-repo-folder>", "<branch>?", "", "", "+",
             "Detect all refactorings at <branch> for <git-repo-folder>. " +
                 "If <branch> is not specified, commits from all branches are analyzed");
