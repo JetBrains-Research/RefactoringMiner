@@ -7,7 +7,7 @@ open class IOCliTask : org.jetbrains.intellij.tasks.RunIdeTask() {
     val operation: String? by project
 
     // Path to the local git directory or URL
-    val projectPath: String? by project
+    val gitProjectPath: String? by project
 
     // Commit, tag, branch or pull-request
     val startPosition: String? by project
@@ -39,7 +39,7 @@ tasks {
         args = listOf(
             "RefactoringMiner",
             operation,
-            projectPath,
+            gitProjectPath,
             startPosition,
             endPosition,
             timeout,
