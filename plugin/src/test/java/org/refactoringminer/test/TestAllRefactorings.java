@@ -8,14 +8,14 @@ import java.math.BigInteger;
 
 public class TestAllRefactorings extends LightJavaCodeInsightFixtureTestCase {
 
-    public final String dataFile = "dataSmall.json";
+    public final String dataFile = "data.json";
     public final BigInteger refactoringsToTest = Refactorings.All.getValue();
     public final String dataDirectory = "tmp1";
 
     public void testAllRefactorings() throws Exception {
         GitHistoryRefactoringMinerImpl detector = new GitHistoryRefactoringMinerImpl();
         TestBuilder test = new TestBuilder(detector, dataDirectory, refactoringsToTest, "src/test/resources/" + dataFile);
-        RefactoringPopulator.feedRefactoringsInstances(Refactorings.All.getValue(), Systems.FSE.getValue(), test);
+        RefactoringPopulator.feedRefactoringsInstances(refactoringsToTest, Systems.FSE.getValue(), test);
         test.assertExpectations(10474, 36, 383);
     }
 }
