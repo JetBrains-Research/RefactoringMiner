@@ -175,7 +175,7 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
         if (typeElement.getParent() instanceof PsiMethod) {
             // TODO: return type annotations attached only to method?
         } else {
-            PsiModifierList modifierList = getPreventingModifiersList(typeElement);
+            PsiModifierList modifierList = getPrecedingModifiersList(typeElement);
             if (modifierList != null) {
                 Arrays.stream(modifierList.getChildren())
                     .filter(element -> element instanceof PsiAnnotation)
@@ -191,7 +191,7 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
         }
     }
 
-    private static PsiModifierList getPreventingModifiersList(PsiTypeElement typeElement) {
+    private static PsiModifierList getPrecedingModifiersList(PsiTypeElement typeElement) {
         PsiElement prev = typeElement;
         while (prev != null) {
             prev = prev.getPrevSibling();
