@@ -1,16 +1,29 @@
 package gr.uom.java.xmi;
 
+import com.intellij.psi.JavaTokenType;
 import com.intellij.psi.PsiComment;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiRecursiveElementWalkingVisitor;
 import com.intellij.psi.PsiWhiteSpace;
+import com.intellij.psi.tree.TokenSet;
+import com.intellij.psi.util.PsiUtil;
 import org.jetbrains.annotations.NotNull;
-import java.util.regex.Pattern;
 
 public class FormattingVisitor extends PsiRecursiveElementWalkingVisitor {
-    private static final Pattern nonWordPattern = Pattern.compile("\\W*");
-    StringBuilder sb = new StringBuilder();
-    boolean isPreviousSpaceSensitive = false;
+    private static final TokenSet noSpaces = TokenSet.create(
+        JavaTokenType.EQ, JavaTokenType.RBRACKET, JavaTokenType.RBRACE, JavaTokenType.LBRACE, JavaTokenType.LBRACKET,
+        JavaTokenType.LT, JavaTokenType.GT, JavaTokenType.DOT, JavaTokenType.COMMA,
+        JavaTokenType.RPARENTH, JavaTokenType.LPARENTH
+    );
+    private static final TokenSet noSpaceAfter = TokenSet.create(
+        JavaTokenType.ASTERISK
+    );
+    private static final TokenSet noSpaceBefore = TokenSet.create(
+        JavaTokenType.SEMICOLON, JavaTokenType.ELLIPSIS
+    );
+
+    private final StringBuilder sb = new StringBuilder();
+    private boolean previousNeedSpaceAfter = false;
 
     @Override
     public void visitElement(@NotNull PsiElement element) {
@@ -18,12 +31,11 @@ public class FormattingVisitor extends PsiRecursiveElementWalkingVisitor {
             if (!(element instanceof PsiWhiteSpace || element instanceof PsiComment)) {
                 String text = element.getText().trim();
                 if (!text.isEmpty()) {
-                    boolean isSpaceSensitive = isSpaceSensitive(element, text);
-                    if (isSpaceSensitive && isPreviousSpaceSensitive) {
+                    if (needSpaceBefore(element, text) && previousNeedSpaceAfter) {
                         sb.append(' ');
                     }
                     sb.append(element.getText());
-                    isPreviousSpaceSensitive = isSpaceSensitive;
+                    previousNeedSpaceAfter = needSpaceAfter(element, text);
                 }
             }
         } else {
@@ -31,9 +43,12 @@ public class FormattingVisitor extends PsiRecursiveElementWalkingVisitor {
         }
     }
 
-    // TODO:
-    private static boolean isSpaceSensitive(PsiElement element, String elementText) {
-        return !nonWordPattern.matcher(elementText).matches();
+    private static boolean needSpaceBefore(PsiElement element, String elementText) {
+        return !(PsiUtil.isJavaToken(element, noSpaces) || PsiUtil.isJavaToken(element, noSpaceBefore));
+    }
+
+    private static boolean needSpaceAfter(PsiElement element, String elementText) {
+        return !(PsiUtil.isJavaToken(element, noSpaces) || PsiUtil.isJavaToken(element, noSpaceAfter));
     }
 
     public String getText() {
