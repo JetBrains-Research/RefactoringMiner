@@ -1,41 +1,122 @@
 package gr.uom.java.xmi;
 
+import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.util.TextRange;
+import com.intellij.psi.JavaTokenType;
+import com.intellij.psi.PsiAnonymousClass;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiEnumConstant;
+import com.intellij.psi.PsiExpression;
+import com.intellij.psi.PsiField;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiIdentifier;
+import com.intellij.psi.PsiJavaCodeReferenceElement;
+import com.intellij.psi.PsiJavaToken;
+import com.intellij.psi.PsiLocalVariable;
+import com.intellij.psi.PsiNewExpression;
+import com.intellij.psi.PsiTypeElement;
+import com.intellij.psi.PsiVariable;
+import com.intellij.psi.util.PsiUtil;
+import gr.uom.java.xmi.decomposition.PsiUtils;
 import gr.uom.java.xmi.diff.CodeRange;
-import org.eclipse.jdt.core.dom.ASTNode;
-import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.jetbrains.annotations.NotNull;
 
+import static gr.uom.java.xmi.decomposition.PsiUtils.findLastCArrayBracket;
+
+/**
+ * Provides an information about the element's location in the file.
+ */
 public class LocationInfo {
     private final String filePath;
     private final int startOffset;
     private final int endOffset;
-    private final int length;
     private final int startLine;
     private final int endLine;
+    private final int startColumn;
+    private final int endColumn;
     private final CodeElementType codeElementType;
-    private int startColumn;
-    private int endColumn;
 
-    public LocationInfo(CompilationUnit cu, String filePath, ASTNode node, CodeElementType codeElementType) {
+    public LocationInfo(@NotNull PsiFile file, @NotNull String filePath, @NotNull PsiElement node,
+                        @NotNull CodeElementType codeElementType) {
         this.filePath = filePath;
         this.codeElementType = codeElementType;
-        this.startOffset = node.getStartPosition();
-        this.length = node.getLength();
-        this.endOffset = startOffset + length;
 
-        //lines are 1-based
-        this.startLine = cu.getLineNumber(startOffset);
-        this.endLine = cu.getLineNumber(endOffset);
-        //columns are 0-based
-        this.startColumn = cu.getColumnNumber(startOffset);
-        //convert to 1-based
-        if (this.startColumn > 0) {
-            this.startColumn += 1;
+        TextRange range = getEclipseRange(node);
+        this.startOffset = range.getStartOffset();
+        this.endOffset = range.getEndOffset();
+
+        Document document = file.getViewProvider().getDocument();
+        if (document != null) {
+            this.startLine = document.getLineNumber(startOffset) + 1;
+            this.endLine = document.getLineNumber(endOffset) + 1;
+            this.startColumn = startOffset - document.getLineStartOffset(startLine - 1) + 1;
+            this.endColumn = endOffset - document.getLineStartOffset(endLine - 1) + 1;
+        } else {
+            this.startLine = 0;
+            this.endLine = 0;
+            this.startColumn = 0;
+            this.endColumn = 0;
         }
-        this.endColumn = cu.getColumnNumber(endOffset);
-        //convert to 1-based
-        if (this.endColumn > 0) {
-            this.endColumn += 1;
+    }
+
+    // TODO: Remove when migration finished
+    public static TextRange getEclipseRange(@NotNull PsiElement node) {
+        PsiElement parent = node.getParent();
+        if ((node instanceof PsiField || node instanceof PsiLocalVariable)
+            && !(node instanceof PsiEnumConstant)) {
+            // initializer and CArray brackets in range
+            PsiVariable variable = (PsiVariable) node;
+            PsiExpression initializer = variable.getInitializer();
+            PsiIdentifier identifier = variable.getNameIdentifier();
+            if (initializer != null) {
+                return new TextRange(
+                    variable.getNameIdentifier().getTextOffset(),
+                    initializer.getTextRange().getEndOffset()
+                );
+            } else {
+                PsiJavaToken lastCArrayRBracket = findLastCArrayBracket(identifier);
+                if (lastCArrayRBracket == null) {
+                    return variable.getNameIdentifier().getTextRange();
+                } else {
+                    return new TextRange(
+                        variable.getNameIdentifier().getTextOffset(),
+                        lastCArrayRBracket.getTextRange().getEndOffset()
+                    );
+                }
+            }
+        } else if (node instanceof PsiJavaCodeReferenceElement || PsiUtils.isTypeKeyword(node)) {
+            if (parent instanceof PsiNewExpression) {
+                // array brackets in range
+                PsiJavaToken lastCArrayRbracket = findLastCArrayBracket(node);
+                if (lastCArrayRbracket != null) {
+                    return new TextRange(
+                        node.getTextOffset(),
+                        lastCArrayRbracket.getTextRange().getEndOffset()
+                    );
+                }
+            }
+        } else if (node instanceof PsiTypeElement) {
+            // ellipsis not in type
+            if (PsiUtil.isJavaToken(node.getLastChild(), JavaTokenType.ELLIPSIS)) {
+                return node.getFirstChild().getTextRange();
+            }
+        } else if (PsiUtils.isForInitializer(node)) {
+            PsiElement lastChild = node.getLastChild().getLastChild();
+            return new TextRange(
+                node.getTextOffset(),
+                lastChild.getTextOffset()
+            );
+        } else if (PsiUtils.isConstructor(node)) {
+            return getEclipseRange(node.getParent());
+        } else if (node instanceof PsiAnonymousClass) {
+            PsiJavaToken lBrace = PsiUtils.findFirstForwardSiblingToken(node.getFirstChild(), JavaTokenType.LBRACE);
+            PsiJavaToken rBrace = PsiUtils.findFirstForwardSiblingToken(node.getFirstChild(), JavaTokenType.RBRACE);
+            return new TextRange(
+                lBrace.getTextOffset(),
+                rBrace.getTextOffset() + 1
+            );
         }
+        return node.getTextRange();
     }
 
     public int getStartOffset() {
@@ -47,7 +128,7 @@ public class LocationInfo {
     }
 
     public int getLength() {
-        return length;
+        return endOffset - startOffset;
     }
 
     public CodeRange codeRange() {
@@ -105,7 +186,6 @@ public class LocationInfo {
         result = prime * result + endLine;
         result = prime * result + endOffset;
         result = prime * result + ((filePath == null) ? 0 : filePath.hashCode());
-        result = prime * result + length;
         result = prime * result + startColumn;
         result = prime * result + startLine;
         result = prime * result + startOffset;
@@ -131,8 +211,6 @@ public class LocationInfo {
             if (other.filePath != null)
                 return false;
         } else if (!filePath.equals(other.filePath))
-            return false;
-        if (length != other.length)
             return false;
         if (startColumn != other.startColumn)
             return false;

@@ -1,191 +1,97 @@
 package gr.uom.java.xmi.decomposition;
 
+import com.intellij.psi.*;
+import com.intellij.psi.util.PsiTreeUtil;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.LocationInfoProvider;
+import gr.uom.java.xmi.TypeUtils;
 import gr.uom.java.xmi.UMLAnnotation;
 import gr.uom.java.xmi.UMLType;
 import gr.uom.java.xmi.VariableDeclarationProvider;
 import gr.uom.java.xmi.diff.CodeRange;
-import org.eclipse.jdt.core.dom.ASTNode;
-import org.eclipse.jdt.core.dom.Annotation;
-import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.EnumConstantDeclaration;
-import org.eclipse.jdt.core.dom.EnumDeclaration;
-import org.eclipse.jdt.core.dom.FieldDeclaration;
-import org.eclipse.jdt.core.dom.IExtendedModifier;
-import org.eclipse.jdt.core.dom.Modifier;
-import org.eclipse.jdt.core.dom.SingleVariableDeclaration;
-import org.eclipse.jdt.core.dom.Type;
-import org.eclipse.jdt.core.dom.VariableDeclarationExpression;
-import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
-import org.eclipse.jdt.core.dom.VariableDeclarationStatement;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class VariableDeclaration implements LocationInfoProvider, VariableDeclarationProvider {
     private final String variableName;
-    private final AbstractExpression initializer;
+    private final UMLType type;
     private final LocationInfo locationInfo;
     private final VariableScope scope;
     private final List<UMLAnnotation> annotations;
-    private UMLType type;
+    private final boolean isEnumConstant;
     private boolean varargsParameter;
     private boolean isParameter;
     private boolean isAttribute;
-    private boolean isEnumConstant;
-    private boolean isFinal;
+    private final boolean isFinal;
+    private AbstractExpression initializer;
 
-    public VariableDeclaration(CompilationUnit cu, String filePath, VariableDeclarationFragment fragment) {
-        this.annotations = new ArrayList<>();
-        List<IExtendedModifier> extendedModifiers = null;
-        if (fragment.getParent() instanceof VariableDeclarationStatement) {
-            VariableDeclarationStatement parent = (VariableDeclarationStatement) fragment.getParent();
-            extendedModifiers = parent.modifiers();
-            int modifiers = parent.getModifiers();
-            if ((modifiers & Modifier.FINAL) != 0) {
-                this.isFinal = true;
-            }
-        } else if (fragment.getParent() instanceof VariableDeclarationExpression) {
-            VariableDeclarationExpression parent = (VariableDeclarationExpression) fragment.getParent();
-            extendedModifiers = parent.modifiers();
-            int modifiers = parent.getModifiers();
-            if ((modifiers & Modifier.FINAL) != 0) {
-                this.isFinal = true;
-            }
-        } else if (fragment.getParent() instanceof FieldDeclaration) {
-            FieldDeclaration parent = (FieldDeclaration) fragment.getParent();
-            extendedModifiers = parent.modifiers();
-            int modifiers = parent.getModifiers();
-            if ((modifiers & Modifier.FINAL) != 0) {
-                this.isFinal = true;
-            }
+    public VariableDeclaration(PsiFile file, String filePath, PsiVariable variable, boolean isVararg) {
+        this(file, filePath, variable);
+        this.varargsParameter = isVararg;
+    }
+
+    public VariableDeclaration(PsiFile file, String filePath, PsiVariable variable) {
+        this(file, filePath, variable, TypeUtils.extractType(file, filePath, variable));
+    }
+
+    public VariableDeclaration(PsiFile file, String filePath, PsiVariable variable, UMLType type) {
+        this.variableName = variable.getName();
+
+        PsiExpression initializer = variable.getInitializer();
+        if (initializer != null) {
+            this.initializer = new AbstractExpression(file, filePath, initializer, CodeElementType.VARIABLE_DECLARATION_INITIALIZER);
         }
-        if (extendedModifiers != null) {
-            for (IExtendedModifier extendedModifier : extendedModifiers) {
-                if (extendedModifier.isAnnotation()) {
-                    Annotation annotation = (Annotation) extendedModifier;
-                    this.annotations.add(new UMLAnnotation(cu, filePath, annotation));
-                }
-            }
-        }
-        this.locationInfo = new LocationInfo(cu, filePath, fragment, extractVariableDeclarationType(fragment));
-        this.variableName = fragment.getName().getIdentifier();
-        this.initializer = fragment.getInitializer() != null ? new AbstractExpression(cu, filePath, fragment.getInitializer(), CodeElementType.VARIABLE_DECLARATION_INITIALIZER) : null;
-        Type astType = extractType(fragment);
-        this.type = UMLType.extractTypeObject(cu, filePath, astType, fragment.getExtraDimensions());
-        ASTNode scopeNode = getScopeNode(fragment);
-        int startOffset;
-        if (locationInfo.getCodeElementType().equals(CodeElementType.FIELD_DECLARATION)) {
-            //field declarations have the entire type declaration as scope, regardless of the location they are declared
-            startOffset = scopeNode.getStartPosition();
+
+        this.type = type;
+
+        CodeElementType declarationType = extractVariableDeclarationType(variable);
+        this.locationInfo = new LocationInfo(file, filePath, variable, declarationType);
+
+        PsiElement scopeNode = getScopeNode(variable);
+        int startOffset = getStartOffset(variable, declarationType, scopeNode);
+        int endOffset = scopeNode.getTextRange().getEndOffset();
+        this.scope = new VariableScope(file, filePath, startOffset, endOffset);
+
+        PsiModifierList modifierList = PsiUtils.findFirstForwardSiblingOfType(variable.getFirstChild(), PsiModifierList.class);
+        if (modifierList != null) {
+            this.isFinal = modifierList.hasExplicitModifier(PsiModifier.FINAL);
         } else {
-            startOffset = fragment.getStartPosition();
+            this.isFinal = false;
         }
-        int endOffset = scopeNode.getStartPosition() + scopeNode.getLength();
-        this.scope = new VariableScope(cu, filePath, startOffset, endOffset);
+        this.isEnumConstant = variable instanceof PsiEnumConstant;
+        this.annotations = Arrays.stream(variable.getAnnotations())
+            .map(annotation -> new UMLAnnotation(file, filePath, annotation))
+            .collect(Collectors.toList());
     }
 
-    private static ASTNode getScopeNode(org.eclipse.jdt.core.dom.VariableDeclaration variableDeclaration) {
-        if (variableDeclaration instanceof SingleVariableDeclaration) {
-            return variableDeclaration.getParent();
-        } else if (variableDeclaration instanceof VariableDeclarationFragment) {
-            return variableDeclaration.getParent().getParent();
+    private int getStartOffset(PsiVariable variable, CodeElementType declarationType, PsiElement scopeNode) {
+        if (declarationType.equals(CodeElementType.FIELD_DECLARATION)) {
+            return scopeNode.getTextRange().getStartOffset();
+        } else {
+            return variable.getTextRange().getStartOffset();
         }
-        return null;
     }
 
-    private static CodeElementType extractVariableDeclarationType(org.eclipse.jdt.core.dom.VariableDeclaration variableDeclaration) {
-        if (variableDeclaration instanceof SingleVariableDeclaration) {
+    private static PsiElement getScopeNode(PsiVariable variableDeclaration) {
+        return PsiTreeUtil.getParentOfType(variableDeclaration,
+            PsiMethod.class, PsiCodeBlock.class, PsiCatchSection.class,
+            PsiTryStatement.class, PsiClass.class, PsiForStatement.class,
+            PsiLambdaExpression.class);
+    }
+
+    private static CodeElementType extractVariableDeclarationType(PsiVariable variableDeclaration) {
+        if (variableDeclaration instanceof PsiEnumConstant) {
+            return CodeElementType.ENUM_CONSTANT_DECLARATION;
+        } else if (variableDeclaration instanceof PsiParameter) {
             return CodeElementType.SINGLE_VARIABLE_DECLARATION;
-        } else if (variableDeclaration instanceof VariableDeclarationFragment) {
-            VariableDeclarationFragment fragment = (VariableDeclarationFragment) variableDeclaration;
-            if (fragment.getParent() instanceof VariableDeclarationStatement) {
-                return CodeElementType.VARIABLE_DECLARATION_STATEMENT;
-            } else if (fragment.getParent() instanceof VariableDeclarationExpression) {
-                return CodeElementType.VARIABLE_DECLARATION_EXPRESSION;
-            } else if (fragment.getParent() instanceof FieldDeclaration) {
-                return CodeElementType.FIELD_DECLARATION;
-            }
+        } else if (variableDeclaration instanceof PsiLocalVariable) {
+            return CodeElementType.VARIABLE_DECLARATION_EXPRESSION;
+        } else if (variableDeclaration instanceof PsiField) {
+            return CodeElementType.FIELD_DECLARATION;
         }
-        return null;
-    }
-
-    private static Type extractType(org.eclipse.jdt.core.dom.VariableDeclaration variableDeclaration) {
-        Type returnedVariableType = null;
-        if (variableDeclaration instanceof SingleVariableDeclaration) {
-            SingleVariableDeclaration singleVariableDeclaration = (SingleVariableDeclaration) variableDeclaration;
-            returnedVariableType = singleVariableDeclaration.getType();
-        } else if (variableDeclaration instanceof VariableDeclarationFragment) {
-            VariableDeclarationFragment fragment = (VariableDeclarationFragment) variableDeclaration;
-            if (fragment.getParent() instanceof VariableDeclarationStatement) {
-                VariableDeclarationStatement variableDeclarationStatement = (VariableDeclarationStatement) fragment.getParent();
-                returnedVariableType = variableDeclarationStatement.getType();
-            } else if (fragment.getParent() instanceof VariableDeclarationExpression) {
-                VariableDeclarationExpression variableDeclarationExpression = (VariableDeclarationExpression) fragment.getParent();
-                returnedVariableType = variableDeclarationExpression.getType();
-            } else if (fragment.getParent() instanceof FieldDeclaration) {
-                FieldDeclaration fieldDeclaration = (FieldDeclaration) fragment.getParent();
-                returnedVariableType = fieldDeclaration.getType();
-            }
-        }
-        return returnedVariableType;
-    }
-
-    public VariableDeclaration(CompilationUnit cu, String filePath, SingleVariableDeclaration fragment, boolean varargs) {
-        this(cu, filePath, fragment);
-        this.varargsParameter = varargs;
-    }
-
-    public VariableDeclaration(CompilationUnit cu, String filePath, SingleVariableDeclaration fragment) {
-        this.annotations = new ArrayList<>();
-        int modifiers = fragment.getModifiers();
-        if ((modifiers & Modifier.FINAL) != 0) {
-            this.isFinal = true;
-        }
-        List<IExtendedModifier> extendedModifiers = fragment.modifiers();
-        for (IExtendedModifier extendedModifier : extendedModifiers) {
-            if (extendedModifier.isAnnotation()) {
-                Annotation annotation = (Annotation) extendedModifier;
-                this.annotations.add(new UMLAnnotation(cu, filePath, annotation));
-            }
-        }
-        this.locationInfo = new LocationInfo(cu, filePath, fragment, extractVariableDeclarationType(fragment));
-        this.variableName = fragment.getName().getIdentifier();
-        this.initializer = fragment.getInitializer() != null ? new AbstractExpression(cu, filePath, fragment.getInitializer(), CodeElementType.VARIABLE_DECLARATION_INITIALIZER) : null;
-        Type astType = extractType(fragment);
-        this.type = UMLType.extractTypeObject(cu, filePath, astType, fragment.getExtraDimensions());
-        int startOffset = fragment.getStartPosition();
-        ASTNode scopeNode = getScopeNode(fragment);
-        int endOffset = scopeNode.getStartPosition() + scopeNode.getLength();
-        this.scope = new VariableScope(cu, filePath, startOffset, endOffset);
-    }
-
-    public VariableDeclaration(CompilationUnit cu, String filePath, EnumConstantDeclaration fragment) {
-        this.annotations = new ArrayList<>();
-        int modifiers = fragment.getModifiers();
-        if ((modifiers & Modifier.FINAL) != 0) {
-            this.isFinal = true;
-        }
-        this.isEnumConstant = true;
-        List<IExtendedModifier> extendedModifiers = fragment.modifiers();
-        for (IExtendedModifier extendedModifier : extendedModifiers) {
-            if (extendedModifier.isAnnotation()) {
-                Annotation annotation = (Annotation) extendedModifier;
-                this.annotations.add(new UMLAnnotation(cu, filePath, annotation));
-            }
-        }
-        this.locationInfo = new LocationInfo(cu, filePath, fragment, CodeElementType.ENUM_CONSTANT_DECLARATION);
-        this.variableName = fragment.getName().getIdentifier();
-        this.initializer = null;
-        if (fragment.getParent() instanceof EnumDeclaration) {
-            EnumDeclaration enumDeclaration = (EnumDeclaration) fragment.getParent();
-            this.type = UMLType.extractTypeObject(enumDeclaration.getName().getIdentifier());
-        }
-        ASTNode scopeNode = fragment.getParent();
-        int startOffset = scopeNode.getStartPosition();
-        int endOffset = scopeNode.getStartPosition() + scopeNode.getLength();
-        this.scope = new VariableScope(cu, filePath, startOffset, endOffset);
+        throw new AssertionError("Unqualified variable type");
     }
 
     public String getVariableName() {

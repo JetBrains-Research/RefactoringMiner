@@ -1,7 +1,8 @@
 package gr.uom.java.xmi.decomposition;
 
+import com.intellij.openapi.editor.Document;
+import com.intellij.psi.PsiFile;
 import gr.uom.java.xmi.LocationInfo;
-import org.eclipse.jdt.core.dom.CompilationUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,33 +11,28 @@ public class VariableScope {
     private final int startOffset;
     private final int endOffset;
     private final int startLine;
+    private final int startColumn;
     private final int endLine;
+    private final int endColumn;
     private final List<AbstractCodeFragment> statementsInScope = new ArrayList<>();
     private final List<AbstractCodeFragment> statementsInScopeUsingVariable = new ArrayList<>();
-    private int startColumn;
-    private int endColumn;
 
-    public VariableScope(CompilationUnit cu, String filePath, int startOffset, int endOffset) {
-        //ASTNode parent = node.getParent();
+    public VariableScope(PsiFile file, String filePath, int startOffset, int endOffset) {
         this.filePath = filePath;
         this.startOffset = startOffset;
         this.endOffset = endOffset;
-        //this.startOffset = node.getStartPosition();
-        //this.endOffset = parent.getStartPosition() + parent.getLength();
 
-        //lines are 1-based
-        this.startLine = cu.getLineNumber(startOffset);
-        this.endLine = cu.getLineNumber(endOffset);
-        //columns are 0-based
-        this.startColumn = cu.getColumnNumber(startOffset);
-        //convert to 1-based
-        if (this.startColumn > 0) {
-            this.startColumn += 1;
-        }
-        this.endColumn = cu.getColumnNumber(endOffset);
-        //convert to 1-based
-        if (this.endColumn > 0) {
-            this.endColumn += 1;
+        Document document = file.getViewProvider().getDocument();
+        if (document != null) {
+            this.startLine = document.getLineNumber(startOffset) + 1;
+            this.endLine = document.getLineNumber(endOffset) + 1;
+            this.startColumn = startOffset - document.getLineStartOffset(startLine - 1) + 1;
+            this.endColumn = endOffset - document.getLineStartOffset(endLine - 1) + 1;
+        } else {
+            this.startLine = 0;
+            this.endLine = 0;
+            this.startColumn = 0;
+            this.endColumn = 0;
         }
     }
 
@@ -82,10 +78,9 @@ public class VariableScope {
     }
 
     public String toString() {
-        String sb = startLine + ":" + startColumn +
-            "-" +
-            endLine + ":" + endColumn;
-        return sb;
+        return startLine + ":" + startColumn
+            + "-"
+            + endLine + ":" + endColumn;
     }
 
     public void addStatement(AbstractCodeFragment statement) {

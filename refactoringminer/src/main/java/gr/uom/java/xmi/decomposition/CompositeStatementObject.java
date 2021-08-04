@@ -1,10 +1,10 @@
 package gr.uom.java.xmi.decomposition;
 
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.diff.CodeRange;
-import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.Statement;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -13,19 +13,15 @@ import java.util.Map;
 import java.util.Set;
 
 public class CompositeStatementObject extends AbstractStatement {
-
-    private final List<AbstractStatement> statementList;
-    private final List<AbstractExpression> expressionList;
-    private final List<VariableDeclaration> variableDeclarations;
+    private final List<AbstractStatement> statementList = new ArrayList<>();
+    private final List<AbstractExpression> expressionList = new ArrayList<>();
+    private final List<VariableDeclaration> variableDeclarations = new ArrayList<>();
     private final LocationInfo locationInfo;
 
-    public CompositeStatementObject(CompilationUnit cu, String filePath, Statement statement, int depth, CodeElementType codeElementType) {
+    public CompositeStatementObject(PsiFile file, String filePath, PsiElement statement, int depth, CodeElementType codeElementType) {
         super();
         this.setDepth(depth);
-        this.locationInfo = new LocationInfo(cu, filePath, statement, codeElementType);
-        this.statementList = new ArrayList<>();
-        this.expressionList = new ArrayList<>();
-        this.variableDeclarations = new ArrayList<>();
+        this.locationInfo = new LocationInfo(file, filePath, statement, codeElementType);
     }
 
     public void addStatement(AbstractStatement statement) {

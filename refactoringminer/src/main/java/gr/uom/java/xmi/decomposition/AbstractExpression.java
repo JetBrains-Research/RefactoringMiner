@@ -1,10 +1,12 @@
 package gr.uom.java.xmi.decomposition;
 
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
+import gr.uom.java.xmi.Formatter;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.diff.CodeRange;
-import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.Expression;
+import org.jetbrains.annotations.NotNull;
 import java.util.List;
 import java.util.Map;
 
@@ -33,9 +35,10 @@ public class AbstractExpression extends AbstractCodeFragment {
     private final List<LambdaExpressionObject> lambdas;
     private CompositeStatementObject owner;
 
-    public AbstractExpression(CompilationUnit cu, String filePath, Expression expression, CodeElementType codeElementType) {
-        this.locationInfo = new LocationInfo(cu, filePath, expression, codeElementType);
-        Visitor visitor = new Visitor(cu, filePath);
+    public AbstractExpression(@NotNull PsiFile file, @NotNull String filePath, @NotNull PsiElement expression,
+                              @NotNull CodeElementType codeElementType) {
+        this.locationInfo = new LocationInfo(file, filePath, expression, codeElementType);
+        Visitor visitor = new Visitor(file, filePath);
         expression.accept(visitor);
         this.variables = visitor.getVariables();
         this.types = visitor.getTypes();
@@ -56,7 +59,7 @@ public class AbstractExpression extends AbstractCodeFragment {
         this.arguments = visitor.getArguments();
         this.ternaryOperatorExpressions = visitor.getTernaryOperatorExpressions();
         this.lambdas = visitor.getLambdas();
-        this.expression = expression.toString();
+        this.expression = Formatter.format(expression);
         this.owner = null;
     }
 

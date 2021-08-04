@@ -1,11 +1,12 @@
 package gr.uom.java.xmi.decomposition;
 
+import com.intellij.psi.PsiAnonymousClass;
+import com.intellij.psi.PsiFile;
+import gr.uom.java.xmi.Formatter;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.LocationInfoProvider;
 import gr.uom.java.xmi.diff.CodeRange;
-import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
-import org.eclipse.jdt.core.dom.CompilationUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,24 +34,14 @@ public class AnonymousClassDeclarationObject implements LocationInfoProvider {
     private final List<String> arguments = new ArrayList<>();
     private final List<TernaryOperatorExpression> ternaryOperatorExpressions = new ArrayList<>();
     private final List<LambdaExpressionObject> lambdas = new ArrayList<>();
-    private AnonymousClassDeclaration astNode;
 
-    public AnonymousClassDeclarationObject(CompilationUnit cu, String filePath, AnonymousClassDeclaration anonymous) {
-        this.locationInfo = new LocationInfo(cu, filePath, anonymous, CodeElementType.ANONYMOUS_CLASS_DECLARATION);
-        this.astNode = anonymous;
-        this.astNodeString = anonymous.toString();
+    public AnonymousClassDeclarationObject(PsiFile file, String filePath, PsiAnonymousClass anonymous) {
+        this.locationInfo = new LocationInfo(file, filePath, anonymous, CodeElementType.ANONYMOUS_CLASS_DECLARATION);
+        this.astNodeString = Formatter.format(anonymous);
     }
 
     public LocationInfo getLocationInfo() {
         return locationInfo;
-    }
-
-    public AnonymousClassDeclaration getAstNode() {
-        return astNode;
-    }
-
-    public void setAstNode(AnonymousClassDeclaration node) {
-        this.astNode = node;
     }
 
     public String toString() {

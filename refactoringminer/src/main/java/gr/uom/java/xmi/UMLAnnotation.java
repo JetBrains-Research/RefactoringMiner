@@ -1,16 +1,13 @@
 package gr.uom.java.xmi;
 
+import com.intellij.psi.PsiAnnotation;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiNameValuePair;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.decomposition.AbstractExpression;
 import gr.uom.java.xmi.diff.CodeRange;
-import org.eclipse.jdt.core.dom.Annotation;
-import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.MemberValuePair;
-import org.eclipse.jdt.core.dom.NormalAnnotation;
-import org.eclipse.jdt.core.dom.SingleMemberAnnotation;
 import java.io.Serializable;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
 public class UMLAnnotation implements Serializable, LocationInfoProvider {
@@ -19,18 +16,16 @@ public class UMLAnnotation implements Serializable, LocationInfoProvider {
     private final Map<String, AbstractExpression> memberValuePairs = new LinkedHashMap<>();
     private AbstractExpression value;
 
-    public UMLAnnotation(CompilationUnit cu, String filePath, Annotation annotation) {
-        this.typeName = annotation.getTypeName().getFullyQualifiedName();
-        this.locationInfo = new LocationInfo(cu, filePath, annotation, CodeElementType.ANNOTATION);
-        if (annotation instanceof SingleMemberAnnotation) {
-            SingleMemberAnnotation singleMemberAnnotation = (SingleMemberAnnotation) annotation;
-            this.value = new AbstractExpression(cu, filePath, singleMemberAnnotation.getValue(), CodeElementType.SINGLE_MEMBER_ANNOTATION_VALUE);
-        } else if (annotation instanceof NormalAnnotation) {
-            NormalAnnotation normalAnnotation = (NormalAnnotation) annotation;
-            List<MemberValuePair> pairs = normalAnnotation.values();
-            for (MemberValuePair pair : pairs) {
-                AbstractExpression value = new AbstractExpression(cu, filePath, pair.getValue(), CodeElementType.NORMAL_ANNOTATION_MEMBER_VALUE_PAIR);
-                memberValuePairs.put(pair.getName().getIdentifier(), value);
+    public UMLAnnotation(PsiFile file, String filePath, PsiAnnotation annotation) {
+        this.typeName = annotation.getNameReferenceElement().getReferenceName();
+        this.locationInfo = new LocationInfo(file, filePath, annotation, CodeElementType.ANNOTATION);
+        PsiNameValuePair[] parameters = annotation.getParameterList().getAttributes();
+        if (parameters.length == 1 && parameters[0].getName() == null) {
+            this.value = new AbstractExpression(file, filePath, parameters[0].getValue(), CodeElementType.SINGLE_MEMBER_ANNOTATION_VALUE);
+        } else {
+            for (PsiNameValuePair parameter : parameters) {
+                AbstractExpression value = new AbstractExpression(file, filePath, parameter.getValue(), CodeElementType.NORMAL_ANNOTATION_MEMBER_VALUE_PAIR);
+                memberValuePairs.put(parameter.getName(), value);
             }
         }
     }

@@ -1,5 +1,6 @@
 package org.refactoringminer.test;
 
+import com.google.common.base.Strings;
 import org.eclipse.jgit.lib.Repository;
 import org.junit.Assert;
 import org.refactoringminer.api.GitHistoryRefactoringMiner;
@@ -12,6 +13,7 @@ import org.refactoringminer.test.RefactoringPopulator.Refactorings;
 import org.refactoringminer.util.GitServiceImpl;
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,23 +39,25 @@ public class TestBuilder {
     private Counter c;// = new Counter();
     private Map<RefactoringType, Counter> cMap;
     private BigInteger refactoringFilter;
+    public final String dataFile;
 
-    public TestBuilder(GitHistoryRefactoringMiner detector, String tempDir, BigInteger refactorings) {
-        this(detector, tempDir);
+    public TestBuilder(GitHistoryRefactoringMiner detector, String tempDir, BigInteger refactorings, String dataFile) {
+        this(detector, tempDir, dataFile);
 
         this.refactoringFilter = refactorings;
     }
 
-    public TestBuilder(GitHistoryRefactoringMiner detector, String tempDir) {
+    public TestBuilder(GitHistoryRefactoringMiner detector, String tempDir, String dataFile) {
         this.map = new HashMap<>();
         this.refactoringDetector = detector;
         this.tempDir = tempDir;
         this.verbose = false;
         this.aggregate = false;
+        this.dataFile = dataFile;
     }
 
     public TestBuilder() {
-        this(new GitHistoryRefactoringMinerImpl(), "tmp");
+        this(new GitHistoryRefactoringMinerImpl(), "tmp", "data.json");
     }
 
     /**
@@ -108,11 +112,14 @@ public class TestBuilder {
 
         String mainResultMessage = buildResultMessage(c);
         System.out.println("Total  " + mainResultMessage);
+        int maxDisplayName =
+            Arrays.stream(RefactoringType.values()).mapToInt(ref -> ref.getDisplayName().length()).max().getAsInt();
         for (RefactoringType refType : RefactoringType.values()) {
             Counter refTypeCounter = cMap.get(refType);
             if (refTypeCounter != null) {
-                System.out
-                    .println(String.format("%-7s", refType.getAbbreviation()) + buildResultMessage(refTypeCounter));
+                System.out.println(refType.getDisplayName()
+                    + Strings.repeat(" ", maxDisplayName - refType.getDisplayName().length())
+                    + buildResultMessage(refTypeCounter));
             }
         }
 
@@ -133,7 +140,7 @@ public class TestBuilder {
         double precision = ((double) get(TP, c) / (get(TP, c) + get(FP, c)));
         double recall = ((double) get(TP, c)) / (get(TP, c) + get(FN, c));
         String mainResultMessage = String.format(
-            "TP: %2d  FP: %2d  FN: %2d  TN: %2d  Unk.: %2d  Prec.: %.3f  Recall: %.3f", get(TP, c), get(FP, c),
+            "TP: %5d  FP: %5d  FN: %5d  TN: %2d  Unk.: %2d  Prec.: %.3f  Recall: %.3f", get(TP, c), get(FP, c),
             get(FN, c), get(TN, c), get(UNK, c), precision, recall);
         return mainResultMessage;
     }

@@ -1,7 +1,15 @@
 package gr.uom.java.xmi.decomposition;
 
+import com.intellij.psi.JavaTokenType;
+import com.intellij.psi.PsiExpression;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiJavaToken;
+import com.intellij.psi.PsiMethodCallExpression;
+import com.intellij.psi.PsiNewExpression;
+import com.intellij.psi.PsiSuperExpression;
+import com.intellij.psi.PsiThisExpression;
+import gr.uom.java.xmi.Formatter;
 import gr.uom.java.xmi.LocationInfo;
-import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.UMLAbstractClass;
 import gr.uom.java.xmi.UMLClass;
 import gr.uom.java.xmi.UMLOperation;
@@ -10,13 +18,6 @@ import gr.uom.java.xmi.UMLType;
 import gr.uom.java.xmi.diff.StringDistance;
 import gr.uom.java.xmi.diff.UMLClassBaseDiff;
 import gr.uom.java.xmi.diff.UMLModelDiff;
-import org.eclipse.jdt.core.dom.ClassInstanceCreation;
-import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.ConstructorInvocation;
-import org.eclipse.jdt.core.dom.Expression;
-import org.eclipse.jdt.core.dom.MethodInvocation;
-import org.eclipse.jdt.core.dom.SuperConstructorInvocation;
-import org.eclipse.jdt.core.dom.SuperMethodInvocation;
 import org.refactoringminer.util.PrefixSuffixUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,6 +28,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
+
+import static gr.uom.java.xmi.decomposition.PsiUtils.isSuperConstructorInvocation;
+import static gr.uom.java.xmi.decomposition.PsiUtils.isThisConstructorInvocation;
 
 public class OperationInvocation extends AbstractCall {
     private static final List<String> PRIMITIVE_TYPE_LIST;
@@ -71,65 +76,62 @@ public class OperationInvocation extends AbstractCall {
     }
 
     private String methodName;
+    /**
+     * Expressions for accessing or creating element on which function calls
+     */
     private List<String> subExpressions = new ArrayList<>();
     private volatile int hashCode = 0;
 
-    public OperationInvocation(CompilationUnit cu, String filePath, MethodInvocation invocation) {
-        this.locationInfo = new LocationInfo(cu, filePath, invocation, CodeElementType.METHOD_INVOCATION);
-        this.methodName = invocation.getName().getIdentifier();
-        this.typeArguments = invocation.arguments().size();
-        this.arguments = new ArrayList<>();
-        List<Expression> args = invocation.arguments();
-        for (Expression argument : args) {
-            this.arguments.add(argument.toString());
+    public OperationInvocation(PsiFile file, String filePath, PsiMethodCallExpression invocation) {
+        this.methodName = invocation.getMethodExpression().getReferenceName();
+        this.arguments = Arrays.stream(invocation.getArgumentList().getExpressions())
+            .map(Formatter::format)
+            .collect(Collectors.toList());
+        this.typeArguments = this.arguments.size();
+
+        PsiExpression qualifierExpression = invocation.getMethodExpression().getQualifierExpression();
+        if (qualifierExpression != null) {
+            this.expression = Formatter.format(qualifierExpression);
+            processSubExpression(qualifierExpression);
         }
-        if (invocation.getExpression() != null) {
-            this.expression = invocation.getExpression().toString();
-            processExpression(invocation.getExpression(), this.subExpressions);
+
+        this.locationInfo =
+            new LocationInfo(file, filePath, invocation, getCodeElementType(invocation, qualifierExpression));
+    }
+
+    private LocationInfo.CodeElementType getCodeElementType(PsiMethodCallExpression expression, PsiExpression qualifierExpression) {
+        if (qualifierExpression instanceof PsiSuperExpression) {
+            return LocationInfo.CodeElementType.SUPER_METHOD_INVOCATION;
+        } else if (isThisConstructorInvocation(expression)) {
+            return LocationInfo.CodeElementType.CONSTRUCTOR_INVOCATION;
+        } else if (isSuperConstructorInvocation(expression)) {
+            return LocationInfo.CodeElementType.SUPER_CONSTRUCTOR_INVOCATION;
+        } else {
+            return LocationInfo.CodeElementType.METHOD_INVOCATION;
         }
     }
 
-    public OperationInvocation(CompilationUnit cu, String filePath, SuperMethodInvocation invocation) {
-        this.locationInfo = new LocationInfo(cu, filePath, invocation, CodeElementType.SUPER_METHOD_INVOCATION);
-        this.methodName = invocation.getName().getIdentifier();
-        this.typeArguments = invocation.arguments().size();
-        this.arguments = new ArrayList<>();
-        this.expression = "super";
-        this.subExpressions.add("super");
-        List<Expression> args = invocation.arguments();
-        for (Expression argument : args) {
-            this.arguments.add(argument.toString());
-        }
-    }
+    private OperationInvocation() {}
 
-    public OperationInvocation(CompilationUnit cu, String filePath, SuperConstructorInvocation invocation) {
-        this.locationInfo = new LocationInfo(cu, filePath, invocation, CodeElementType.SUPER_CONSTRUCTOR_INVOCATION);
-        this.methodName = "super";
-        this.typeArguments = invocation.arguments().size();
-        this.arguments = new ArrayList<>();
-        List<Expression> args = invocation.arguments();
-        for (Expression argument : args) {
-            this.arguments.add(argument.toString());
+    private void processSubExpression(PsiExpression expression) {
+        if (expression instanceof PsiMethodCallExpression) {
+            PsiMethodCallExpression methodCallExpression = (PsiMethodCallExpression) expression;
+            PsiExpression subExpression = methodCallExpression.getMethodExpression().getQualifierExpression();
+            if (subExpression != null) {
+                processSubExpression(subExpression);
+                PsiJavaToken dot = PsiUtils.findFirstForwardSiblingToken(subExpression, JavaTokenType.DOT);
+                String text = expression.getText().substring(dot.getTextOffset() + 1 - expression.getTextOffset());
+                subExpressions.add(Formatter.format(text));
+            } else {
+                subExpressions.add(Formatter.format(expression));
+            }
+        } else if (expression instanceof PsiNewExpression) {
+            subExpressions.add(Formatter.format(expression));
+        } else if (expression instanceof PsiSuperExpression) {
+            subExpressions.add(Formatter.format(expression));
+        } else if (expression instanceof PsiThisExpression) {
+            subExpressions.add(Formatter.format(expression));
         }
-        if (invocation.getExpression() != null) {
-            this.expression = invocation.getExpression().toString();
-            processExpression(invocation.getExpression(), this.subExpressions);
-        }
-    }
-
-    public OperationInvocation(CompilationUnit cu, String filePath, ConstructorInvocation invocation) {
-        this.locationInfo = new LocationInfo(cu, filePath, invocation, CodeElementType.CONSTRUCTOR_INVOCATION);
-        this.methodName = "this";
-        this.typeArguments = invocation.arguments().size();
-        this.arguments = new ArrayList<>();
-        List<Expression> args = invocation.arguments();
-        for (Expression argument : args) {
-            this.arguments.add(argument.toString());
-        }
-    }
-
-    private OperationInvocation() {
-
     }
 
     private static boolean differInThisDot(String subExpression1, String subExpression2) {
@@ -420,32 +422,6 @@ public class OperationInvocation extends AbstractCall {
 
     public int numberOfSubExpressions() {
         return subExpressions.size();
-    }
-
-    private void processExpression(Expression expression, List<String> subExpressions) {
-        if (expression instanceof MethodInvocation) {
-            MethodInvocation invocation = (MethodInvocation) expression;
-            if (invocation.getExpression() != null) {
-                String expressionAsString = invocation.getExpression().toString();
-                String invocationAsString = invocation.toString();
-                String suffix = invocationAsString.substring(expressionAsString.length() + 1);
-                subExpressions.add(0, suffix);
-                processExpression(invocation.getExpression(), subExpressions);
-            } else {
-                subExpressions.add(0, invocation.toString());
-            }
-        } else if (expression instanceof ClassInstanceCreation) {
-            ClassInstanceCreation creation = (ClassInstanceCreation) expression;
-            if (creation.getExpression() != null) {
-                String expressionAsString = creation.getExpression().toString();
-                String invocationAsString = creation.toString();
-                String suffix = invocationAsString.substring(expressionAsString.length() + 1);
-                subExpressions.add(0, suffix);
-                processExpression(creation.getExpression(), subExpressions);
-            } else {
-                subExpressions.add(0, creation.toString());
-            }
-        }
     }
 
     public Set<String> callChainIntersection(OperationInvocation other) {

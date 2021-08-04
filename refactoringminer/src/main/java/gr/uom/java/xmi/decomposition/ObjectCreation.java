@@ -1,15 +1,17 @@
 package gr.uom.java.xmi.decomposition;
 
+import com.intellij.psi.PsiAnonymousClass;
+import com.intellij.psi.PsiExpression;
+import com.intellij.psi.PsiExpressionList;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiNewExpression;
+import gr.uom.java.xmi.Formatter;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
+import gr.uom.java.xmi.TypeUtils;
 import gr.uom.java.xmi.UMLType;
 import gr.uom.java.xmi.diff.StringDistance;
-import org.eclipse.jdt.core.dom.ArrayCreation;
-import org.eclipse.jdt.core.dom.ClassInstanceCreation;
-import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.Expression;
 import java.util.ArrayList;
-import java.util.List;
 
 public class ObjectCreation extends AbstractCall {
     private UMLType type;
@@ -17,41 +19,36 @@ public class ObjectCreation extends AbstractCall {
     private boolean isArray = false;
     private volatile int hashCode = 0;
 
-    public ObjectCreation(CompilationUnit cu, String filePath, ClassInstanceCreation creation) {
-        this.locationInfo = new LocationInfo(cu, filePath, creation, CodeElementType.CLASS_INSTANCE_CREATION);
-        this.type = UMLType.extractTypeObject(cu, filePath, creation.getType(), 0);
-        this.typeArguments = creation.arguments().size();
-        this.arguments = new ArrayList<>();
-        List<Expression> args = creation.arguments();
-        for (Expression argument : args) {
-            this.arguments.add(argument.toString());
-        }
-        if (creation.getExpression() != null) {
-            this.expression = creation.getExpression().toString();
-        }
-        if (creation.getAnonymousClassDeclaration() != null) {
-            this.anonymousClassDeclaration = creation.getAnonymousClassDeclaration().toString();
-        }
-    }
-
-    public ObjectCreation(CompilationUnit cu, String filePath, ArrayCreation creation) {
-        this.locationInfo = new LocationInfo(cu, filePath, creation, CodeElementType.ARRAY_CREATION);
-        this.isArray = true;
-        this.type = UMLType.extractTypeObject(cu, filePath, creation.getType(), 0);
-        this.typeArguments = creation.dimensions().size();
-        this.arguments = new ArrayList<>();
-        List<Expression> args = creation.dimensions();
-        for (Expression argument : args) {
-            this.arguments.add(argument.toString());
-        }
-        if (creation.getInitializer() != null) {
-            this.anonymousClassDeclaration = creation.getInitializer().toString();
+    public ObjectCreation(PsiFile file, String filePath, PsiNewExpression creation) {
+        this.type = TypeUtils.extractType(file, filePath, creation);
+        if (!creation.isArrayCreation()) {
+            this.locationInfo = new LocationInfo(file, filePath, creation, CodeElementType.CLASS_INSTANCE_CREATION);
+            this.arguments = new ArrayList<>();
+            PsiExpressionList argList = creation.getArgumentList();
+            if (argList != null) {
+                PsiExpression[] args = argList.getExpressions();
+                for (PsiExpression argument : args) {
+                    this.arguments.add(Formatter.format(argument));
+                }
+            }
+            this.typeArguments = this.arguments.size();
+            PsiAnonymousClass anonymous = creation.getAnonymousClass();
+            if (anonymous != null) {
+                anonymousClassDeclaration = Formatter.format(anonymous);
+            }
+        } else {
+            this.locationInfo = new LocationInfo(file, filePath, creation, CodeElementType.ARRAY_CREATION);
+            this.isArray = true;
+            this.arguments = new ArrayList<>();
+            PsiExpression[] args = creation.getArrayDimensions();
+            for (PsiExpression argument : args) {
+                this.arguments.add(Formatter.format(argument));
+            }
+            this.typeArguments = this.arguments.size();
         }
     }
 
-    private ObjectCreation() {
-
-    }
+    private ObjectCreation() {}
 
     public String getName() {
         return getType().toString();
@@ -136,8 +133,6 @@ public class ObjectCreation extends AbstractCall {
     }
 
     public String actualString() {
-        String sb = "new " +
-            super.actualString();
-        return sb;
+        return "new " + super.actualString();
     }
 }

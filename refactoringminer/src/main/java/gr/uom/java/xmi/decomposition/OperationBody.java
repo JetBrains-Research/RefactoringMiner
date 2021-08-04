@@ -1,13 +1,17 @@
 package gr.uom.java.xmi.decomposition;
 
+import com.intellij.psi.*;
+import gr.uom.java.xmi.Formatter;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
-import org.eclipse.jdt.core.dom.*;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import static gr.uom.java.xmi.decomposition.PsiUtils.isSuperConstructorInvocation;
+import static gr.uom.java.xmi.decomposition.PsiUtils.isThisConstructorInvocation;
 
 public class OperationBody {
 
@@ -16,12 +20,12 @@ public class OperationBody {
     private boolean containsAssertion;
     private Set<VariableDeclaration> activeVariableDeclarations;
 
-    public OperationBody(CompilationUnit cu, String filePath, Block methodBody) {
-        this.compositeStatement = new CompositeStatementObject(cu, filePath, methodBody, 0, CodeElementType.BLOCK);
+    public OperationBody(PsiFile file, String filePath, PsiCodeBlock codeBlock) {
+        this.compositeStatement = new CompositeStatementObject(file, filePath, codeBlock, 0, CodeElementType.BLOCK);
         this.activeVariableDeclarations = new HashSet<>();
-        List<Statement> statements = methodBody.statements();
-        for (Statement statement : statements) {
-            processStatement(cu, filePath, compositeStatement, statement);
+        PsiStatement[] statements = codeBlock.getStatements();
+        for (PsiStatement statement : statements) {
+            processStatement(file, filePath, compositeStatement, statement);
         }
         for (OperationInvocation invocation : getAllOperationInvocations()) {
             if (invocation.getName().startsWith("assert")) {
@@ -77,220 +81,230 @@ public class OperationBody {
         return compositeStatement.getVariableDeclaration(variableName);
     }
 
-    private void processStatement(CompilationUnit cu, String filePath, CompositeStatementObject parent, Statement statement) {
-        if (statement instanceof Block) {
-            Block block = (Block) statement;
-            List<Statement> blockStatements = block.statements();
-            CompositeStatementObject child = new CompositeStatementObject(cu, filePath, block, parent.getDepth() + 1, CodeElementType.BLOCK);
-            parent.addStatement(child);
-            addStatementInVariableScopes(child);
-            for (Statement blockStatement : blockStatements) {
-                processStatement(cu, filePath, child, blockStatement);
+    private void processStatement(PsiFile file, String filePath, CompositeStatementObject parent, PsiCodeBlock codeBlock) {
+        CompositeStatementObject blockChild = new CompositeStatementObject(file, filePath, codeBlock, parent.getDepth() + 1, CodeElementType.BLOCK);
+        parent.addStatement(blockChild);
+        addStatementInVariableScopes(blockChild);
+        PsiStatement[] blockStatements = codeBlock.getStatements();
+        for (PsiStatement blockStatement : blockStatements) {
+            processStatement(file, filePath, blockChild, blockStatement);
+        }
+    }
+
+    private CodeElementType getCodeElementType(PsiExpression expression) {
+        if (expression instanceof PsiMethodCallExpression) {
+            PsiMethodCallExpression callExpression = (PsiMethodCallExpression) expression;
+            if (isThisConstructorInvocation(callExpression)) {
+                return CodeElementType.CONSTRUCTOR_INVOCATION;
+            } else if (isSuperConstructorInvocation(callExpression)) {
+                return CodeElementType.SUPER_CONSTRUCTOR_INVOCATION;
             }
-        } else if (statement instanceof IfStatement) {
-            IfStatement ifStatement = (IfStatement) statement;
-            CompositeStatementObject child = new CompositeStatementObject(cu, filePath, ifStatement, parent.getDepth() + 1, CodeElementType.IF_STATEMENT);
+        }
+        return CodeElementType.EXPRESSION_STATEMENT;
+    }
+
+    private void processStatement(PsiFile file, String filePath, CompositeStatementObject parent, PsiExpression expression) {
+        StatementObject child = new StatementObject(file, filePath, (PsiExpressionStatement) expression.getParent(), parent.getDepth() + 1, getCodeElementType(expression));
+        parent.addStatement(child);
+        addStatementInVariableScopes(child);
+    }
+
+    private void processStatement(PsiFile file, String filePath, CompositeStatementObject parent, PsiStatement statement) {
+        if (statement instanceof PsiBlockStatement) {
+            PsiCodeBlock codeBlock = ((PsiBlockStatement) statement).getCodeBlock();
+            processStatement(file, filePath, parent, codeBlock);
+        } else if (statement instanceof PsiIfStatement) {
+            PsiIfStatement ifStatement = (PsiIfStatement) statement;
+            CompositeStatementObject child = new CompositeStatementObject(file, filePath, ifStatement, parent.getDepth() + 1, CodeElementType.IF_STATEMENT);
             parent.addStatement(child);
-            AbstractExpression abstractExpression = new AbstractExpression(cu, filePath, ifStatement.getExpression(), CodeElementType.IF_STATEMENT_CONDITION);
+            AbstractExpression abstractExpression = new AbstractExpression(file, filePath, ifStatement.getCondition(), CodeElementType.IF_STATEMENT_CONDITION);
             child.addExpression(abstractExpression);
             addStatementInVariableScopes(child);
-            processStatement(cu, filePath, child, ifStatement.getThenStatement());
-            if (ifStatement.getElseStatement() != null) {
-                processStatement(cu, filePath, child, ifStatement.getElseStatement());
+            processStatement(file, filePath, child, ifStatement.getThenBranch());
+            if (ifStatement.getElseBranch() != null) {
+                processStatement(file, filePath, child, ifStatement.getElseBranch());
             }
-        } else if (statement instanceof ForStatement) {
-            ForStatement forStatement = (ForStatement) statement;
-            CompositeStatementObject child = new CompositeStatementObject(cu, filePath, forStatement, parent.getDepth() + 1, CodeElementType.FOR_STATEMENT);
+        } else if (statement instanceof PsiForStatement) {
+            PsiForStatement forStatement = (PsiForStatement) statement;
+            CompositeStatementObject child = new CompositeStatementObject(file, filePath, forStatement, parent.getDepth() + 1, CodeElementType.FOR_STATEMENT);
             parent.addStatement(child);
-            List<Expression> initializers = forStatement.initializers();
-            for (Expression initializer : initializers) {
-                AbstractExpression abstractExpression = new AbstractExpression(cu, filePath, initializer, CodeElementType.FOR_STATEMENT_INITIALIZER);
-                child.addExpression(abstractExpression);
+
+            PsiStatement initializer = forStatement.getInitialization();
+            if (initializer != null && !(initializer instanceof PsiEmptyStatement)) {
+                child.addExpression(new AbstractExpression(file, filePath, initializer, CodeElementType.FOR_STATEMENT_INITIALIZER));
             }
-            Expression expression = forStatement.getExpression();
+
+            PsiExpression expression = forStatement.getCondition();
             if (expression != null) {
-                AbstractExpression abstractExpression = new AbstractExpression(cu, filePath, expression, CodeElementType.FOR_STATEMENT_CONDITION);
-                child.addExpression(abstractExpression);
+                child.addExpression(new AbstractExpression(file, filePath, expression, CodeElementType.FOR_STATEMENT_CONDITION));
             }
-            List<Expression> updaters = forStatement.updaters();
-            for (Expression updater : updaters) {
-                AbstractExpression abstractExpression = new AbstractExpression(cu, filePath, updater, CodeElementType.FOR_STATEMENT_UPDATER);
-                child.addExpression(abstractExpression);
+
+            PsiStatement updater = forStatement.getUpdate();
+            if (updater != null) {
+                child.addExpression(new AbstractExpression(file, filePath, updater, CodeElementType.FOR_STATEMENT_UPDATER));
             }
             addStatementInVariableScopes(child);
             List<VariableDeclaration> variableDeclarations = child.getVariableDeclarations();
             this.activeVariableDeclarations.addAll(variableDeclarations);
-            processStatement(cu, filePath, child, forStatement.getBody());
-            this.activeVariableDeclarations.removeAll(variableDeclarations);
-        } else if (statement instanceof EnhancedForStatement) {
-            EnhancedForStatement enhancedForStatement = (EnhancedForStatement) statement;
-            CompositeStatementObject child = new CompositeStatementObject(cu, filePath, enhancedForStatement, parent.getDepth() + 1, CodeElementType.ENHANCED_FOR_STATEMENT);
+            processStatement(file, filePath, child, forStatement.getBody());
+            variableDeclarations.forEach(this.activeVariableDeclarations::remove);
+        } else if (statement instanceof PsiForeachStatement) {
+            PsiForeachStatement foreachStatement = (PsiForeachStatement) statement;
+            CompositeStatementObject child = new CompositeStatementObject(file, filePath, foreachStatement, parent.getDepth() + 1, CodeElementType.ENHANCED_FOR_STATEMENT);
             parent.addStatement(child);
-            SingleVariableDeclaration variableDeclaration = enhancedForStatement.getParameter();
-            VariableDeclaration vd = new VariableDeclaration(cu, filePath, variableDeclaration);
+            PsiParameter variableDeclaration = foreachStatement.getIterationParameter();
+            VariableDeclaration vd = new VariableDeclaration(file, filePath, variableDeclaration);
             child.addVariableDeclaration(vd);
-            AbstractExpression variableDeclarationName = new AbstractExpression(cu, filePath, variableDeclaration.getName(), CodeElementType.ENHANCED_FOR_STATEMENT_PARAMETER_NAME);
+            AbstractExpression variableDeclarationName = new AbstractExpression(file, filePath, variableDeclaration.getNameIdentifier(), CodeElementType.ENHANCED_FOR_STATEMENT_PARAMETER_NAME);
             child.addExpression(variableDeclarationName);
-            if (variableDeclaration.getInitializer() != null) {
-                AbstractExpression variableDeclarationInitializer = new AbstractExpression(cu, filePath, variableDeclaration.getInitializer(), CodeElementType.VARIABLE_DECLARATION_INITIALIZER);
-                child.addExpression(variableDeclarationInitializer);
-            }
-            AbstractExpression abstractExpression = new AbstractExpression(cu, filePath, enhancedForStatement.getExpression(), CodeElementType.ENHANCED_FOR_STATEMENT_EXPRESSION);
+            AbstractExpression abstractExpression = new AbstractExpression(file, filePath, foreachStatement.getIteratedValue(), CodeElementType.ENHANCED_FOR_STATEMENT_EXPRESSION);
             child.addExpression(abstractExpression);
             addStatementInVariableScopes(child);
             List<VariableDeclaration> variableDeclarations = child.getVariableDeclarations();
             this.activeVariableDeclarations.addAll(variableDeclarations);
-            processStatement(cu, filePath, child, enhancedForStatement.getBody());
-            this.activeVariableDeclarations.removeAll(variableDeclarations);
-        } else if (statement instanceof WhileStatement) {
-            WhileStatement whileStatement = (WhileStatement) statement;
-            CompositeStatementObject child = new CompositeStatementObject(cu, filePath, whileStatement, parent.getDepth() + 1, CodeElementType.WHILE_STATEMENT);
+            processStatement(file, filePath, child, foreachStatement.getBody());
+            variableDeclarations.forEach(this.activeVariableDeclarations::remove);
+        } else if (statement instanceof PsiWhileStatement) {
+            PsiWhileStatement whileStatement = (PsiWhileStatement) statement;
+            CompositeStatementObject child = new CompositeStatementObject(file, filePath, whileStatement, parent.getDepth() + 1, CodeElementType.WHILE_STATEMENT);
             parent.addStatement(child);
-            AbstractExpression abstractExpression = new AbstractExpression(cu, filePath, whileStatement.getExpression(), CodeElementType.WHILE_STATEMENT_CONDITION);
+            AbstractExpression abstractExpression = new AbstractExpression(file, filePath, whileStatement.getCondition(), CodeElementType.WHILE_STATEMENT_CONDITION);
             child.addExpression(abstractExpression);
             addStatementInVariableScopes(child);
-            processStatement(cu, filePath, child, whileStatement.getBody());
-        } else if (statement instanceof DoStatement) {
-            DoStatement doStatement = (DoStatement) statement;
-            CompositeStatementObject child = new CompositeStatementObject(cu, filePath, doStatement, parent.getDepth() + 1, CodeElementType.DO_STATEMENT);
+            processStatement(file, filePath, child, whileStatement.getBody());
+        } else if (statement instanceof PsiDoWhileStatement) {
+            PsiDoWhileStatement doStatement = (PsiDoWhileStatement) statement;
+            CompositeStatementObject child = new CompositeStatementObject(file, filePath, doStatement, parent.getDepth() + 1, CodeElementType.DO_STATEMENT);
             parent.addStatement(child);
-            AbstractExpression abstractExpression = new AbstractExpression(cu, filePath, doStatement.getExpression(), CodeElementType.DO_STATEMENT_CONDITION);
+            AbstractExpression abstractExpression = new AbstractExpression(file, filePath, doStatement.getCondition(), CodeElementType.DO_STATEMENT_CONDITION);
             child.addExpression(abstractExpression);
             addStatementInVariableScopes(child);
-            processStatement(cu, filePath, child, doStatement.getBody());
-        } else if (statement instanceof ExpressionStatement) {
-            ExpressionStatement expressionStatement = (ExpressionStatement) statement;
-            StatementObject child = new StatementObject(cu, filePath, expressionStatement, parent.getDepth() + 1, CodeElementType.EXPRESSION_STATEMENT);
+            processStatement(file, filePath, child, doStatement.getBody());
+        } else if (statement instanceof PsiSwitchStatement) {
+            PsiSwitchStatement switchStatement = (PsiSwitchStatement) statement;
+            CompositeStatementObject child = new CompositeStatementObject(file, filePath, switchStatement, parent.getDepth() + 1, CodeElementType.SWITCH_STATEMENT);
             parent.addStatement(child);
-            addStatementInVariableScopes(child);
-        } else if (statement instanceof SwitchStatement) {
-            SwitchStatement switchStatement = (SwitchStatement) statement;
-            CompositeStatementObject child = new CompositeStatementObject(cu, filePath, switchStatement, parent.getDepth() + 1, CodeElementType.SWITCH_STATEMENT);
-            parent.addStatement(child);
-            AbstractExpression abstractExpression = new AbstractExpression(cu, filePath, switchStatement.getExpression(), CodeElementType.SWITCH_STATEMENT_CONDITION);
+            AbstractExpression abstractExpression = new AbstractExpression(file, filePath, switchStatement.getExpression(), CodeElementType.SWITCH_STATEMENT_CONDITION);
             child.addExpression(abstractExpression);
             addStatementInVariableScopes(child);
-            List<Statement> switchStatements = switchStatement.statements();
-            for (Statement switchStatement2 : switchStatements)
-                processStatement(cu, filePath, child, switchStatement2);
-        } else if (statement instanceof SwitchCase) {
-            SwitchCase switchCase = (SwitchCase) statement;
-            StatementObject child = new StatementObject(cu, filePath, switchCase, parent.getDepth() + 1, CodeElementType.SWITCH_CASE);
+            PsiStatement[] switchStatements = switchStatement.getBody().getStatements();
+            for (PsiStatement switchStatement2 : switchStatements)
+                processStatement(file, filePath, child, switchStatement2);
+        } else if (statement instanceof PsiSwitchLabelStatement) {
+            PsiSwitchLabelStatement switchCase = (PsiSwitchLabelStatement) statement;
+            StatementObject child = new StatementObject(file, filePath, switchCase, parent.getDepth() + 1, CodeElementType.SWITCH_CASE);
             parent.addStatement(child);
             addStatementInVariableScopes(child);
-        } else if (statement instanceof AssertStatement) {
-            AssertStatement assertStatement = (AssertStatement) statement;
-            StatementObject child = new StatementObject(cu, filePath, assertStatement, parent.getDepth() + 1, CodeElementType.ASSERT_STATEMENT);
+        } else if (statement instanceof PsiAssertStatement) {
+            PsiAssertStatement assertStatement = (PsiAssertStatement) statement;
+            StatementObject child = new StatementObject(file, filePath, assertStatement, parent.getDepth() + 1, CodeElementType.ASSERT_STATEMENT);
             parent.addStatement(child);
             addStatementInVariableScopes(child);
-        } else if (statement instanceof LabeledStatement) {
-            LabeledStatement labeledStatement = (LabeledStatement) statement;
-            SimpleName label = labeledStatement.getLabel();
-            CompositeStatementObject child = new CompositeStatementObject(cu, filePath, labeledStatement, parent.getDepth() + 1, CodeElementType.LABELED_STATEMENT.setName(label.getIdentifier()));
+        } else if (statement instanceof PsiLabeledStatement) {
+            PsiLabeledStatement labeledStatement = (PsiLabeledStatement) statement;
+            CodeElementType elementType = CodeElementType.LABELED_STATEMENT.setName(Formatter.format(labeledStatement.getLabelIdentifier()));
+            CompositeStatementObject child = new CompositeStatementObject(file, filePath, labeledStatement, parent.getDepth() + 1, elementType);
             parent.addStatement(child);
             addStatementInVariableScopes(child);
-            processStatement(cu, filePath, child, labeledStatement.getBody());
-        } else if (statement instanceof ReturnStatement) {
-            ReturnStatement returnStatement = (ReturnStatement) statement;
-            StatementObject child = new StatementObject(cu, filePath, returnStatement, parent.getDepth() + 1, CodeElementType.RETURN_STATEMENT);
+            processStatement(file, filePath, child, labeledStatement.getStatement());
+        } else if (statement instanceof PsiReturnStatement) {
+            PsiReturnStatement returnStatement = (PsiReturnStatement) statement;
+            StatementObject child = new StatementObject(file, filePath, returnStatement, parent.getDepth() + 1, CodeElementType.RETURN_STATEMENT);
             parent.addStatement(child);
             addStatementInVariableScopes(child);
-        } else if (statement instanceof SynchronizedStatement) {
-            SynchronizedStatement synchronizedStatement = (SynchronizedStatement) statement;
-            CompositeStatementObject child = new CompositeStatementObject(cu, filePath, synchronizedStatement, parent.getDepth() + 1, CodeElementType.SYNCHRONIZED_STATEMENT);
+        } else if (statement instanceof PsiSynchronizedStatement) {
+            PsiSynchronizedStatement synchronizedStatement = (PsiSynchronizedStatement) statement;
+            CompositeStatementObject child = new CompositeStatementObject(file, filePath, synchronizedStatement, parent.getDepth() + 1, CodeElementType.SYNCHRONIZED_STATEMENT);
             parent.addStatement(child);
-            AbstractExpression abstractExpression = new AbstractExpression(cu, filePath, synchronizedStatement.getExpression(), CodeElementType.SYNCHRONIZED_STATEMENT_EXPRESSION);
+            AbstractExpression abstractExpression = new AbstractExpression(file, filePath, synchronizedStatement.getLockExpression(), CodeElementType.SYNCHRONIZED_STATEMENT_EXPRESSION);
             child.addExpression(abstractExpression);
             addStatementInVariableScopes(child);
-            processStatement(cu, filePath, child, synchronizedStatement.getBody());
-        } else if (statement instanceof ThrowStatement) {
-            ThrowStatement throwStatement = (ThrowStatement) statement;
-            StatementObject child = new StatementObject(cu, filePath, throwStatement, parent.getDepth() + 1, CodeElementType.THROW_STATEMENT);
+            processStatement(file, filePath, child, synchronizedStatement.getBody());
+        } else if (statement instanceof PsiThrowStatement) {
+            PsiThrowStatement throwStatement = (PsiThrowStatement) statement;
+            StatementObject child = new StatementObject(file, filePath, throwStatement, parent.getDepth() + 1, CodeElementType.THROW_STATEMENT);
             parent.addStatement(child);
             addStatementInVariableScopes(child);
-        } else if (statement instanceof TryStatement) {
-            TryStatement tryStatement = (TryStatement) statement;
-            TryStatementObject child = new TryStatementObject(cu, filePath, tryStatement, parent.getDepth() + 1);
+        } else if (statement instanceof PsiTryStatement) {
+            PsiTryStatement tryStatement = (PsiTryStatement) statement;
+            TryStatementObject child = new TryStatementObject(file, filePath, tryStatement, parent.getDepth() + 1);
             parent.addStatement(child);
-            List<Expression> resources = tryStatement.resources();
-            for (Expression resource : resources) {
-                AbstractExpression expression = new AbstractExpression(cu, filePath, resource, CodeElementType.TRY_STATEMENT_RESOURCE);
-                child.addExpression(expression);
+            PsiResourceList resources = tryStatement.getResourceList();
+            if (resources != null) {
+                for (PsiResourceListElement resource : resources) {
+                    AbstractExpression expression = new AbstractExpression(file, filePath, resource, CodeElementType.TRY_STATEMENT_RESOURCE);
+                    child.addExpression(expression);
+                }
             }
             addStatementInVariableScopes(child);
             List<VariableDeclaration> variableDeclarations = child.getVariableDeclarations();
             this.activeVariableDeclarations.addAll(variableDeclarations);
-            List<Statement> tryStatements = tryStatement.getBody().statements();
-            for (Statement blockStatement : tryStatements) {
-                processStatement(cu, filePath, child, blockStatement);
+            PsiStatement[] tryStatements = tryStatement.getTryBlock().getStatements();
+            for (PsiStatement blockStatement : tryStatements) {
+                processStatement(file, filePath, child, blockStatement);
             }
-            this.activeVariableDeclarations.removeAll(variableDeclarations);
-            List<CatchClause> catchClauses = tryStatement.catchClauses();
-            for (CatchClause catchClause : catchClauses) {
-                Block catchClauseBody = catchClause.getBody();
-                CompositeStatementObject catchClauseStatementObject = new CompositeStatementObject(cu, filePath, catchClauseBody, parent.getDepth() + 1, CodeElementType.CATCH_CLAUSE);
+            variableDeclarations.forEach(this.activeVariableDeclarations::remove);
+            PsiCatchSection[] catchClauses = tryStatement.getCatchSections();
+            for (PsiCatchSection catchClause : catchClauses) {
+                PsiParameter variableDeclaration = catchClause.getParameter();
+                CompositeStatementObject catchClauseStatementObject = new CompositeStatementObject(file, filePath, catchClause.getCatchBlock(), parent.getDepth() + 1, CodeElementType.CATCH_CLAUSE);
                 child.addCatchClause(catchClauseStatementObject);
                 parent.addStatement(catchClauseStatementObject);
-                SingleVariableDeclaration variableDeclaration = catchClause.getException();
-                VariableDeclaration vd = new VariableDeclaration(cu, filePath, variableDeclaration);
+                VariableDeclaration vd = new VariableDeclaration(file, filePath, variableDeclaration);
                 catchClauseStatementObject.addVariableDeclaration(vd);
-                AbstractExpression variableDeclarationName = new AbstractExpression(cu, filePath, variableDeclaration.getName(), CodeElementType.CATCH_CLAUSE_EXCEPTION_NAME);
+                AbstractExpression variableDeclarationName = new AbstractExpression(file, filePath, variableDeclaration.getNameIdentifier(), CodeElementType.CATCH_CLAUSE_EXCEPTION_NAME);
                 catchClauseStatementObject.addExpression(variableDeclarationName);
                 if (variableDeclaration.getInitializer() != null) {
-                    AbstractExpression variableDeclarationInitializer = new AbstractExpression(cu, filePath, variableDeclaration.getInitializer(), CodeElementType.VARIABLE_DECLARATION_INITIALIZER);
+                    AbstractExpression variableDeclarationInitializer = new AbstractExpression(file, filePath, variableDeclaration.getInitializer(), CodeElementType.VARIABLE_DECLARATION_INITIALIZER);
                     catchClauseStatementObject.addExpression(variableDeclarationInitializer);
                 }
                 addStatementInVariableScopes(catchClauseStatementObject);
                 List<VariableDeclaration> catchClauseVariableDeclarations = catchClauseStatementObject.getVariableDeclarations();
                 this.activeVariableDeclarations.addAll(catchClauseVariableDeclarations);
-                List<Statement> blockStatements = catchClauseBody.statements();
-                for (Statement blockStatement : blockStatements) {
-                    processStatement(cu, filePath, catchClauseStatementObject, blockStatement);
+                PsiStatement[] blockStatements = catchClause.getCatchBlock().getStatements();
+                for (PsiStatement blockStatement : blockStatements) {
+                    processStatement(file, filePath, catchClauseStatementObject, blockStatement);
                 }
-                this.activeVariableDeclarations.removeAll(catchClauseVariableDeclarations);
+                catchClauseVariableDeclarations.forEach(this.activeVariableDeclarations::remove);
             }
-            Block finallyBlock = tryStatement.getFinally();
+            PsiCodeBlock finallyBlock = tryStatement.getFinallyBlock();
             if (finallyBlock != null) {
-                CompositeStatementObject finallyClauseStatementObject = new CompositeStatementObject(cu, filePath, finallyBlock, parent.getDepth() + 1, CodeElementType.FINALLY_BLOCK);
+                CompositeStatementObject finallyClauseStatementObject = new CompositeStatementObject(file, filePath, finallyBlock, parent.getDepth() + 1, CodeElementType.FINALLY_BLOCK);
                 child.setFinallyClause(finallyClauseStatementObject);
                 parent.addStatement(finallyClauseStatementObject);
                 addStatementInVariableScopes(finallyClauseStatementObject);
-                List<Statement> blockStatements = finallyBlock.statements();
-                for (Statement blockStatement : blockStatements) {
-                    processStatement(cu, filePath, finallyClauseStatementObject, blockStatement);
+                PsiStatement[] blockStatements = finallyBlock.getStatements();
+                for (PsiStatement blockStatement : blockStatements) {
+                    processStatement(file, filePath, finallyClauseStatementObject, blockStatement);
                 }
             }
-        } else if (statement instanceof VariableDeclarationStatement) {
-            VariableDeclarationStatement variableDeclarationStatement = (VariableDeclarationStatement) statement;
-            StatementObject child = new StatementObject(cu, filePath, variableDeclarationStatement, parent.getDepth() + 1, CodeElementType.VARIABLE_DECLARATION_STATEMENT);
+        } else if (statement instanceof PsiDeclarationStatement) {
+            PsiDeclarationStatement declarationStatement = (PsiDeclarationStatement) statement;
+            // Local classes are not yet supported
+            if (declarationStatement.getDeclaredElements()[0] instanceof PsiVariable) {
+                StatementObject child = new StatementObject(file, filePath, declarationStatement, parent.getDepth() + 1, CodeElementType.VARIABLE_DECLARATION_STATEMENT);
+                parent.addStatement(child);
+                addStatementInVariableScopes(child);
+                this.activeVariableDeclarations.addAll(child.getVariableDeclarations());
+            }
+        } else if (statement instanceof PsiBreakStatement) {
+            PsiBreakStatement breakStatement = (PsiBreakStatement) statement;
+            StatementObject child = new StatementObject(file, filePath, breakStatement, parent.getDepth() + 1, CodeElementType.BREAK_STATEMENT);
             parent.addStatement(child);
             addStatementInVariableScopes(child);
-            this.activeVariableDeclarations.addAll(child.getVariableDeclarations());
-        } else if (statement instanceof ConstructorInvocation) {
-            ConstructorInvocation constructorInvocation = (ConstructorInvocation) statement;
-            StatementObject child = new StatementObject(cu, filePath, constructorInvocation, parent.getDepth() + 1, CodeElementType.CONSTRUCTOR_INVOCATION);
+        } else if (statement instanceof PsiContinueStatement) {
+            PsiContinueStatement continueStatement = (PsiContinueStatement) statement;
+            StatementObject child = new StatementObject(file, filePath, continueStatement, parent.getDepth() + 1, CodeElementType.CONTINUE_STATEMENT);
             parent.addStatement(child);
             addStatementInVariableScopes(child);
-        } else if (statement instanceof SuperConstructorInvocation) {
-            SuperConstructorInvocation superConstructorInvocation = (SuperConstructorInvocation) statement;
-            StatementObject child = new StatementObject(cu, filePath, superConstructorInvocation, parent.getDepth() + 1, CodeElementType.SUPER_CONSTRUCTOR_INVOCATION);
+        } else if (statement instanceof PsiEmptyStatement) {
+            PsiEmptyStatement emptyStatement = (PsiEmptyStatement) statement;
+            StatementObject child = new StatementObject(file, filePath, emptyStatement, parent.getDepth() + 1, CodeElementType.EMPTY_STATEMENT);
             parent.addStatement(child);
             addStatementInVariableScopes(child);
-        } else if (statement instanceof BreakStatement) {
-            BreakStatement breakStatement = (BreakStatement) statement;
-            StatementObject child = new StatementObject(cu, filePath, breakStatement, parent.getDepth() + 1, CodeElementType.BREAK_STATEMENT);
-            parent.addStatement(child);
-            addStatementInVariableScopes(child);
-        } else if (statement instanceof ContinueStatement) {
-            ContinueStatement continueStatement = (ContinueStatement) statement;
-            StatementObject child = new StatementObject(cu, filePath, continueStatement, parent.getDepth() + 1, CodeElementType.CONTINUE_STATEMENT);
-            parent.addStatement(child);
-            addStatementInVariableScopes(child);
-        } else if (statement instanceof EmptyStatement) {
-            EmptyStatement emptyStatement = (EmptyStatement) statement;
-            StatementObject child = new StatementObject(cu, filePath, emptyStatement, parent.getDepth() + 1, CodeElementType.EMPTY_STATEMENT);
-            parent.addStatement(child);
-            addStatementInVariableScopes(child);
+        } else if (statement instanceof PsiExpressionStatement) {
+            PsiExpressionStatement expressionStatement = (PsiExpressionStatement) statement;
+            processStatement(file, filePath, parent, expressionStatement.getExpression());
         }
     }
 

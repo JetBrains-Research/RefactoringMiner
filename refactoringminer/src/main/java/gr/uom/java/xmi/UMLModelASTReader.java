@@ -1,137 +1,116 @@
 package gr.uom.java.xmi;
 
-import gr.uom.java.xmi.LocationInfo.CodeElementType;
+import com.intellij.lang.java.JavaLanguage;
+import com.intellij.psi.*;
+import com.intellij.psi.javadoc.PsiDocComment;
+import com.intellij.psi.javadoc.PsiDocTag;
+import com.intellij.psi.util.PsiTreeUtil;
 import gr.uom.java.xmi.decomposition.OperationBody;
+import gr.uom.java.xmi.decomposition.PsiUtils;
 import gr.uom.java.xmi.decomposition.VariableDeclaration;
-import org.apache.commons.io.FileUtils;
-import org.eclipse.jdt.core.JavaCore;
-import org.eclipse.jdt.core.dom.*;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.TreeNode;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import org.apache.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class UMLModelASTReader {
-    private static final String FREE_MARKER_GENERATED = "generated using freemarker";
-    private static final String systemFileSeparator = Matcher.quoteReplacement(File.separator);
+    private static final Logger LOG = Logger.getLogger(UMLModelASTReader.class);
+
     private final UMLModel umlModel;
 
     public UMLModelASTReader(Map<String, String> javaFileContents, Set<String> repositoryDirectories) {
         this.umlModel = new UMLModel(repositoryDirectories);
-        processJavaFileContents(javaFileContents);
-    }
-
-    public UMLModelASTReader(File rootFolder) throws IOException {
-        List<String> javaFilePaths = getJavaFilePaths(rootFolder);
-        Map<String, String> javaFileContents = new LinkedHashMap<>();
-        Set<String> repositoryDirectories = new LinkedHashSet<>();
-        for (String path : javaFilePaths) {
-            String fullPath = rootFolder + File.separator + path.replaceAll("/", systemFileSeparator);
-            String contents = FileUtils.readFileToString(new File(fullPath));
-            javaFileContents.put(path, contents);
-            String directory = path;
-            while (directory.contains("/")) {
-                directory = directory.substring(0, directory.lastIndexOf("/"));
-                repositoryDirectories.add(directory);
-            }
-        }
-        this.umlModel = new UMLModel(repositoryDirectories);
-        processJavaFileContents(javaFileContents);
-    }
-
-    private static List<String> getJavaFilePaths(File folder) throws IOException {
-        Stream<Path> walk = Files.walk(Paths.get(folder.toURI()));
-        List<String> paths = walk.map(Path::toString)
-            .filter(f -> f.endsWith(".java"))
-            .map(x -> x.substring(folder.getPath().length() + 1).replaceAll(systemFileSeparator, "/"))
-            .collect(Collectors.toList());
-        walk.close();
-        return paths;
-    }
-
-    private void processJavaFileContents(Map<String, String> javaFileContents) {
-        ASTParser parser = ASTParser.newParser(AST.JLS15);
-        for (String filePath : javaFileContents.keySet()) {
-            Map<String, String> options = JavaCore.getOptions();
-            options.put(JavaCore.COMPILER_CODEGEN_TARGET_PLATFORM, JavaCore.VERSION_1_8);
-            options.put(JavaCore.COMPILER_SOURCE, JavaCore.VERSION_1_8);
-            options.put(JavaCore.COMPILER_COMPLIANCE, JavaCore.VERSION_1_8);
-            parser.setCompilerOptions(options);
-            parser.setResolveBindings(false);
-            parser.setKind(ASTParser.K_COMPILATION_UNIT);
-            parser.setStatementsRecovery(true);
-            String javaFileContent = javaFileContents.get(filePath);
-            parser.setSource(javaFileContent.toCharArray());
-            if (javaFileContent.contains(FREE_MARKER_GENERATED) &&
-                !javaFileContent.contains("private static final String FREE_MARKER_GENERATED = \"generated using freemarker\";")) {
-                continue;
-            }
-            try {
-                CompilationUnit compilationUnit = (CompilationUnit) parser.createAST(null);
-                processCompilationUnit(filePath, compilationUnit, javaFileContent);
-            } catch (Exception e) {
-                //e.printStackTrace();
-            }
-        }
+        processJavaFileContents(javaFileContents, PsiFactoryManager.getFactory());
     }
 
     public UMLModel getUmlModel() {
         return this.umlModel;
     }
 
-    protected void processCompilationUnit(String sourceFilePath, CompilationUnit compilationUnit, String javaFileContent) {
-        List<UMLComment> comments = extractInternalComments(compilationUnit, sourceFilePath, javaFileContent);
-        PackageDeclaration packageDeclaration = compilationUnit.getPackage();
-        String packageName;
-        if (packageDeclaration != null)
-            packageName = packageDeclaration.getName().getFullyQualifiedName();
-        else
-            packageName = "";
-
-        List<ImportDeclaration> imports = compilationUnit.imports();
-        List<String> importedTypes = new ArrayList<>();
-        for (ImportDeclaration importDeclaration : imports) {
-            importedTypes.add(importDeclaration.getName().getFullyQualifiedName());
-        }
-        List<AbstractTypeDeclaration> topLevelTypeDeclarations = compilationUnit.types();
-        for (AbstractTypeDeclaration abstractTypeDeclaration : topLevelTypeDeclarations) {
-            if (abstractTypeDeclaration instanceof TypeDeclaration) {
-                TypeDeclaration topLevelTypeDeclaration = (TypeDeclaration) abstractTypeDeclaration;
-                processTypeDeclaration(compilationUnit, topLevelTypeDeclaration, packageName, sourceFilePath, importedTypes, comments);
-            } else if (abstractTypeDeclaration instanceof EnumDeclaration) {
-                EnumDeclaration enumDeclaration = (EnumDeclaration) abstractTypeDeclaration;
-                processEnumDeclaration(compilationUnit, enumDeclaration, packageName, sourceFilePath, importedTypes, comments);
+    private void processJavaFileContents(Map<String, String> javaFileContents, PsiFileFactory factory) {
+        for (Map.Entry<String, String> file : javaFileContents.entrySet()) {
+            PsiFile psiFile = factory.createFileFromText(JavaLanguage.INSTANCE, file.getValue());
+            try {
+                processFile(file.getKey(), psiFile, file.getValue());
+            } catch (Exception e) {
+                LOG.error("Error on file: " + file.getKey(), e);
+            } catch (AssertionError e) {
+                LOG.error("Assert failed on file: " + file.getKey(), e);
             }
         }
     }
 
-    private List<UMLComment> extractInternalComments(CompilationUnit cu, String sourceFile, String javaFileContent) {
-        List<Comment> astComments = cu.getCommentList();
+    private void processFile(String sourceFilePath, PsiFile file, String javaFileContent) {
+        if (PsiTreeUtil.hasErrorElements(file)) {
+            throw new IllegalArgumentException("PsiFile contains errors");
+        }
+        List<UMLComment> comments = extractInternalComments(file, sourceFilePath, javaFileContent);
+        String packageName = getPackageName(file);
+        List<String> importedTypes = getImports(file);
+
+        PsiElement[] topLevelTypeDeclarations = file.getChildren();
+        for (PsiElement element : topLevelTypeDeclarations) {
+            if (element instanceof PsiClass) {
+                PsiClass topLevelClass = (PsiClass) element;
+                if (topLevelClass.isEnum()) {
+                    processEnumDeclaration(file, topLevelClass, packageName, sourceFilePath, importedTypes, comments);
+                } else {
+                    processTypeDeclaration(file, topLevelClass, packageName, sourceFilePath, importedTypes, comments);
+                }
+            }
+        }
+    }
+
+    @NotNull
+    private List<String> getImports(PsiFile file) {
+        PsiImportList imports = PsiUtils.findFirstForwardSiblingOfType(file.getFirstChild(), PsiImportList.class);
+        return Arrays.stream(imports.getAllImportStatements())
+            .map(imp -> imp.isOnDemand()
+                ? imp.getImportReference().getText() + ".*"
+                : imp.getImportReference().getText())
+            .collect(Collectors.toList());
+    }
+
+    @NotNull
+    private String getPackageName(@NotNull PsiFile file) {
+        PsiPackageStatement packageDeclaration = PsiTreeUtil.findChildOfType(file, PsiPackageStatement.class);
+        String packageName;
+        if (packageDeclaration != null) {
+            packageName = packageDeclaration.getPackageName();
+        } else {
+            packageName = "";
+        }
+        return packageName;
+    }
+
+    /**
+     * Parse all comments in file
+     */
+    @NotNull
+    private List<UMLComment> extractInternalComments(@NotNull PsiFile file,
+                                                     @NotNull String sourceFile,
+                                                     @NotNull String javaFileContent) {
+        Collection<PsiComment> astComments = PsiTreeUtil.findChildrenOfType(file, PsiComment.class);
         List<UMLComment> comments = new ArrayList<>();
-        for (Comment comment : astComments) {
+        for (PsiComment comment : astComments) {
             LocationInfo locationInfo = null;
-            if (comment.isLineComment()) {
-                locationInfo = generateLocationInfo(cu, sourceFile, comment, CodeElementType.LINE_COMMENT);
-            } else if (comment.isBlockComment()) {
-                locationInfo = generateLocationInfo(cu, sourceFile, comment, CodeElementType.BLOCK_COMMENT);
+            if (comment.getTokenType() == JavaTokenType.END_OF_LINE_COMMENT) {
+                locationInfo = new LocationInfo(file, sourceFile, comment, LocationInfo.CodeElementType.LINE_COMMENT);
+            } else if (comment.getTokenType() == JavaTokenType.C_STYLE_COMMENT) {
+                locationInfo = new LocationInfo(file, sourceFile, comment, LocationInfo.CodeElementType.BLOCK_COMMENT);
             }
             if (locationInfo != null) {
-                int start = comment.getStartPosition();
-                int end = start + comment.getLength();
+                int start = comment.getTextRange().getStartOffset();
+                int end = comment.getTextRange().getEndOffset();
                 String text = javaFileContent.substring(start, end);
                 UMLComment umlComment = new UMLComment(text, locationInfo);
                 comments.add(umlComment);
@@ -147,7 +126,7 @@ public class UMLModelASTReader {
             LocationInfo commentLocationInfo = comment.getLocationInfo();
             if (codeElementLocationInfo.subsumes(commentLocationInfo) ||
                 codeElementLocationInfo.sameLine(commentLocationInfo) ||
-                (codeElementLocationInfo.nextLine(commentLocationInfo) && !codeElementLocationInfo.getCodeElementType().equals(CodeElementType.ANONYMOUS_CLASS_DECLARATION)) ||
+                (codeElementLocationInfo.nextLine(commentLocationInfo) && !codeElementLocationInfo.getCodeElementType().equals(LocationInfo.CodeElementType.ANONYMOUS_CLASS_DECLARATION)) ||
                 (codeElementComments.size() > 0 && codeElementComments.get(0).getLocationInfo().nextLine(commentLocationInfo))) {
                 codeElementComments.add(0, comment);
             }
@@ -155,456 +134,26 @@ public class UMLModelASTReader {
         compilationUnitComments.removeAll(codeElementComments);
     }
 
-    private void processAnonymousClassDeclarations(CompilationUnit cu, AbstractTypeDeclaration typeDeclaration,
-                                                   String packageName, String sourceFile, String className, UMLClass umlClass) {
-        AnonymousClassDeclarationVisitor visitor = new AnonymousClassDeclarationVisitor();
-        typeDeclaration.accept(visitor);
-        Set<AnonymousClassDeclaration> anonymousClassDeclarations = visitor.getAnonymousClassDeclarations();
-
-        DefaultMutableTreeNode root = new DefaultMutableTreeNode();
-        for (AnonymousClassDeclaration anonymous : anonymousClassDeclarations) {
-            insertNode(anonymous, root);
-        }
-
-        List<UMLAnonymousClass> createdAnonymousClasses = new ArrayList<>();
-        Enumeration<TreeNode> enumeration = root.postorderEnumeration();
-        while (enumeration.hasMoreElements()) {
-            DefaultMutableTreeNode node = (DefaultMutableTreeNode) enumeration.nextElement();
-            if (node.getUserObject() != null) {
-                AnonymousClassDeclaration anonymous = (AnonymousClassDeclaration) node.getUserObject();
-                boolean operationFound = false;
-                UMLOperation matchingOperation = null;
-                UMLAttribute matchingAttribute = null;
-                List<UMLComment> comments = null;
-                for (UMLOperation operation : umlClass.getOperations()) {
-                    if (operation.getLocationInfo().getStartOffset() <= anonymous.getStartPosition() &&
-                        operation.getLocationInfo().getEndOffset() >= anonymous.getStartPosition() + anonymous.getLength()) {
-                        comments = operation.getComments();
-                        operationFound = true;
-                        matchingOperation = operation;
-                        break;
-                    }
-                }
-                if (!operationFound) {
-                    for (UMLAttribute attribute : umlClass.getAttributes()) {
-                        if (attribute.getLocationInfo().getStartOffset() <= anonymous.getStartPosition() &&
-                            attribute.getLocationInfo().getEndOffset() >= anonymous.getStartPosition() + anonymous.getLength()) {
-                            comments = attribute.getComments();
-                            matchingAttribute = attribute;
-                            break;
-                        }
-                    }
-                }
-                if (matchingOperation != null || matchingAttribute != null) {
-                    String anonymousBinaryName = getAnonymousBinaryName(node);
-                    String anonymousCodePath = getAnonymousCodePath(node);
-                    UMLAnonymousClass anonymousClass = processAnonymousClassDeclaration(cu, anonymous, packageName + "." + className, anonymousBinaryName, anonymousCodePath, sourceFile, comments);
-                    umlClass.addAnonymousClass(anonymousClass);
-                    if (matchingOperation != null) {
-                        matchingOperation.addAnonymousClass(anonymousClass);
-                    }
-                    if (matchingAttribute != null) {
-                        matchingAttribute.addAnonymousClass(anonymousClass);
-                    }
-                    for (UMLOperation operation : anonymousClass.getOperations()) {
-                        for (UMLAnonymousClass createdAnonymousClass : createdAnonymousClasses) {
-                            if (operation.getLocationInfo().subsumes(createdAnonymousClass.getLocationInfo())) {
-                                operation.addAnonymousClass(createdAnonymousClass);
-                            }
-                        }
-                    }
-                    createdAnonymousClasses.add(anonymousClass);
-                }
-            }
-        }
-    }
-
-    private void processEnumDeclaration(CompilationUnit cu, EnumDeclaration enumDeclaration, String packageName, String sourceFile,
-                                        List<String> importedTypes, List<UMLComment> comments) {
-        UMLJavadoc javadoc = generateJavadoc(cu, enumDeclaration, sourceFile);
-        if (javadoc != null && javadoc.containsIgnoreCase(FREE_MARKER_GENERATED)) {
-            return;
-        }
-        String className = enumDeclaration.getName().getFullyQualifiedName();
-        LocationInfo locationInfo = generateLocationInfo(cu, sourceFile, enumDeclaration, CodeElementType.TYPE_DECLARATION);
-        UMLClass umlClass = new UMLClass(packageName, className, locationInfo, enumDeclaration.isPackageMemberTypeDeclaration(), importedTypes);
-        umlClass.setJavadoc(javadoc);
-
-        umlClass.setEnum(true);
-
-        List<Type> superInterfaceTypes = enumDeclaration.superInterfaceTypes();
-        for (Type interfaceType : superInterfaceTypes) {
-            UMLType umlType = UMLType.extractTypeObject(cu, sourceFile, interfaceType, 0);
-            UMLRealization umlRealization = new UMLRealization(umlClass, umlType.getClassType());
-            umlClass.addImplementedInterface(umlType);
-            getUmlModel().addRealization(umlRealization);
-        }
-
-        List<EnumConstantDeclaration> enumConstantDeclarations = enumDeclaration.enumConstants();
-        for (EnumConstantDeclaration enumConstantDeclaration : enumConstantDeclarations) {
-            processEnumConstantDeclaration(cu, enumConstantDeclaration, sourceFile, umlClass, comments);
-        }
-
-        processModifiers(cu, sourceFile, enumDeclaration, umlClass);
-
-        processBodyDeclarations(cu, enumDeclaration, packageName, sourceFile, importedTypes, umlClass, comments);
-
-        processAnonymousClassDeclarations(cu, enumDeclaration, packageName, sourceFile, className, umlClass);
-
-        this.getUmlModel().addClass(umlClass);
-        distributeComments(comments, locationInfo, umlClass.getComments());
-    }
-
-    private void processBodyDeclarations(CompilationUnit cu, AbstractTypeDeclaration abstractTypeDeclaration, String packageName,
-                                         String sourceFile, List<String> importedTypes, UMLClass umlClass, List<UMLComment> comments) {
-        List<BodyDeclaration> bodyDeclarations = abstractTypeDeclaration.bodyDeclarations();
-        for (BodyDeclaration bodyDeclaration : bodyDeclarations) {
-            if (bodyDeclaration instanceof FieldDeclaration) {
-                FieldDeclaration fieldDeclaration = (FieldDeclaration) bodyDeclaration;
-                List<UMLAttribute> attributes = processFieldDeclaration(cu, fieldDeclaration, umlClass.isInterface(), sourceFile, comments);
-                for (UMLAttribute attribute : attributes) {
-                    attribute.setClassName(umlClass.getName());
-                    umlClass.addAttribute(attribute);
-                }
-            } else if (bodyDeclaration instanceof MethodDeclaration) {
-                MethodDeclaration methodDeclaration = (MethodDeclaration) bodyDeclaration;
-                UMLOperation operation = processMethodDeclaration(cu, methodDeclaration, packageName, umlClass.isInterface(), sourceFile, comments);
-                operation.setClassName(umlClass.getName());
-                umlClass.addOperation(operation);
-            } else if (bodyDeclaration instanceof TypeDeclaration) {
-                TypeDeclaration typeDeclaration = (TypeDeclaration) bodyDeclaration;
-                processTypeDeclaration(cu, typeDeclaration, umlClass.getName(), sourceFile, importedTypes, comments);
-            } else if (bodyDeclaration instanceof EnumDeclaration) {
-                EnumDeclaration enumDeclaration = (EnumDeclaration) bodyDeclaration;
-                processEnumDeclaration(cu, enumDeclaration, umlClass.getName(), sourceFile, importedTypes, comments);
-            }
-        }
-    }
-
-    private void processTypeDeclaration(CompilationUnit cu, TypeDeclaration typeDeclaration, String packageName, String sourceFile,
-                                        List<String> importedTypes, List<UMLComment> comments) {
-        UMLJavadoc javadoc = generateJavadoc(cu, typeDeclaration, sourceFile);
-        if (javadoc != null && javadoc.containsIgnoreCase(FREE_MARKER_GENERATED)) {
-            return;
-        }
-        String className = typeDeclaration.getName().getFullyQualifiedName();
-        LocationInfo locationInfo = generateLocationInfo(cu, sourceFile, typeDeclaration, CodeElementType.TYPE_DECLARATION);
-        UMLClass umlClass = new UMLClass(packageName, className, locationInfo, typeDeclaration.isPackageMemberTypeDeclaration(), importedTypes);
-        umlClass.setJavadoc(javadoc);
-
-        if (typeDeclaration.isInterface()) {
-            umlClass.setInterface(true);
-        }
-
-        processModifiers(cu, sourceFile, typeDeclaration, umlClass);
-
-        List<TypeParameter> typeParameters = typeDeclaration.typeParameters();
-        for (TypeParameter typeParameter : typeParameters) {
-            UMLTypeParameter umlTypeParameter = new UMLTypeParameter(typeParameter.getName().getFullyQualifiedName());
-            List<Type> typeBounds = typeParameter.typeBounds();
-            for (Type type : typeBounds) {
-                umlTypeParameter.addTypeBound(UMLType.extractTypeObject(cu, sourceFile, type, 0));
-            }
-            List<IExtendedModifier> typeParameterExtendedModifiers = typeParameter.modifiers();
-            for (IExtendedModifier extendedModifier : typeParameterExtendedModifiers) {
-                if (extendedModifier.isAnnotation()) {
-                    Annotation annotation = (Annotation) extendedModifier;
-                    umlTypeParameter.addAnnotation(new UMLAnnotation(cu, sourceFile, annotation));
-                }
-            }
-            umlClass.addTypeParameter(umlTypeParameter);
-        }
-
-        Type superclassType = typeDeclaration.getSuperclassType();
-        if (superclassType != null) {
-            UMLType umlType = UMLType.extractTypeObject(cu, sourceFile, superclassType, 0);
-            UMLGeneralization umlGeneralization = new UMLGeneralization(umlClass, umlType.getClassType());
-            umlClass.setSuperclass(umlType);
-            getUmlModel().addGeneralization(umlGeneralization);
-        }
-
-        List<Type> superInterfaceTypes = typeDeclaration.superInterfaceTypes();
-        for (Type interfaceType : superInterfaceTypes) {
-            UMLType umlType = UMLType.extractTypeObject(cu, sourceFile, interfaceType, 0);
-            UMLRealization umlRealization = new UMLRealization(umlClass, umlType.getClassType());
-            umlClass.addImplementedInterface(umlType);
-            getUmlModel().addRealization(umlRealization);
-        }
-
-        FieldDeclaration[] fieldDeclarations = typeDeclaration.getFields();
-        for (FieldDeclaration fieldDeclaration : fieldDeclarations) {
-            List<UMLAttribute> attributes = processFieldDeclaration(cu, fieldDeclaration, umlClass.isInterface(), sourceFile, comments);
-            for (UMLAttribute attribute : attributes) {
-                attribute.setClassName(umlClass.getName());
-                umlClass.addAttribute(attribute);
-            }
-        }
-
-        MethodDeclaration[] methodDeclarations = typeDeclaration.getMethods();
-        for (MethodDeclaration methodDeclaration : methodDeclarations) {
-            UMLOperation operation = processMethodDeclaration(cu, methodDeclaration, packageName, umlClass.isInterface(), sourceFile, comments);
-            operation.setClassName(umlClass.getName());
-            umlClass.addOperation(operation);
-        }
-
-        processAnonymousClassDeclarations(cu, typeDeclaration, packageName, sourceFile, className, umlClass);
-
-        this.getUmlModel().addClass(umlClass);
-
-        TypeDeclaration[] types = typeDeclaration.getTypes();
-        for (TypeDeclaration type : types) {
-            processTypeDeclaration(cu, type, umlClass.getName(), sourceFile, importedTypes, comments);
-        }
-
-        List<BodyDeclaration> bodyDeclarations = typeDeclaration.bodyDeclarations();
-        for (BodyDeclaration bodyDeclaration : bodyDeclarations) {
-            if (bodyDeclaration instanceof EnumDeclaration) {
-                EnumDeclaration enumDeclaration = (EnumDeclaration) bodyDeclaration;
-                processEnumDeclaration(cu, enumDeclaration, umlClass.getName(), sourceFile, importedTypes, comments);
-            }
-        }
-        distributeComments(comments, locationInfo, umlClass.getComments());
-    }
-
-    private void insertNode(AnonymousClassDeclaration childAnonymous, DefaultMutableTreeNode root) {
-        Enumeration<TreeNode> enumeration = root.postorderEnumeration();
-        DefaultMutableTreeNode childNode = new DefaultMutableTreeNode(childAnonymous);
-
-        DefaultMutableTreeNode parentNode = root;
-        while (enumeration.hasMoreElements()) {
-            DefaultMutableTreeNode currentNode = (DefaultMutableTreeNode) enumeration.nextElement();
-            AnonymousClassDeclaration currentAnonymous = (AnonymousClassDeclaration) currentNode.getUserObject();
-            if (currentAnonymous != null && isParent(childAnonymous, currentAnonymous)) {
-                parentNode = currentNode;
-                break;
-            }
-        }
-        parentNode.add(childNode);
-    }
-
-    private void processModifiers(CompilationUnit cu, String sourceFile, AbstractTypeDeclaration typeDeclaration, UMLClass umlClass) {
-        int modifiers = typeDeclaration.getModifiers();
-        if ((modifiers & Modifier.ABSTRACT) != 0)
-            umlClass.setAbstract(true);
-        if ((modifiers & Modifier.STATIC) != 0)
-            umlClass.setStatic(true);
-        if ((modifiers & Modifier.FINAL) != 0)
-            umlClass.setFinal(true);
-
-        if ((modifiers & Modifier.PUBLIC) != 0)
-            umlClass.setVisibility("public");
-        else if ((modifiers & Modifier.PROTECTED) != 0)
-            umlClass.setVisibility("protected");
-        else if ((modifiers & Modifier.PRIVATE) != 0)
-            umlClass.setVisibility("private");
-        else
-            umlClass.setVisibility("package");
-
-        List<IExtendedModifier> extendedModifiers = typeDeclaration.modifiers();
-        for (IExtendedModifier extendedModifier : extendedModifiers) {
-            if (extendedModifier.isAnnotation()) {
-                Annotation annotation = (Annotation) extendedModifier;
-                umlClass.addAnnotation(new UMLAnnotation(cu, sourceFile, annotation));
-            }
-        }
-    }
-
-    private UMLOperation processMethodDeclaration(CompilationUnit cu, MethodDeclaration methodDeclaration, String packageName, boolean isInterfaceMethod, String sourceFile, List<UMLComment> comments) {
-        UMLJavadoc javadoc = generateJavadoc(cu, methodDeclaration, sourceFile);
-        String methodName = methodDeclaration.getName().getFullyQualifiedName();
-        LocationInfo locationInfo = generateLocationInfo(cu, sourceFile, methodDeclaration, CodeElementType.METHOD_DECLARATION);
-        UMLOperation umlOperation = new UMLOperation(methodName, locationInfo);
-        umlOperation.setJavadoc(javadoc);
-        distributeComments(comments, locationInfo, umlOperation.getComments());
-
-        if (methodDeclaration.isConstructor())
-            umlOperation.setConstructor(true);
-
-        int methodModifiers = methodDeclaration.getModifiers();
-        if ((methodModifiers & Modifier.PUBLIC) != 0)
-            umlOperation.setVisibility("public");
-        else if ((methodModifiers & Modifier.PROTECTED) != 0)
-            umlOperation.setVisibility("protected");
-        else if ((methodModifiers & Modifier.PRIVATE) != 0)
-            umlOperation.setVisibility("private");
-        else if (isInterfaceMethod)
-            umlOperation.setVisibility("public");
-        else
-            umlOperation.setVisibility("package");
-
-        if ((methodModifiers & Modifier.ABSTRACT) != 0)
-            umlOperation.setAbstract(true);
-
-        if ((methodModifiers & Modifier.FINAL) != 0)
-            umlOperation.setFinal(true);
-
-        if ((methodModifiers & Modifier.STATIC) != 0)
-            umlOperation.setStatic(true);
-
-        if ((methodModifiers & Modifier.SYNCHRONIZED) != 0)
-            umlOperation.setSynchronized(true);
-
-        List<IExtendedModifier> extendedModifiers = methodDeclaration.modifiers();
-        for (IExtendedModifier extendedModifier : extendedModifiers) {
-            if (extendedModifier.isAnnotation()) {
-                Annotation annotation = (Annotation) extendedModifier;
-                umlOperation.addAnnotation(new UMLAnnotation(cu, sourceFile, annotation));
-            }
-        }
-
-        List<TypeParameter> typeParameters = methodDeclaration.typeParameters();
-        for (TypeParameter typeParameter : typeParameters) {
-            UMLTypeParameter umlTypeParameter = new UMLTypeParameter(typeParameter.getName().getFullyQualifiedName());
-            List<Type> typeBounds = typeParameter.typeBounds();
-            for (Type type : typeBounds) {
-                umlTypeParameter.addTypeBound(UMLType.extractTypeObject(cu, sourceFile, type, 0));
-            }
-            List<IExtendedModifier> typeParameterExtendedModifiers = typeParameter.modifiers();
-            for (IExtendedModifier extendedModifier : typeParameterExtendedModifiers) {
-                if (extendedModifier.isAnnotation()) {
-                    Annotation annotation = (Annotation) extendedModifier;
-                    umlTypeParameter.addAnnotation(new UMLAnnotation(cu, sourceFile, annotation));
-                }
-            }
-            umlOperation.addTypeParameter(umlTypeParameter);
-        }
-
-        Block block = methodDeclaration.getBody();
-        if (block != null) {
-            OperationBody body = new OperationBody(cu, sourceFile, block);
-            umlOperation.setBody(body);
-            if (block.statements().size() == 0) {
-                umlOperation.setEmptyBody(true);
-            }
-        } else {
-            umlOperation.setBody(null);
-        }
-
-        Type returnType = methodDeclaration.getReturnType2();
-        if (returnType != null) {
-            UMLType type = UMLType.extractTypeObject(cu, sourceFile, returnType, methodDeclaration.getExtraDimensions());
-            UMLParameter returnParameter = new UMLParameter("return", type, "return", false);
-            umlOperation.addParameter(returnParameter);
-        }
-        List<SingleVariableDeclaration> parameters = methodDeclaration.parameters();
-        for (SingleVariableDeclaration parameter : parameters) {
-            Type parameterType = parameter.getType();
-            String parameterName = parameter.getName().getFullyQualifiedName();
-            UMLType type = UMLType.extractTypeObject(cu, sourceFile, parameterType, parameter.getExtraDimensions());
-            UMLParameter umlParameter = new UMLParameter(parameterName, type, "in", parameter.isVarargs());
-            VariableDeclaration variableDeclaration = new VariableDeclaration(cu, sourceFile, parameter, parameter.isVarargs());
-            variableDeclaration.setParameter(true);
-            umlParameter.setVariableDeclaration(variableDeclaration);
-            umlOperation.addParameter(umlParameter);
-        }
-        List<Type> thrownExceptionTypes = methodDeclaration.thrownExceptionTypes();
-        for (Type thrownExceptionType : thrownExceptionTypes) {
-            UMLType type = UMLType.extractTypeObject(cu, sourceFile, thrownExceptionType, 0);
-            umlOperation.addThrownExceptionType(type);
-        }
-        return umlOperation;
-    }
-
-    private void processEnumConstantDeclaration(CompilationUnit cu, EnumConstantDeclaration enumConstantDeclaration, String sourceFile, UMLClass umlClass, List<UMLComment> comments) {
-        UMLJavadoc javadoc = generateJavadoc(cu, enumConstantDeclaration, sourceFile);
-        LocationInfo locationInfo = generateLocationInfo(cu, sourceFile, enumConstantDeclaration, CodeElementType.ENUM_CONSTANT_DECLARATION);
-        UMLEnumConstant enumConstant = new UMLEnumConstant(enumConstantDeclaration.getName().getIdentifier(), UMLType.extractTypeObject(umlClass.getName()), locationInfo);
-        VariableDeclaration variableDeclaration = new VariableDeclaration(cu, sourceFile, enumConstantDeclaration);
-        enumConstant.setVariableDeclaration(variableDeclaration);
-        enumConstant.setJavadoc(javadoc);
-        distributeComments(comments, locationInfo, enumConstant.getComments());
-        enumConstant.setFinal(true);
-        enumConstant.setStatic(true);
-        enumConstant.setVisibility("public");
-        List<Expression> arguments = enumConstantDeclaration.arguments();
-        for (Expression argument : arguments) {
-            enumConstant.addArgument(argument.toString());
-        }
-        enumConstant.setClassName(umlClass.getName());
-        umlClass.addEnumConstant(enumConstant);
-    }
-
-    private List<UMLAttribute> processFieldDeclaration(CompilationUnit cu, FieldDeclaration fieldDeclaration, boolean isInterfaceField, String sourceFile, List<UMLComment> comments) {
-        UMLJavadoc javadoc = generateJavadoc(cu, fieldDeclaration, sourceFile);
-        List<UMLAttribute> attributes = new ArrayList<>();
-        Type fieldType = fieldDeclaration.getType();
-        List<VariableDeclarationFragment> fragments = fieldDeclaration.fragments();
-        for (VariableDeclarationFragment fragment : fragments) {
-            UMLType type = UMLType.extractTypeObject(cu, sourceFile, fieldType, fragment.getExtraDimensions());
-            String fieldName = fragment.getName().getFullyQualifiedName();
-            LocationInfo locationInfo = generateLocationInfo(cu, sourceFile, fragment, CodeElementType.FIELD_DECLARATION);
-            UMLAttribute umlAttribute = new UMLAttribute(fieldName, type, locationInfo);
-            VariableDeclaration variableDeclaration = new VariableDeclaration(cu, sourceFile, fragment);
-            variableDeclaration.setAttribute(true);
-            umlAttribute.setVariableDeclaration(variableDeclaration);
-            umlAttribute.setJavadoc(javadoc);
-            distributeComments(comments, locationInfo, umlAttribute.getComments());
-
-            int fieldModifiers = fieldDeclaration.getModifiers();
-            if ((fieldModifiers & Modifier.PUBLIC) != 0)
-                umlAttribute.setVisibility("public");
-            else if ((fieldModifiers & Modifier.PROTECTED) != 0)
-                umlAttribute.setVisibility("protected");
-            else if ((fieldModifiers & Modifier.PRIVATE) != 0)
-                umlAttribute.setVisibility("private");
-            else if (isInterfaceField)
-                umlAttribute.setVisibility("public");
-            else
-                umlAttribute.setVisibility("package");
-
-            if ((fieldModifiers & Modifier.FINAL) != 0)
-                umlAttribute.setFinal(true);
-
-            if ((fieldModifiers & Modifier.STATIC) != 0)
-                umlAttribute.setStatic(true);
-
-            if ((fieldModifiers & Modifier.VOLATILE) != 0)
-                umlAttribute.setVolatile(true);
-
-            if ((fieldModifiers & Modifier.TRANSIENT) != 0)
-                umlAttribute.setTransient(true);
-
-            attributes.add(umlAttribute);
-        }
-        return attributes;
-    }
-
-    private UMLAnonymousClass processAnonymousClassDeclaration(CompilationUnit cu, AnonymousClassDeclaration anonymous, String packageName, String binaryName, String codePath, String sourceFile, List<UMLComment> comments) {
-        List<BodyDeclaration> bodyDeclarations = anonymous.bodyDeclarations();
-        LocationInfo locationInfo = generateLocationInfo(cu, sourceFile, anonymous, CodeElementType.ANONYMOUS_CLASS_DECLARATION);
-        UMLAnonymousClass anonymousClass = new UMLAnonymousClass(packageName, binaryName, codePath, locationInfo);
-
-        for (BodyDeclaration bodyDeclaration : bodyDeclarations) {
-            if (bodyDeclaration instanceof FieldDeclaration) {
-                FieldDeclaration fieldDeclaration = (FieldDeclaration) bodyDeclaration;
-                List<UMLAttribute> attributes = processFieldDeclaration(cu, fieldDeclaration, false, sourceFile, comments);
-                for (UMLAttribute attribute : attributes) {
-                    attribute.setClassName(anonymousClass.getCodePath());
-                    anonymousClass.addAttribute(attribute);
-                }
-            } else if (bodyDeclaration instanceof MethodDeclaration) {
-                MethodDeclaration methodDeclaration = (MethodDeclaration) bodyDeclaration;
-                UMLOperation operation = processMethodDeclaration(cu, methodDeclaration, packageName, false, sourceFile, comments);
-                operation.setClassName(anonymousClass.getCodePath());
-                anonymousClass.addOperation(operation);
-            }
-        }
-        distributeComments(comments, locationInfo, anonymousClass.getComments());
-        return anonymousClass;
-    }
-
-    private UMLJavadoc generateJavadoc(CompilationUnit cu, BodyDeclaration bodyDeclaration, String sourceFile) {
+    private UMLJavadoc generateJavadoc(PsiFile file, PsiJavaDocumentedElement element, String sourceFile) {
         UMLJavadoc doc = null;
-        Javadoc javaDoc = bodyDeclaration.getJavadoc();
+        PsiDocComment javaDoc = element.getDocComment();
         if (javaDoc != null) {
-            LocationInfo locationInfo = generateLocationInfo(cu, sourceFile, javaDoc, CodeElementType.JAVADOC);
+            LocationInfo locationInfo = new LocationInfo(file, sourceFile, javaDoc, LocationInfo.CodeElementType.JAVADOC);
             doc = new UMLJavadoc(locationInfo);
-            List<TagElement> tags = javaDoc.tags();
-            for (TagElement tag : tags) {
-                UMLTagElement tagElement = new UMLTagElement(tag.getTagName());
-                List<Object> fragments = tag.fragments();
-                for (Object docElement : fragments) {
-                    tagElement.addFragment(docElement.toString());
+
+            UMLTagElement mainText = new UMLTagElement(null);
+            for (PsiElement descriptionElement : javaDoc.getDescriptionElements()) {
+                if (!(descriptionElement instanceof PsiWhiteSpace)) {
+                    mainText.addFragment(Formatter.format(descriptionElement));
+                }
+            }
+
+            PsiDocTag[] tags = javaDoc.getTags();
+            for (PsiDocTag tag : tags) {
+                UMLTagElement tagElement = new UMLTagElement(tag.getName());
+                PsiElement[] fragments = tag.getDataElements();
+                for (PsiElement docElement : fragments) {
+                    tagElement.addFragment(Formatter.format(docElement));
                 }
                 doc.addTag(tagElement);
             }
@@ -612,74 +161,405 @@ public class UMLModelASTReader {
         return doc;
     }
 
-    private String getAnonymousCodePath(DefaultMutableTreeNode node) {
-        AnonymousClassDeclaration anonymous = (AnonymousClassDeclaration) node.getUserObject();
-        String name = "";
-        ASTNode parent = anonymous.getParent();
+    private void processEnumDeclaration(PsiFile file, PsiClass psiEnumClass, String packageName, String sourceFile,
+                                        List<String> importedTypes, List<UMLComment> comments) {
+        String className = psiEnumClass.getName();
+        LocationInfo locationInfo = new LocationInfo(file, sourceFile, psiEnumClass, LocationInfo.CodeElementType.TYPE_DECLARATION);
+        boolean isTopLevel = psiEnumClass.getParent() instanceof PsiFile;
+        UMLClass umlClass = new UMLClass(packageName, className, locationInfo, isTopLevel, importedTypes);
+        umlClass.setJavadoc(generateJavadoc(file, psiEnumClass, sourceFile));
+        umlClass.setEnum(true);
+
+        for (UMLType umlType : getUMLTypesOfReferenceList(file, sourceFile, psiEnumClass.getImplementsList())) {
+            UMLRealization umlRealization = new UMLRealization(umlClass, umlType.getClassType());
+            umlClass.addImplementedInterface(umlType);
+            this.umlModel.addRealization(umlRealization);
+        }
+
+        processModifiers(file, sourceFile, psiEnumClass, umlClass);
+        processBodyDeclarations(file, psiEnumClass, sourceFile, importedTypes, umlClass, comments);
+        processAnonymousClassDeclarations(file, psiEnumClass, packageName, sourceFile, className, umlClass);
+        distributeComments(comments, locationInfo, umlClass.getComments());
+        this.umlModel.addClass(umlClass);
+    }
+
+    private List<UMLType> getUMLTypesOfReferenceList(PsiFile file, String sourceFile, @Nullable PsiReferenceList list) {
+        if (list == null) {
+            return Collections.emptyList();
+        }
+        PsiJavaCodeReferenceElement[] superInterfaceElements = list.getReferenceElements();
+        List<UMLType> types = new ArrayList<>(superInterfaceElements.length);
+        for (PsiJavaCodeReferenceElement superInterfaceElement : superInterfaceElements) {
+            types.add(UMLType.extractTypeObject(file, sourceFile, superInterfaceElement));
+        }
+        return types;
+    }
+
+    /**
+     * Process body of class or enum
+     */
+    private void processBodyDeclarations(PsiFile file, PsiClass psiClass,
+                                         String sourceFile, List<String> importedTypes,
+                                         UMLClass umlClass, List<UMLComment> comments) {
+        for (PsiElement psiElement : psiClass.getChildren()) {
+            if (psiElement instanceof PsiEnumConstant) {
+                processEnumConstantDeclaration(file, (PsiEnumConstant) psiElement, sourceFile, umlClass, comments);
+            } else if (psiElement instanceof PsiField) {
+                PsiField psiField = (PsiField) psiElement;
+                List<UMLAttribute> attributes = processFieldDeclaration(file, psiField, sourceFile, comments);
+                for (UMLAttribute attribute : attributes) {
+                    attribute.setClassName(umlClass.getName());
+                    umlClass.addAttribute(attribute);
+                }
+            } else if (psiElement instanceof PsiMethod) {
+                PsiMethod psiMethod = (PsiMethod) psiElement;
+                UMLOperation operation = processMethodDeclaration(file, psiMethod, sourceFile, comments);
+                operation.setClassName(umlClass.getName());
+                umlClass.addOperation(operation);
+            } else if (psiElement instanceof PsiClass) {
+                PsiClass psiSubClass = (PsiClass) psiElement;
+                if (psiSubClass.isEnum()) {
+                    processEnumDeclaration(file, psiSubClass, umlClass.getName(), sourceFile, importedTypes, comments);
+                } else {
+                    processTypeDeclaration(file, psiSubClass, umlClass.getName(), sourceFile, importedTypes, comments);
+                }
+            }
+        }
+    }
+
+    private void processTypeDeclaration(PsiFile file, PsiClass psiClass,
+                                        String packageName, String sourceFile,
+                                        List<String> importedTypes, List<UMLComment> comments) {
+        String className = psiClass.getName();
+        LocationInfo locationInfo = new LocationInfo(file, sourceFile, psiClass, LocationInfo.CodeElementType.TYPE_DECLARATION);
+        boolean isTopLevel = psiClass.getParent() instanceof PsiFile;
+        UMLClass umlClass = new UMLClass(packageName, className, locationInfo, isTopLevel, importedTypes);
+        umlClass.setJavadoc(generateJavadoc(file, psiClass, sourceFile));
+
+        if (psiClass.isInterface()) {
+            umlClass.setInterface(true);
+            for (UMLType umlType : getUMLTypesOfReferenceList(file, sourceFile, psiClass.getExtendsList())) {
+                UMLRealization umlRealization = new UMLRealization(umlClass, umlType.getClassType());
+                umlClass.addImplementedInterface(umlType);
+                this.umlModel.addRealization(umlRealization);
+            }
+        } else {
+            List<UMLType> extendsList = getUMLTypesOfReferenceList(file, sourceFile, psiClass.getExtendsList());
+            if (!extendsList.isEmpty()) {
+                assert extendsList.size() == 1;
+                UMLType umlType = extendsList.get(0);
+                UMLGeneralization umlGeneralization = new UMLGeneralization(umlClass, umlType.getClassType());
+                umlClass.setSuperclass(umlType);
+                this.umlModel.addGeneralization(umlGeneralization);
+            }
+
+            for (UMLType umlType : getUMLTypesOfReferenceList(file, sourceFile, psiClass.getImplementsList())) {
+                UMLRealization umlRealization = new UMLRealization(umlClass, umlType.getClassType());
+                umlClass.addImplementedInterface(umlType);
+                this.umlModel.addRealization(umlRealization);
+            }
+        }
+
+        processModifiers(file, sourceFile, psiClass, umlClass);
+
+        PsiTypeParameter[] typeParameters = psiClass.getTypeParameters();
+        for (PsiTypeParameter typeParameter : typeParameters) {
+            umlClass.addTypeParameter(processTypeParameter(file, sourceFile, typeParameter));
+        }
+
+        processBodyDeclarations(file, psiClass, sourceFile, importedTypes, umlClass, comments);
+        processAnonymousClassDeclarations(file, psiClass, packageName, sourceFile, className, umlClass);
+        distributeComments(comments, locationInfo, umlClass.getComments());
+        this.umlModel.addClass(umlClass);
+    }
+
+    @NotNull
+    private UMLTypeParameter processTypeParameter(PsiFile file, String sourceFile, PsiTypeParameter typeParameter) {
+        UMLTypeParameter umlTypeParameter = new UMLTypeParameter(typeParameter.getName());
+        List<UMLType> extendsList = getUMLTypesOfReferenceList(file, sourceFile, typeParameter.getExtendsList());
+        extendsList.forEach(umlTypeParameter::addTypeBound);
+        PsiAnnotation[] typeParameterAnnotations = typeParameter.getAnnotations();
+        for (PsiAnnotation psiAnnotation : typeParameterAnnotations) {
+            umlTypeParameter.addAnnotation(new UMLAnnotation(file, sourceFile, psiAnnotation));
+        }
+        return umlTypeParameter;
+    }
+
+    private void processAnonymousClassDeclarations(PsiFile file, PsiClass psiClass,
+                                                   String packageName, String sourceFile,
+                                                   String className, UMLClass umlClass) {
+        AnonymousClassDeclarationVisitor visitor = new AnonymousClassDeclarationVisitor();
+        psiClass.accept(visitor);
+        List<UMLAnonymousClass> createdAnonymousClasses = new ArrayList<>();
+        for (AnonymousClassDeclarationVisitor.AnonymousClassDeclaration anonymousClassDeclaration
+            : visitor.getPostOrderedAnonymousClassDeclarations()) {
+            PsiAnonymousClass anonymous = anonymousClassDeclaration.psiAnonymousClass;
+            UMLOperation matchingOperation = null;
+            UMLAttribute matchingAttribute = null;
+            List<UMLComment> comments = null;
+            for (UMLOperation operation : umlClass.getOperations()) {
+                if (operation.getLocationInfo().getStartOffset() <= anonymous.getTextRange().getStartOffset() &&
+                    operation.getLocationInfo().getEndOffset() >= anonymous.getTextRange().getEndOffset()) {
+                    comments = operation.getComments();
+                    matchingOperation = operation;
+                    break;
+                }
+            }
+            if (matchingOperation == null) {
+                for (UMLAttribute attribute : umlClass.getAttributes()) {
+                    if (attribute.getLocationInfo().getStartOffset() <= anonymous.getTextRange().getStartOffset() &&
+                        attribute.getLocationInfo().getEndOffset() >= anonymous.getTextRange().getEndOffset()) {
+                        comments = attribute.getComments();
+                        matchingAttribute = attribute;
+                        break;
+                    }
+                }
+            }
+            if (matchingOperation != null || matchingAttribute != null) {
+                String anonymousBinaryName = anonymousClassDeclaration.binaryName;
+                String anonymousCodePath = getAnonymousCodePath(anonymous);
+                UMLAnonymousClass anonymousClass =
+                    processAnonymousClassDeclaration(file, anonymous, packageName + "." + className, anonymousBinaryName, anonymousCodePath, sourceFile, comments);
+                umlClass.addAnonymousClass(anonymousClass);
+                if (matchingOperation != null) {
+                    matchingOperation.addAnonymousClass(anonymousClass);
+                }
+                if (matchingAttribute != null) {
+                    matchingAttribute.addAnonymousClass(anonymousClass);
+                }
+                for (UMLOperation operation : anonymousClass.getOperations()) {
+                    for (UMLAnonymousClass createdAnonymousClass : createdAnonymousClasses) {
+                        if (operation.getLocationInfo().subsumes(createdAnonymousClass.getLocationInfo())) {
+                            operation.addAnonymousClass(createdAnonymousClass);
+                        }
+                    }
+                }
+                createdAnonymousClasses.add(anonymousClass);
+            }
+        }
+    }
+
+    private String getAnonymousCodePath(PsiAnonymousClass anonymous) {
+        LinkedList<String> elements = new LinkedList<>();
+        PsiElement parent = anonymous.getParent();
         while (parent != null) {
-            if (parent instanceof MethodDeclaration) {
-                String methodName = ((MethodDeclaration) parent).getName().getIdentifier();
-                if (name.isEmpty()) {
-                    name = methodName;
-                } else {
-                    name = methodName + "." + name;
-                }
-            } else if (parent instanceof VariableDeclarationFragment &&
-                (parent.getParent() instanceof FieldDeclaration ||
-                    parent.getParent() instanceof VariableDeclarationStatement)) {
-                String fieldName = ((VariableDeclarationFragment) parent).getName().getIdentifier();
-                if (name.isEmpty()) {
-                    name = fieldName;
-                } else {
-                    name = fieldName + "." + name;
-                }
-            } else if (parent instanceof MethodInvocation) {
-                String invocationName = ((MethodInvocation) parent).getName().getIdentifier();
-                if (name.isEmpty()) {
-                    name = invocationName;
-                } else {
-                    name = invocationName + "." + name;
-                }
-            } else if (parent instanceof SuperMethodInvocation) {
-                String invocationName = ((SuperMethodInvocation) parent).getName().getIdentifier();
-                if (name.isEmpty()) {
-                    name = invocationName;
-                } else {
-                    name = invocationName + "." + name;
+            if (parent instanceof PsiMethod) {
+                String methodName = ((PsiMethod) parent).getName();
+                elements.addFirst(methodName);
+            } else if (parent instanceof PsiField) {
+                String fieldName = ((PsiField) parent).getName();
+                elements.addFirst(fieldName);
+            } else if (parent instanceof PsiMethodCallExpression) {
+                PsiIdentifier identifier =
+                    PsiUtils.findFirstForwardSiblingOfType(
+                        ((PsiMethodCallExpression) parent).getMethodExpression(),
+                        PsiIdentifier.class
+                    );
+                if (identifier != null) {
+                    String invocationName = Formatter.format(identifier);
+                    elements.addFirst(invocationName);
                 }
             }
             parent = parent.getParent();
         }
-        return name;
+        return String.join(".", elements);
     }
 
-    private String getAnonymousBinaryName(DefaultMutableTreeNode node) {
-        StringBuilder name = new StringBuilder();
-        TreeNode[] path = node.getPath();
-        for (int i = 0; i < path.length; i++) {
-            DefaultMutableTreeNode tmp = (DefaultMutableTreeNode) path[i];
-            if (tmp.getUserObject() != null) {
-                DefaultMutableTreeNode parent = (DefaultMutableTreeNode) tmp.getParent();
-                int index = parent.getIndex(tmp);
-                name.append(index + 1);
-                if (i < path.length - 1)
-                    name.append(".");
+    private void processModifiers(PsiFile file, String sourceFile, PsiClass psiClass, UMLClass umlClass) {
+        PsiModifierList modifiers = psiClass.getModifierList();
+        assert modifiers != null;
+        if (modifiers.hasExplicitModifier(PsiModifier.ABSTRACT)) {
+            umlClass.setAbstract(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.STATIC)) {
+            umlClass.setStatic(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.FINAL)) {
+            umlClass.setFinal(true);
+        }
+
+        if (modifiers.hasExplicitModifier(PsiModifier.PUBLIC)) {
+            umlClass.setVisibility("public");
+        } else if (modifiers.hasExplicitModifier(PsiModifier.PROTECTED)) {
+            umlClass.setVisibility("protected");
+        } else if (modifiers.hasExplicitModifier(PsiModifier.PRIVATE)) {
+            umlClass.setVisibility("private");
+        } else {
+            umlClass.setVisibility("package");
+        }
+
+        for (PsiAnnotation annotation : modifiers.getAnnotations()) {
+            umlClass.addAnnotation(new UMLAnnotation(file, sourceFile, annotation));
+        }
+    }
+
+    private UMLOperation processMethodDeclaration(PsiFile file, PsiMethod psiMethod,
+                                                  String sourceFile, List<UMLComment> comments) {
+        String methodName = psiMethod.getName();
+        LocationInfo locationInfo = new LocationInfo(file, sourceFile, psiMethod, LocationInfo.CodeElementType.METHOD_DECLARATION);
+        UMLOperation umlOperation = new UMLOperation(methodName, locationInfo);
+        umlOperation.setJavadoc(generateJavadoc(file, psiMethod, sourceFile));
+        distributeComments(comments, locationInfo, umlOperation.getComments());
+        umlOperation.setConstructor(psiMethod.isConstructor());
+
+        processModifiers(file, sourceFile, psiMethod, umlOperation);
+
+        PsiTypeParameter[] typeParameters = psiMethod.getTypeParameters();
+        for (PsiTypeParameter typeParameter : typeParameters) {
+            umlOperation.addTypeParameter(processTypeParameter(file, sourceFile, typeParameter));
+        }
+
+        PsiCodeBlock block = psiMethod.getBody();
+        if (block != null) {
+            OperationBody body = new OperationBody(file, sourceFile, block);
+            umlOperation.setBody(body);
+            umlOperation.setEmptyBody(block.isEmpty());
+        } else {
+            umlOperation.setBody(null);
+        }
+
+        if (!psiMethod.isConstructor()) {
+            UMLType type = UMLType.extractTypeObject(file, sourceFile, psiMethod.getReturnTypeElement(), psiMethod.getReturnType());
+            UMLParameter returnParameter = new UMLParameter("return", type, "return", false);
+            umlOperation.addParameter(returnParameter);
+        }
+
+        PsiParameter[] parameters = psiMethod.getParameterList().getParameters();
+        for (PsiParameter parameter : parameters) {
+            UMLType type = UMLType.extractTypeObject(file, sourceFile, parameter.getTypeElement(), parameter.getType());
+            String parameterName = parameter.getName();
+            UMLParameter umlParameter = new UMLParameter(parameterName, type, "in", parameter.isVarArgs());
+            VariableDeclaration variableDeclaration = new VariableDeclaration(file, sourceFile, parameter, parameter.isVarArgs());
+            variableDeclaration.setParameter(true);
+            umlParameter.setVariableDeclaration(variableDeclaration);
+            umlOperation.addParameter(umlParameter);
+        }
+
+        for (UMLType umlType : getUMLTypesOfReferenceList(file, sourceFile, psiMethod.getThrowsList())) {
+            umlOperation.addThrownExceptionType(umlType);
+        }
+        return umlOperation;
+    }
+
+    private void processModifiers(PsiFile file, String sourceFile, PsiMethod method, UMLOperation umlOperation) {
+        PsiModifierList modifiers = method.getModifierList();
+        if (modifiers.hasExplicitModifier(PsiModifier.ABSTRACT)) {
+            umlOperation.setAbstract(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.STATIC)) {
+            umlOperation.setStatic(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.FINAL)) {
+            umlOperation.setFinal(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.SYNCHRONIZED)) {
+            umlOperation.setSynchronized(true);
+        }
+
+        if (modifiers.hasModifierProperty(PsiModifier.PUBLIC)) {
+            umlOperation.setVisibility("public");
+        } else if (modifiers.hasExplicitModifier(PsiModifier.PROTECTED)) {
+            umlOperation.setVisibility("protected");
+        } else if (modifiers.hasExplicitModifier(PsiModifier.PRIVATE)) {
+            umlOperation.setVisibility("private");
+        } else {
+            umlOperation.setVisibility("package");
+        }
+
+        for (PsiAnnotation annotation : modifiers.getAnnotations()) {
+            umlOperation.addAnnotation(new UMLAnnotation(file, sourceFile, annotation));
+        }
+    }
+
+    private List<UMLAttribute> processFieldDeclaration(PsiFile file, PsiField psiField,
+                                                       String sourceFile, List<UMLComment> comments) {
+        UMLJavadoc javadoc = generateJavadoc(file, psiField, sourceFile);
+        List<UMLAttribute> attributes = new ArrayList<>();
+        UMLType type = UMLType.extractTypeObject(file, sourceFile, psiField.getTypeElement(), psiField.getType());
+        String fieldName = psiField.getName();
+        LocationInfo locationInfo = new LocationInfo(file, sourceFile, psiField, LocationInfo.CodeElementType.FIELD_DECLARATION);
+        VariableDeclaration variableDeclaration = new VariableDeclaration(file, sourceFile, psiField);
+        variableDeclaration.setAttribute(true);
+        UMLAttribute umlAttribute = new UMLAttribute(fieldName, type, locationInfo);
+        umlAttribute.setVariableDeclaration(variableDeclaration);
+        umlAttribute.setJavadoc(javadoc);
+        distributeComments(comments, locationInfo, umlAttribute.getComments());
+        processModifiers(psiField, umlAttribute);
+        attributes.add(umlAttribute);
+        return attributes;
+    }
+
+    private void processEnumConstantDeclaration(PsiFile file, PsiEnumConstant psiEnumConstant, String sourceFile,
+                                                UMLClass umlClass, List<UMLComment> comments) {
+        UMLJavadoc javadoc = generateJavadoc(file, psiEnumConstant, sourceFile);
+        LocationInfo locationInfo = new LocationInfo(file, sourceFile, psiEnumConstant, LocationInfo.CodeElementType.ENUM_CONSTANT_DECLARATION);
+        UMLType type = UMLType.extractTypeObject(umlClass.getName());
+        UMLEnumConstant enumConstant = new UMLEnumConstant(psiEnumConstant.getName(), type, locationInfo);
+        VariableDeclaration variableDeclaration = new VariableDeclaration(file, sourceFile, psiEnumConstant, type);
+        enumConstant.setVariableDeclaration(variableDeclaration);
+        enumConstant.setJavadoc(javadoc);
+        distributeComments(comments, locationInfo, enumConstant.getComments());
+        enumConstant.setFinal(true);
+        enumConstant.setStatic(true);
+        enumConstant.setVisibility("public");
+        PsiExpressionList argumentList = psiEnumConstant.getArgumentList();
+        if (argumentList != null) {
+            for (PsiExpression argument : argumentList.getExpressions()) {
+                enumConstant.addArgument(Formatter.format(argument));
             }
         }
-        return name.toString();
+        enumConstant.setClassName(umlClass.getName());
+        umlClass.addEnumConstant(enumConstant);
     }
 
-    private boolean isParent(ASTNode child, ASTNode parent) {
-        ASTNode current = child;
-        while (current.getParent() != null) {
-            if (current.getParent().equals(parent))
-                return true;
-            current = current.getParent();
+    private void processModifiers(PsiField field, UMLAttribute umlAttribute) {
+        PsiModifierList modifiers = field.getModifierList();
+        assert modifiers != null;
+        if (modifiers.hasExplicitModifier(PsiModifier.STATIC)) {
+            umlAttribute.setStatic(true);
         }
-        return false;
+        if (modifiers.hasExplicitModifier(PsiModifier.FINAL)) {
+            umlAttribute.setFinal(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.VOLATILE)) {
+            umlAttribute.setVolatile(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.TRANSIENT)) {
+            umlAttribute.setTransient(true);
+        }
+
+        if (modifiers.hasModifierProperty(PsiModifier.PUBLIC)) {
+            umlAttribute.setVisibility("public");
+        } else if (modifiers.hasExplicitModifier(PsiModifier.PROTECTED)) {
+            umlAttribute.setVisibility("protected");
+        } else if (modifiers.hasExplicitModifier(PsiModifier.PRIVATE)) {
+            umlAttribute.setVisibility("private");
+        } else {
+            umlAttribute.setVisibility("package");
+        }
     }
 
-    private LocationInfo generateLocationInfo(CompilationUnit cu, String sourceFile, ASTNode node, CodeElementType codeElementType) {
-        return new LocationInfo(cu, sourceFile, node, codeElementType);
+    private UMLAnonymousClass processAnonymousClassDeclaration(PsiFile file, PsiAnonymousClass psiAnonymousClass,
+                                                               String packageName, String binaryName, String codePath,
+                                                               String sourceFile, List<UMLComment> comments) {
+        LocationInfo locationInfo = new LocationInfo(file, sourceFile, psiAnonymousClass, LocationInfo.CodeElementType.ANONYMOUS_CLASS_DECLARATION);
+        UMLAnonymousClass anonymousClass = new UMLAnonymousClass(packageName, binaryName, codePath, locationInfo);
+
+        for (PsiField field : psiAnonymousClass.getFields()) {
+            List<UMLAttribute> attributes = processFieldDeclaration(file, field, sourceFile, comments);
+            for (UMLAttribute attribute : attributes) {
+                attribute.setClassName(anonymousClass.getCodePath());
+                anonymousClass.addAttribute(attribute);
+            }
+        }
+
+        for (PsiMethod method : psiAnonymousClass.getMethods()) {
+            UMLOperation operation = processMethodDeclaration(file, method, sourceFile, comments);
+            operation.setClassName(anonymousClass.getCodePath());
+            anonymousClass.addOperation(operation);
+        }
+
+        distributeComments(comments, locationInfo, anonymousClass.getComments());
+        return anonymousClass;
     }
 }

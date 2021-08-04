@@ -1,167 +1,252 @@
 package gr.uom.java.xmi;
 
+import com.intellij.psi.PsiAnnotation;
+import com.intellij.psi.PsiArrayType;
+import com.intellij.psi.PsiDisjunctionType;
+import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiJavaCodeReferenceElement;
+import com.intellij.psi.PsiKeyword;
+import com.intellij.psi.PsiMethod;
+import com.intellij.psi.PsiModifierList;
+import com.intellij.psi.PsiType;
+import com.intellij.psi.PsiTypeElement;
+import com.intellij.psi.PsiWhiteSpace;
+import com.intellij.psi.PsiWildcardType;
 import gr.uom.java.xmi.ListCompositeType.Kind;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import gr.uom.java.xmi.diff.CodeRange;
 import gr.uom.java.xmi.diff.StringDistance;
-import org.eclipse.jdt.core.dom.AnnotatableType;
-import org.eclipse.jdt.core.dom.Annotation;
-import org.eclipse.jdt.core.dom.ArrayType;
-import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.IntersectionType;
-import org.eclipse.jdt.core.dom.NameQualifiedType;
-import org.eclipse.jdt.core.dom.ParameterizedType;
-import org.eclipse.jdt.core.dom.QualifiedType;
-import org.eclipse.jdt.core.dom.Type;
-import org.eclipse.jdt.core.dom.UnionType;
-import org.eclipse.jdt.core.dom.WildcardType;
+import org.jetbrains.annotations.NotNull;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public abstract class UMLType implements Serializable, LocationInfoProvider {
-    protected final List<UMLAnnotation> annotations = new ArrayList<>();
-    private LocationInfo locationInfo;
-    private int arrayDimension;
-    private List<UMLType> typeArguments = new ArrayList<>();
+    protected LocationInfo locationInfo;
+    protected int arrayDimension;
+    protected List<UMLAnnotation> annotations = new ArrayList<>();
+    protected List<UMLType> typeArguments = Collections.emptyList();
 
-    public static LeafType extractTypeObject(String qualifiedName) {
-        int arrayDimension = 0;
-        List<UMLType> typeArgumentDecomposition = new ArrayList<>();
-        if (qualifiedName.endsWith("[]")) {
-            while (qualifiedName.endsWith("[]")) {
-                qualifiedName = qualifiedName.substring(0, qualifiedName.lastIndexOf("[]"));
-                arrayDimension++;
-            }
-        }
-        if (qualifiedName.contains("<") && qualifiedName.contains(">") &&
-            !closingTagBeforeOpeningTag(qualifiedName.substring(qualifiedName.indexOf("<") + 1, qualifiedName.lastIndexOf(">")))) {
-            String typeArguments = qualifiedName.substring(qualifiedName.indexOf("<") + 1, qualifiedName.lastIndexOf(">"));
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < typeArguments.length(); i++) {
-                char charAt = typeArguments.charAt(i);
-                if (charAt != ',') {
-                    sb.append(charAt);
-                } else {
-                    if (sb.length() > 0 && equalOpeningClosingTags(sb.toString())) {
-                        typeArgumentDecomposition.add(extractTypeObject(sb.toString()));
-                        sb = new StringBuilder();
-                    } else {
-                        sb.append(charAt);
-                    }
-                }
-            }
-            if (sb.length() > 0) {
-                typeArgumentDecomposition.add(extractTypeObject(sb.toString()));
-            }
-            qualifiedName = qualifiedName.substring(0, qualifiedName.indexOf("<"));
-        }
-        UMLType typeObject = new LeafType(qualifiedName);
-        typeObject.arrayDimension = arrayDimension;
-        typeObject.typeArguments = typeArgumentDecomposition;
-        return (LeafType) typeObject;
+    /**
+     * Parse type from qualified type string
+     */
+    public static UMLType extractTypeObject(String qualifiedName) {
+        qualifiedName = qualifiedName.replaceAll("\\s", "");
+        return extractArrayDimensions(qualifiedName);
     }
 
-    private static UMLType extractTypeObject(CompilationUnit cu, String filePath, Type type) {
-        if (type.isPrimitiveType() || type.isSimpleType()) {
-            LeafType leafType = extractTypeObject(type.toString());
-            AnnotatableType annotatableType = (AnnotatableType) type;
-            List<Annotation> annotations = annotatableType.annotations();
-            for (Annotation annotation : annotations) {
-                leafType.annotations.add(new UMLAnnotation(cu, filePath, annotation));
+    @NotNull
+    private static UMLType extractArrayDimensions(String qualifiedName) {
+        int arrayDimension = 0;
+        if (qualifiedName.endsWith("...")) {
+            qualifiedName = qualifiedName.substring(0, qualifiedName.length() - 3);
+            arrayDimension++;
+        }
+        while (qualifiedName.endsWith("[]")) {
+            qualifiedName = qualifiedName.substring(0, qualifiedName.length() - 2);
+            arrayDimension++;
+        }
+        UMLType typeObject = extractQualifiedName(qualifiedName);
+        typeObject.arrayDimension = arrayDimension;
+        return typeObject;
+    }
+
+    @NotNull
+    private static UMLType extractQualifiedName(String qualifiedName) {
+        List<String> elements = splitCapturing(qualifiedName, '.');
+        UMLType left = null;
+        for (int i = 0; i < elements.size(); i++) {
+            // All names before first with generics marks as package names (Eclipse compatibility)
+            if (left == null && !elements.get(i).contains("<")) {
+                continue;
             }
-            return leafType;
-        } else if (type instanceof QualifiedType) {
-            QualifiedType qualified = (QualifiedType) type;
-            UMLType leftType = extractTypeObject(cu, filePath, qualified.getQualifier());
-            LeafType rightType = extractTypeObject(qualified.getName().getFullyQualifiedName());
-            AnnotatableType annotatableType = qualified;
-            List<Annotation> annotations = annotatableType.annotations();
-            for (Annotation annotation : annotations) {
-                rightType.annotations.add(new UMLAnnotation(cu, filePath, annotation));
-            }
-            return new CompositeType(leftType, rightType);
-        } else if (type instanceof NameQualifiedType) {
-            NameQualifiedType nameQualified = (NameQualifiedType) type;
-            LeafType leftType = extractTypeObject(nameQualified.getQualifier().getFullyQualifiedName());
-            LeafType rightType = extractTypeObject(nameQualified.getName().getFullyQualifiedName());
-            AnnotatableType annotatableType = nameQualified;
-            List<Annotation> annotations = annotatableType.annotations();
-            for (Annotation annotation : annotations) {
-                rightType.annotations.add(new UMLAnnotation(cu, filePath, annotation));
-            }
-            return new CompositeType(leftType, rightType);
-        } else if (type instanceof WildcardType) {
-            WildcardType wildcard = (WildcardType) type;
-            gr.uom.java.xmi.WildcardType myWildcardType;
-            if (wildcard.getBound() != null) {
-                UMLType bound = extractTypeObject(cu, filePath, wildcard.getBound());
-                myWildcardType = new gr.uom.java.xmi.WildcardType(bound, wildcard.isUpperBound());
+            if (left == null) {
+                left = extractGenerics(String.join(".", elements.subList(0, i + 1)));
             } else {
-                myWildcardType = new gr.uom.java.xmi.WildcardType(null, false);
+                left = new CompositeType(left, extractGenerics(elements.get(i)));
             }
-            AnnotatableType annotatableType = wildcard;
-            List<Annotation> annotations = annotatableType.annotations();
-            for (Annotation annotation : annotations) {
-                myWildcardType.annotations.add(new UMLAnnotation(cu, filePath, annotation));
+        }
+        if (left == null) {
+            left = extractGenerics(qualifiedName);
+        }
+        return left;
+    }
+
+    /**
+     * Split string by separator chars not captured by <>
+     */
+    @NotNull
+    private static List<String> splitCapturing(String qualifiedName, char separator) {
+        List<String> parts = new ArrayList<>();
+        int sum = 0;
+        int last = -1;
+        for (int i = 0; i < qualifiedName.length(); i++) {
+            char character = qualifiedName.charAt(i);
+            switch (character) {
+                case '>': {
+                    sum++;
+                    break;
+                }
+                case '<': {
+                    sum--;
+                    break;
+                }
             }
-            return myWildcardType;
-        } else if (type instanceof ArrayType) {
-            ArrayType array = (ArrayType) type;
-            UMLType arrayType = extractTypeObject(cu, filePath, array.getElementType());
-            arrayType.arrayDimension = array.getDimensions();
-            return arrayType;
-        } else if (type instanceof ParameterizedType) {
-            ParameterizedType parameterized = (ParameterizedType) type;
-            UMLType container = extractTypeObject(cu, filePath, parameterized.getType());
-            List<Type> typeArguments = parameterized.typeArguments();
-            for (Type argument : typeArguments) {
-                container.typeArguments.add(extractTypeObject(cu, filePath, argument));
+            if (character == separator && sum == 0) {
+                parts.add(qualifiedName.substring(last + 1, i));
+                last = i;
             }
-            return container;
-        } else if (type instanceof UnionType) {
-            UnionType union = (UnionType) type;
-            List<Type> types = union.types();
-            List<UMLType> umlTypes = new ArrayList<>();
-            for (Type unionType : types) {
-                umlTypes.add(extractTypeObject(cu, filePath, unionType));
+        }
+        parts.add(qualifiedName.substring(last + 1));
+        return parts;
+    }
+
+    @NotNull
+    private static LeafType extractGenerics(String qualifiedName) {
+        if (qualifiedName.contains("<")) {
+            String typeArguments = qualifiedName.substring(qualifiedName.indexOf('<') + 1, qualifiedName.lastIndexOf('>'));
+            List<UMLType> typeArgumentsList;
+            if (!typeArguments.isEmpty()) {
+                typeArgumentsList = splitCapturing(typeArguments, ',').stream()
+                    .map(UMLType::extractArrayDimensions)
+                    .collect(Collectors.toList());
+            } else {
+                typeArgumentsList = Collections.emptyList();
             }
+            LeafType typeObject = extractSimpleType(qualifiedName.substring(0, qualifiedName.indexOf('<')));
+            typeObject.typeArguments = typeArgumentsList;
+            return typeObject;
+        }
+        return extractSimpleType(qualifiedName);
+    }
+
+    @NotNull
+    private static LeafType extractSimpleType(String qualifiedName) {
+        return new LeafType(qualifiedName);
+    }
+
+    private static UMLType extractType(PsiFile file, String filePath, PsiTypeElement typeElement, PsiType type) {
+        if (type instanceof PsiDisjunctionType) {
+            List<UMLType> umlTypes = Arrays.stream(typeElement.getChildren())
+                .filter(element -> element instanceof PsiTypeElement)
+                .map(element -> (PsiTypeElement) element)
+                .map(dTypeElement -> extractTypeObject(file, filePath, dTypeElement))
+                .collect(Collectors.toList());
             return new ListCompositeType(umlTypes, Kind.UNION);
-        } else if (type instanceof IntersectionType) {
-            IntersectionType intersection = (IntersectionType) type;
-            List<Type> types = intersection.types();
-            List<UMLType> umlTypes = new ArrayList<>();
-            for (Type unionType : types) {
-                umlTypes.add(extractTypeObject(cu, filePath, unionType));
+        } else if (type instanceof PsiWildcardType) {
+            PsiWildcardType wildcardType = (PsiWildcardType) type;
+            if (wildcardType.isBounded()) {
+                PsiTypeElement bound = (PsiTypeElement) typeElement.getLastChild();
+                return new WildcardType(extractTypeObject(file, filePath, bound, wildcardType.getBound()), wildcardType.isSuper());
+            } else {
+                return new WildcardType(null, false);
             }
-            return new ListCompositeType(umlTypes, Kind.INTERSECTION);
+        } else {
+            String typeString = Arrays.stream(typeElement.getChildren())
+                .filter(child -> !(child instanceof PsiAnnotation) && !(child instanceof PsiWhiteSpace))
+                .map(Formatter::format)
+                .collect(Collectors.joining());
+            if (type instanceof PsiArrayType) {
+                UMLType commonType = extractArrayDimensions(typeString);
+                commonType.arrayDimension = type.getArrayDimensions();
+                return commonType;
+            } else {
+                return extractQualifiedName(typeString);
+            }
+        }
+    }
+
+    /**
+     * Construct UMLType from Psi type and typeElement
+     *
+     * @param typeElement Element associated with type declaration position
+     * @param type        Real type (differs from typeElement.getType() on C-style arrays)
+     */
+    public static UMLType extractTypeObject(PsiFile file, String filePath, PsiTypeElement typeElement, PsiType type) {
+        UMLType umlType = extractType(file, filePath, typeElement, type);
+        umlType.locationInfo = new LocationInfo(file, filePath, typeElement, CodeElementType.TYPE);
+        addAnnotations(file, filePath, typeElement, umlType);
+        return umlType;
+    }
+
+    private static void addAnnotations(PsiFile file, String filePath, PsiTypeElement typeElement, UMLType umlType) {
+        if (typeElement.getParent() instanceof PsiMethod) {
+            // TODO: return type annotations attached only to method?
+        } else {
+            PsiModifierList modifierList = getPrecedingModifiersList(typeElement);
+            if (modifierList != null) {
+                Arrays.stream(modifierList.getChildren())
+                    .filter(element -> element instanceof PsiAnnotation)
+                    .map(annotation -> new UMLAnnotation(file, filePath, (PsiAnnotation) annotation))
+                    .forEach(umlType.annotations::add);
+            } else {
+                // Only parts of DisjunctionType have not preventing modifiersList
+                assert typeElement.getParent() instanceof PsiTypeElement;
+            }
+        }
+    }
+
+    private static PsiModifierList getPrecedingModifiersList(PsiTypeElement typeElement) {
+        PsiElement prev = typeElement;
+        while (prev != null) {
+            prev = prev.getPrevSibling();
+            if (prev instanceof PsiModifierList) {
+                return (PsiModifierList) prev;
+            }
         }
         return null;
     }
 
-    private static boolean closingTagBeforeOpeningTag(String typeArguments) {
-        int indexOfOpeningTag = typeArguments.indexOf("<");
-        int indexOfClosingTag = typeArguments.lastIndexOf(">");
-        return indexOfClosingTag < indexOfOpeningTag;
+    public static UMLType extractTypeObject(PsiFile file, String filePath, PsiTypeElement typeElement) {
+        return extractTypeObject(file, filePath, typeElement, typeElement.getType());
     }
 
-    private static boolean equalOpeningClosingTags(String typeArguments) {
-        int openingTags = 0;
-        int closingTags = 0;
-        for (int i = 0; i < typeArguments.length(); i++) {
-            if (typeArguments.charAt(i) == '>') {
-                openingTags++;
-            } else if (typeArguments.charAt(i) == '<') {
-                closingTags++;
-            }
+    /**
+     * Extract Class type with optional array dimensions
+     */
+    public static UMLType extractTypeObject(PsiFile file, String filePath, PsiJavaCodeReferenceElement typeElement, PsiType type) {
+        UMLType umlType = extractTypeObject(file, filePath, typeElement);
+        if (type instanceof PsiArrayType) {
+            umlType.arrayDimension = type.getArrayDimensions();
         }
-        return openingTags == closingTags;
+        return umlType;
     }
 
-    public static UMLType extractTypeObject(CompilationUnit cu, String filePath, Type type, int extraDimensions) {
-        UMLType umlType = extractTypeObject(cu, filePath, type);
-        umlType.locationInfo = new LocationInfo(cu, filePath, type, CodeElementType.TYPE);
-        umlType.arrayDimension += extraDimensions;
+    /**
+     * Extract Class type without array dimensions
+     */
+    public static UMLType extractTypeObject(PsiFile file, String filePath, PsiJavaCodeReferenceElement typeElement) {
+        UMLType umlType = extractQualifiedName(Formatter.format(typeElement));
+        umlType.locationInfo = new LocationInfo(file, filePath, typeElement, CodeElementType.TYPE);
+        Arrays.stream(typeElement.getChildren())
+            .filter(element -> element instanceof PsiAnnotation)
+            .map(annotation -> new UMLAnnotation(file, filePath, (PsiAnnotation) annotation))
+            .forEach(umlType.annotations::add);
+        return umlType;
+    }
+
+    /**
+     * Extract type for primitives and array of primitives
+     */
+    public static LeafType extractTypeObject(PsiFile file, String filePath, PsiKeyword typeKeyword) {
+        LeafType umlType = extractSimpleType(Formatter.format(typeKeyword));
+        umlType.locationInfo = new LocationInfo(file, filePath, typeKeyword, CodeElementType.TYPE);
+        umlType.arrayDimension = TypeUtils.arrayDimensions(typeKeyword);
+        Arrays.stream(typeKeyword.getParent().getChildren())
+            .filter(element -> element instanceof PsiAnnotation)
+            .map(annotation -> new UMLAnnotation(file, filePath, (PsiAnnotation) annotation))
+            .forEach(umlType.annotations::add);
+        return umlType;
+    }
+
+    public static LeafType extractVarType(PsiFile file, String filePath, PsiTypeElement varElement) {
+        LeafType umlType = new LeafType("var");
+        umlType.locationInfo = new LocationInfo(file, filePath, varElement, CodeElementType.TYPE);
+        addAnnotations(file, filePath, varElement, umlType);
         return umlType;
     }
 
@@ -179,10 +264,6 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
 
     public CodeRange codeRange() {
         return locationInfo.codeRange();
-    }
-
-    public void setVarargs() {
-        arrayDimension++;
     }
 
     protected boolean equalTypeArgumentsAndArrayDimension(UMLType typeObject) {
@@ -217,6 +298,8 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
         return true;
     }
 
+    public abstract boolean equals(Object o);
+
     protected String typeArgumentsToString() {
         StringBuilder sb = new StringBuilder();
         if (typeArguments.isEmpty()) {
@@ -233,8 +316,6 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
     }
 
     public abstract String toQualifiedString();
-
-    public abstract boolean equals(Object o);
 
     public boolean isParameterized() {
         return typeArguments.size() > 0;
@@ -295,14 +376,6 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
         return false;
     }
 
-    public double normalizedNameDistance(UMLType type) {
-        String s1 = this.toString();
-        String s2 = type.toString();
-        int distance = StringDistance.editDistance(s1, s2);
-        double normalized = (double) distance / (double) Math.max(s1.length(), s2.length());
-        return normalized;
-    }
-
     protected String typeArgumentsAndArrayDimensionToString() {
         StringBuilder sb = new StringBuilder();
         if (isParameterized())
@@ -313,5 +386,12 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
 
     public int getArrayDimension() {
         return this.arrayDimension;
+    }
+
+    public double normalizedNameDistance(UMLType type) {
+        String s1 = this.toString();
+        String s2 = type.toString();
+        int distance = StringDistance.editDistance(s1, s2);
+        return (double) distance / (double) Math.max(s1.length(), s2.length());
     }
 }
