@@ -9,6 +9,11 @@ import com.intellij.psi.tree.TokenSet;
 import com.intellij.psi.util.PsiUtil;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Visitor for building string representation of PsiElement
+ * 1. Without commentaries
+ * 2. With formatting similar to Eclipse format
+ */
 public class FormattingVisitor extends PsiRecursiveElementWalkingVisitor {
     private static final TokenSet noSpaces = TokenSet.create(
         JavaTokenType.EQ, JavaTokenType.RBRACKET, JavaTokenType.RBRACE, JavaTokenType.LBRACE, JavaTokenType.LBRACKET,
@@ -28,6 +33,7 @@ public class FormattingVisitor extends PsiRecursiveElementWalkingVisitor {
     @Override
     public void visitElement(@NotNull PsiElement element) {
         if (element.getFirstChild() == null) {
+            // Add text from leaves. Excluding comments and user-specific whitespaces
             if (!(element instanceof PsiWhiteSpace || element instanceof PsiComment)) {
                 String text = element.getText().trim();
                 if (!text.isEmpty()) {

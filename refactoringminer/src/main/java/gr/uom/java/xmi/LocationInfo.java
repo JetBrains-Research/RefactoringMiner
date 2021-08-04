@@ -59,6 +59,7 @@ public class LocationInfo {
         }
     }
 
+    // TODO: Remove when migration finished
     public static TextRange getEclipseRange(@NotNull PsiElement node) {
         PsiElement parent = node.getParent();
         if ((node instanceof PsiField || node instanceof PsiLocalVariable)

@@ -13,7 +13,15 @@ import java.util.stream.Collectors;
  * Finds all of anonymous classes in element subtree and add them to list in the postorder
  */
 public class AnonymousClassDeclarationVisitor extends PsiRecursiveElementWalkingVisitor {
+    /**
+     * Stack of anonymous classes above the current element
+     */
     private final Stack<PsiAnonymousClass> stackDeclarations = new Stack<>();
+    /**
+     * Count of top-level anonymous classes inside
+     * For 0     : root element from which visit starts
+     * For i > 0 : i-1 element in stack declarations
+     */
     private final Stack<Integer> childCount = new Stack<>();
     private final List<AnonymousClassDeclaration> declarationsPostOrdered = new ArrayList<>();
 
@@ -44,11 +52,11 @@ public class AnonymousClassDeclarationVisitor extends PsiRecursiveElementWalking
         return declarationsPostOrdered;
     }
 
-    static class AnonymousClassDeclaration {
+    public static class AnonymousClassDeclaration {
         public final PsiAnonymousClass psiAnonymousClass;
         public final String binaryName;
 
-        AnonymousClassDeclaration(PsiAnonymousClass psiAnonymousClass, List<Integer> stackAnonymousChildCount) {
+        private AnonymousClassDeclaration(PsiAnonymousClass psiAnonymousClass, List<Integer> stackAnonymousChildCount) {
             this.psiAnonymousClass = psiAnonymousClass;
             this.binaryName = stackAnonymousChildCount.stream()
                 .map(Object::toString)

@@ -76,6 +76,9 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
         return left;
     }
 
+    /**
+     * Split string by separator chars not captured by <>
+     */
     @NotNull
     private static List<String> splitCapturing(String qualifiedName, char separator) {
         List<String> parts = new ArrayList<>();
@@ -226,6 +229,9 @@ public abstract class UMLType implements Serializable, LocationInfoProvider {
         return umlType;
     }
 
+    /**
+     * Extract type for primitives and array of primitives
+     */
     public static LeafType extractTypeObject(PsiFile file, String filePath, PsiKeyword typeKeyword) {
         LeafType umlType = extractSimpleType(Formatter.format(typeKeyword));
         umlType.locationInfo = new LocationInfo(file, filePath, typeKeyword, CodeElementType.TYPE);
