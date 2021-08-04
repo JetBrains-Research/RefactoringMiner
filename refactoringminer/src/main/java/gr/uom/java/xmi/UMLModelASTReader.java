@@ -99,9 +99,9 @@ public class UMLModelASTReader {
     private List<UMLComment> extractInternalComments(@NotNull PsiFile file,
                                                      @NotNull String sourceFile,
                                                      @NotNull String javaFileContent) {
-        Collection<PsiComment> astComments = PsiTreeUtil.findChildrenOfType(file, PsiComment.class);
-        List<UMLComment> comments = new ArrayList<>();
-        for (PsiComment comment : astComments) {
+        Collection<PsiComment> psiComments = PsiTreeUtil.findChildrenOfType(file, PsiComment.class);
+        List<UMLComment> umlComments = new ArrayList<>();
+        for (PsiComment comment : psiComments) {
             LocationInfo locationInfo = null;
             if (comment.getTokenType() == JavaTokenType.END_OF_LINE_COMMENT) {
                 locationInfo = new LocationInfo(file, sourceFile, comment, LocationInfo.CodeElementType.LINE_COMMENT);
@@ -113,10 +113,10 @@ public class UMLModelASTReader {
                 int end = comment.getTextRange().getEndOffset();
                 String text = javaFileContent.substring(start, end);
                 UMLComment umlComment = new UMLComment(text, locationInfo);
-                comments.add(umlComment);
+                umlComments.add(umlComment);
             }
         }
-        return comments;
+        return umlComments;
     }
 
     private void distributeComments(List<UMLComment> compilationUnitComments, LocationInfo codeElementLocationInfo, List<UMLComment> codeElementComments) {

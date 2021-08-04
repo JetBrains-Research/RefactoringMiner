@@ -14,7 +14,7 @@ import java.util.Map;
 
 public class AnonymousClassDeclarationObject implements LocationInfoProvider {
     private final LocationInfo locationInfo;
-    private final String astNodeString;
+    private final String string;
     private final List<String> variables = new ArrayList<>();
     private final List<String> types = new ArrayList<>();
     private final Map<String, List<OperationInvocation>> methodInvocationMap = new LinkedHashMap<>();
@@ -37,7 +37,7 @@ public class AnonymousClassDeclarationObject implements LocationInfoProvider {
 
     public AnonymousClassDeclarationObject(PsiFile file, String filePath, PsiAnonymousClass anonymous) {
         this.locationInfo = new LocationInfo(file, filePath, anonymous, CodeElementType.ANONYMOUS_CLASS_DECLARATION);
-        this.astNodeString = Formatter.format(anonymous);
+        this.string = Formatter.format(anonymous);
     }
 
     public LocationInfo getLocationInfo() {
@@ -45,7 +45,7 @@ public class AnonymousClassDeclarationObject implements LocationInfoProvider {
     }
 
     public String toString() {
-        return astNodeString;
+        return string;
     }
 
     public Map<String, List<OperationInvocation>> getMethodInvocationMap() {
