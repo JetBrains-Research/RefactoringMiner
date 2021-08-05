@@ -4,7 +4,7 @@ dependencies {
 
 open class IOCliTask : org.jetbrains.intellij.tasks.RunIdeTask() {
     // Name of operation to perform (h/help for usage)
-    val operation: String? by project
+    val command: String? by project
 
     // Path to the local git directory or URL
     val gitProjectPath: String? by project
@@ -38,7 +38,7 @@ tasks {
         dependsOn("buildPlugin")
         args = listOf(
             "RefactoringMiner",
-            operation,
+            command,
             gitProjectPath,
             startPosition,
             endPosition,
