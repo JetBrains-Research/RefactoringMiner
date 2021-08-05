@@ -18,6 +18,9 @@ public class OutputRefactoringHandler extends RefactoringHandler {
     @NotNull
     private final String repositoryURL;
 
+    /**
+     * @param verbose Whether to print the commit statistics at the end of processing
+     */
     public OutputRefactoringHandler(@NotNull String repositoryURL, @NotNull JsonOutput output, boolean verbose) {
         this.verbose = verbose;
         this.output = output;
