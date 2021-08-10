@@ -72,7 +72,7 @@ public class UMLModelASTReader {
 
     @NotNull
     private List<String> getImports(PsiFile file) {
-        PsiImportList imports = PsiUtils.findFirstForwardSiblingOfType(file.getFirstChild(), PsiImportList.class);
+        PsiImportList imports = PsiUtils.findFirstChildOfType(file, PsiImportList.class);
         return Arrays.stream(imports.getAllImportStatements())
             .map(imp -> imp.isOnDemand()
                 ? imp.getImportReference().getText() + ".*"
@@ -183,16 +183,30 @@ public class UMLModelASTReader {
         this.umlModel.addClass(umlClass);
     }
 
-    private List<UMLType> getUMLTypesOfReferenceList(PsiFile file, String sourceFile, @Nullable PsiReferenceList list) {
-        if (list == null) {
-            return Collections.emptyList();
+    private String getAnonymousCodePath(PsiAnonymousClass anonymous) {
+        LinkedList<String> elements = new LinkedList<>();
+        PsiElement parent = anonymous.getParent();
+        while (parent != null) {
+            if (parent instanceof PsiMethod) {
+                String methodName = ((PsiMethod) parent).getName();
+                elements.addFirst(methodName);
+            } else if (parent instanceof PsiVariable) {
+                String fieldName = ((PsiVariable) parent).getName();
+                elements.addFirst(fieldName);
+            } else if (parent instanceof PsiMethodCallExpression) {
+                PsiIdentifier identifier =
+                    PsiUtils.findFirstChildOfType(
+                        ((PsiMethodCallExpression) parent).getMethodExpression(),
+                        PsiIdentifier.class
+                    );
+                if (identifier != null) {
+                    String invocationName = Formatter.format(identifier);
+                    elements.addFirst(invocationName);
+                }
+            }
+            parent = parent.getParent();
         }
-        PsiJavaCodeReferenceElement[] superInterfaceElements = list.getReferenceElements();
-        List<UMLType> types = new ArrayList<>(superInterfaceElements.length);
-        for (PsiJavaCodeReferenceElement superInterfaceElement : superInterfaceElements) {
-            types.add(UMLType.extractTypeObject(file, sourceFile, superInterfaceElement));
-        }
-        return types;
+        return String.join(".", elements);
     }
 
     /**
@@ -339,30 +353,52 @@ public class UMLModelASTReader {
         }
     }
 
-    private String getAnonymousCodePath(PsiAnonymousClass anonymous) {
-        LinkedList<String> elements = new LinkedList<>();
-        PsiElement parent = anonymous.getParent();
-        while (parent != null) {
-            if (parent instanceof PsiMethod) {
-                String methodName = ((PsiMethod) parent).getName();
-                elements.addFirst(methodName);
-            } else if (parent instanceof PsiField) {
-                String fieldName = ((PsiField) parent).getName();
-                elements.addFirst(fieldName);
-            } else if (parent instanceof PsiMethodCallExpression) {
-                PsiIdentifier identifier =
-                    PsiUtils.findFirstForwardSiblingOfType(
-                        ((PsiMethodCallExpression) parent).getMethodExpression(),
-                        PsiIdentifier.class
-                    );
-                if (identifier != null) {
-                    String invocationName = Formatter.format(identifier);
-                    elements.addFirst(invocationName);
-                }
-            }
-            parent = parent.getParent();
+    private UMLOperation processMethodDeclaration(PsiFile file, PsiMethod psiMethod,
+                                                  String sourceFile, List<UMLComment> comments) {
+        String methodName = psiMethod.getName();
+        LocationInfo locationInfo = new LocationInfo(file, sourceFile, psiMethod, LocationInfo.CodeElementType.METHOD_DECLARATION);
+        UMLOperation umlOperation = new UMLOperation(methodName, locationInfo);
+        umlOperation.setJavadoc(generateJavadoc(file, psiMethod, sourceFile));
+        distributeComments(comments, locationInfo, umlOperation.getComments());
+        umlOperation.setConstructor(psiMethod.isConstructor());
+
+        processModifiers(file, sourceFile, psiMethod, umlOperation);
+
+        PsiTypeParameter[] typeParameters = psiMethod.getTypeParameters();
+        for (PsiTypeParameter typeParameter : typeParameters) {
+            umlOperation.addTypeParameter(processTypeParameter(file, sourceFile, typeParameter));
         }
-        return String.join(".", elements);
+
+        PsiCodeBlock block = psiMethod.getBody();
+        if (block != null) {
+            OperationBody body = new OperationBody(file, sourceFile, block);
+            umlOperation.setBody(body);
+            umlOperation.setEmptyBody(block.isEmpty());
+        } else {
+            umlOperation.setBody(null);
+        }
+
+        if (!psiMethod.isConstructor()) {
+            UMLType type = UMLTypePsiParser.extractTypeObject(file, sourceFile, psiMethod.getReturnTypeElement(), psiMethod.getReturnType());
+            UMLParameter returnParameter = new UMLParameter("return", type, "return", false);
+            umlOperation.addParameter(returnParameter);
+        }
+
+        PsiParameter[] parameters = psiMethod.getParameterList().getParameters();
+        for (PsiParameter parameter : parameters) {
+            UMLType type = UMLTypePsiParser.extractTypeObject(file, sourceFile, parameter.getTypeElement(), parameter.getType());
+            String parameterName = parameter.getName();
+            UMLParameter umlParameter = new UMLParameter(parameterName, type, "in", parameter.isVarArgs());
+            VariableDeclaration variableDeclaration = new VariableDeclaration(file, sourceFile, parameter, parameter.isVarArgs());
+            variableDeclaration.setParameter(true);
+            umlParameter.setVariableDeclaration(variableDeclaration);
+            umlOperation.addParameter(umlParameter);
+        }
+
+        for (UMLType umlType : getUMLTypesOfReferenceList(file, sourceFile, psiMethod.getThrowsList())) {
+            umlOperation.addThrownExceptionType(umlType);
+        }
+        return umlOperation;
     }
 
     private void processModifiers(PsiFile file, String sourceFile, PsiClass psiClass, UMLClass umlClass) {
@@ -393,52 +429,16 @@ public class UMLModelASTReader {
         }
     }
 
-    private UMLOperation processMethodDeclaration(PsiFile file, PsiMethod psiMethod,
-                                                  String sourceFile, List<UMLComment> comments) {
-        String methodName = psiMethod.getName();
-        LocationInfo locationInfo = new LocationInfo(file, sourceFile, psiMethod, LocationInfo.CodeElementType.METHOD_DECLARATION);
-        UMLOperation umlOperation = new UMLOperation(methodName, locationInfo);
-        umlOperation.setJavadoc(generateJavadoc(file, psiMethod, sourceFile));
-        distributeComments(comments, locationInfo, umlOperation.getComments());
-        umlOperation.setConstructor(psiMethod.isConstructor());
-
-        processModifiers(file, sourceFile, psiMethod, umlOperation);
-
-        PsiTypeParameter[] typeParameters = psiMethod.getTypeParameters();
-        for (PsiTypeParameter typeParameter : typeParameters) {
-            umlOperation.addTypeParameter(processTypeParameter(file, sourceFile, typeParameter));
+    private List<UMLType> getUMLTypesOfReferenceList(PsiFile file, String sourceFile, @Nullable PsiReferenceList list) {
+        if (list == null) {
+            return Collections.emptyList();
         }
-
-        PsiCodeBlock block = psiMethod.getBody();
-        if (block != null) {
-            OperationBody body = new OperationBody(file, sourceFile, block);
-            umlOperation.setBody(body);
-            umlOperation.setEmptyBody(block.isEmpty());
-        } else {
-            umlOperation.setBody(null);
+        PsiJavaCodeReferenceElement[] superInterfaceElements = list.getReferenceElements();
+        List<UMLType> types = new ArrayList<>(superInterfaceElements.length);
+        for (PsiJavaCodeReferenceElement superInterfaceElement : superInterfaceElements) {
+            types.add(UMLTypePsiParser.extractTypeObject(file, sourceFile, superInterfaceElement));
         }
-
-        if (!psiMethod.isConstructor()) {
-            UMLType type = UMLType.extractTypeObject(file, sourceFile, psiMethod.getReturnTypeElement(), psiMethod.getReturnType());
-            UMLParameter returnParameter = new UMLParameter("return", type, "return", false);
-            umlOperation.addParameter(returnParameter);
-        }
-
-        PsiParameter[] parameters = psiMethod.getParameterList().getParameters();
-        for (PsiParameter parameter : parameters) {
-            UMLType type = UMLType.extractTypeObject(file, sourceFile, parameter.getTypeElement(), parameter.getType());
-            String parameterName = parameter.getName();
-            UMLParameter umlParameter = new UMLParameter(parameterName, type, "in", parameter.isVarArgs());
-            VariableDeclaration variableDeclaration = new VariableDeclaration(file, sourceFile, parameter, parameter.isVarArgs());
-            variableDeclaration.setParameter(true);
-            umlParameter.setVariableDeclaration(variableDeclaration);
-            umlOperation.addParameter(umlParameter);
-        }
-
-        for (UMLType umlType : getUMLTypesOfReferenceList(file, sourceFile, psiMethod.getThrowsList())) {
-            umlOperation.addThrownExceptionType(umlType);
-        }
-        return umlOperation;
+        return types;
     }
 
     private void processModifiers(PsiFile file, String sourceFile, PsiMethod method, UMLOperation umlOperation) {
@@ -475,7 +475,7 @@ public class UMLModelASTReader {
                                                        String sourceFile, List<UMLComment> comments) {
         UMLJavadoc javadoc = generateJavadoc(file, psiField, sourceFile);
         List<UMLAttribute> attributes = new ArrayList<>();
-        UMLType type = UMLType.extractTypeObject(file, sourceFile, psiField.getTypeElement(), psiField.getType());
+        UMLType type = UMLTypePsiParser.extractTypeObject(file, sourceFile, psiField.getTypeElement(), psiField.getType());
         String fieldName = psiField.getName();
         LocationInfo locationInfo = new LocationInfo(file, sourceFile, psiField, LocationInfo.CodeElementType.FIELD_DECLARATION);
         VariableDeclaration variableDeclaration = new VariableDeclaration(file, sourceFile, psiField);

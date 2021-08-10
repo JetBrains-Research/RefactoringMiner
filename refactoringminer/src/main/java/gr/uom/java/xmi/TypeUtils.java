@@ -17,7 +17,7 @@ public class TypeUtils {
     public static UMLType extractType(PsiFile file, String filePath, PsiNewExpression newExpression) {
         PsiJavaCodeReferenceElement typeElement = newExpression.getClassReference();
         if (typeElement != null) {
-            return UMLType.extractTypeObject(file, filePath, typeElement, newExpression.getType());
+            return UMLTypePsiParser.extractTypeObject(file, filePath, typeElement, newExpression.getType());
         } else {
             PsiElement qualifyingElement = PsiUtils.findFirstForwardSibling(newExpression.getFirstChild(),
                 element -> element instanceof PsiAnonymousClass || PsiUtils.isTypeKeyword(element));
@@ -25,7 +25,7 @@ public class TypeUtils {
             assert qualifyingElement != null;
             if (qualifyingElement instanceof PsiKeyword) {
                 // array of primitives
-                return UMLType.extractTypeObject(file, filePath, (PsiKeyword) qualifyingElement);
+                return UMLTypePsiParser.extractTypeObject(file, filePath, (PsiKeyword) qualifyingElement);
             } else {
                 // anonymous class
                 return extractType(file, filePath, (PsiAnonymousClass) qualifyingElement);
@@ -35,15 +35,15 @@ public class TypeUtils {
 
     @NotNull
     public static UMLType extractType(PsiFile file, String filePath, PsiAnonymousClass anonymousClass) {
-        return UMLType.extractTypeObject(file, filePath, anonymousClass.getBaseClassReference());
+        return UMLTypePsiParser.extractTypeObject(file, filePath, anonymousClass.getBaseClassReference());
     }
 
     public static UMLType extractType(PsiFile file, String filePath, PsiVariable variable) {
         PsiTypeElement typeElement = variable.getTypeElement();
         if (typeElement.isInferredType()) {
-            return UMLType.extractVarType(file, filePath, typeElement);
+            return UMLTypePsiParser.extractVarType(file, filePath, typeElement);
         } else {
-            return UMLType.extractTypeObject(file, filePath, typeElement, variable.getType());
+            return UMLTypePsiParser.extractTypeObject(file, filePath, typeElement, variable.getType());
         }
     }
 
@@ -57,5 +57,33 @@ public class TypeUtils {
             next = next.getNextSibling();
         }
         return arrayDimensions;
+    }
+
+    public static String clearArrayLength(String typeString) {
+        StringBuilder sb = new StringBuilder();
+        int sum = 0;
+        for (int i = 0; i < typeString.length(); i++) {
+            switch (typeString.charAt(i)) {
+                case '[': {
+                    if (sum == 0) {
+                        sb.append('[');
+                    }
+                    sum++;
+                }
+                break;
+                case ']': {
+                    sum--;
+                    if (sum == 0) {
+                        sb.append(']');
+                    }
+                }
+                break;
+                default:
+                    if (sum == 0) {
+                        sb.append(typeString.charAt(i));
+                    }
+            }
+        }
+        return sb.toString();
     }
 }

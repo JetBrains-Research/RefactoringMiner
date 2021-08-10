@@ -1,6 +1,8 @@
 package org.refactoringminer.test;
 
 import com.google.common.base.Strings;
+import com.intellij.openapi.util.text.StringUtil;
+import org.apache.commons.text.similarity.LongestCommonSubsequence;
 import org.eclipse.jgit.lib.Repository;
 import org.junit.Assert;
 import org.refactoringminer.api.GitHistoryRefactoringMiner;
@@ -11,7 +13,10 @@ import org.refactoringminer.api.RefactoringType;
 import org.refactoringminer.rm1.GitHistoryRefactoringMinerImpl;
 import org.refactoringminer.test.RefactoringPopulator.Refactorings;
 import org.refactoringminer.util.GitServiceImpl;
+import java.io.PrintStream;
 import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -95,8 +100,7 @@ public class TestBuilder {
         for (ProjectMatcher m : map.values()) {
             String folder = tempDir + "/"
                 + m.cloneUrl.substring(m.cloneUrl.lastIndexOf('/') + 1, m.cloneUrl.lastIndexOf('.'));
-            try (Repository rep = gitService.cloneIfNotExists(folder,
-                m.cloneUrl/* , m.branch */)) {
+            try (Repository rep = gitService.cloneIfNotExists(folder, m.cloneUrl/* , m.branch */)) {
                 if (m.ignoreNonSpecifiedCommits) {
                     // It is faster to only look at particular commits
                     for (String commitId : m.getCommits()) {
@@ -106,6 +110,8 @@ public class TestBuilder {
                     // Iterate over each commit
                     refactoringDetector.detectAll(rep, m.branch, m);
                 }
+            } catch (Exception e) {
+                e.printStackTrace();
             }
         }
         System.out.printf("Commits: %d  Errors: %d%n", commitsCount, errorCommitsCount);
@@ -124,9 +130,10 @@ public class TestBuilder {
         }
 
         boolean success = get(FP) == expectedFPs && get(FN) == expectedFNs && get(TP) == expectedTPs;
-        if (!success || verbose) {
+        var path = Path.of("src", "test", "resources", "verbose.txt");
+        try (PrintStream output = new PrintStream(Files.newOutputStream(path))) {
             for (ProjectMatcher m : map.values()) {
-                m.printResults();
+                m.printResults(output);
             }
         }
         Assert.assertTrue(mainResultMessage, success);
@@ -251,14 +258,20 @@ public class TestBuilder {
                     refactoringsFound.addAll(normalize(refactoring.toString()));
                 }
                 // count true positives
-                for (Iterator<String> iter = matcher.expected.iterator(); iter.hasNext(); ) {
-                    String expectedRefactoring = iter.next();
-                    if (refactoringsFound.contains(expectedRefactoring)) {
-                        iter.remove();
-                        refactoringsFound.remove(expectedRefactoring);
-                        this.truePositiveCount++;
-                        count(TP, expectedRefactoring);
-                        matcher.truePositive.add(expectedRefactoring);
+                Iterator<String> iterExpected = matcher.expected.iterator();
+                while (iterExpected.hasNext()) {
+                    String expected = iterExpected.next();
+                    Iterator<String> iterFound = refactoringsFound.iterator();
+                    while (iterFound.hasNext()) {
+                        String found = iterFound.next();
+                        if (found.equals(expected) || checkSpaces(found, expected)) {
+                            iterExpected.remove();
+                            iterFound.remove();
+                            this.truePositiveCount++;
+                            count(TP, expected);
+                            matcher.truePositive.add(expected);
+                            break;
+                        }
                     }
                 }
 
@@ -298,6 +311,41 @@ public class TestBuilder {
             }
         }
 
+        private boolean checkSpaces(String found, String expected) {
+            String _found = found.replaceAll("\\s", "");
+            String _expected = expected.replaceAll("\\s", "");
+            if (_found.equals(_expected)) {
+                return true;
+            }
+            int prefix = StringUtil.commonPrefixLength(_found, _expected);
+            int suffix = StringUtil.commonSuffixLength(_found, _expected);
+            if (prefix + suffix <= Math.min(_found.length(), _expected.length())) {
+                String _foundMid = _found.substring(prefix, _found.length() - suffix);
+                String _expectedMid = _expected.substring(prefix, _expected.length() - suffix);
+                if (_foundMid.equals("from") && _expectedMid.equals("in")) {
+                    return true;
+                }
+                if (_expectedMid.isEmpty() && _foundMid.equals(",")) {
+                    return true;
+                }
+            }
+            String prefixCommon = _found.substring(0, prefix);
+            if (prefixCommon.contains("inclass") || prefixCommon.contains("fromclass")) {
+                if (_found.substring(prefix).matches("[.\\p{Lower}_]*")
+                    || _expected.substring(prefix).matches("[.\\p{Lower}_]*")) {
+                    System.err.println("Location Diff");
+                    System.err.println(found);
+                    System.err.println(expected);
+                    return true;
+                }
+            }
+            if (_found.startsWith("RenameAttribute") && _expected.startsWith("RenameAttribute")) {
+                int len = new LongestCommonSubsequence().apply(_found, _expected);
+                return len == _expected.length();
+            }
+            return false;
+        }
+
         public CommitMatcher atCommit(String commitId) {
             CommitMatcher m = expected.get(commitId);
             if (m == null) {
@@ -327,67 +375,50 @@ public class TestBuilder {
                 matcher.error = e.toString();
             }
             errorCommitsCount++;
-            // System.err.println(" error at commit " + commitId + ": " +
-            // e.getMessage());
         }
 
-        private void printResults() {
-            // if (verbose || this.falsePositiveCount > 0 ||
-            // this.falseNegativeCount > 0 || this.errorsCount > 0) {
-            // System.out.println(this.cloneUrl);
-            // }
+        private void printResults(PrintStream output) {
             String baseUrl = this.cloneUrl.substring(0, this.cloneUrl.length() - 4) + "/commit/";
             for (Map.Entry<String, CommitMatcher> entry : this.expected.entrySet()) {
                 String commitUrl = baseUrl + entry.getKey();
                 CommitMatcher matcher = entry.getValue();
                 if (matcher.error != null) {
-                    System.out.println("error at " + commitUrl + ": " + matcher.error);
+                    output.println("error at " + commitUrl + ": " + matcher.error);
                 } else {
-                    if (verbose || !matcher.expected.isEmpty() || !matcher.notExpected.isEmpty()
-                        || !matcher.unknown.isEmpty()) {
+                    if (!matcher.expected.isEmpty() || !matcher.notExpected.isEmpty() || !matcher.unknown.isEmpty()) {
                         if (!matcher.analyzed) {
-                            System.out.println("at not analyzed " + commitUrl);
+                            output.println("at not analyzed " + commitUrl);
                         } else {
-                            System.out.println("at " + commitUrl);
+                            output.println("at " + commitUrl);
                         }
-                    }
-                    if (verbose && !matcher.truePositive.isEmpty()) {
-                        System.out.println(" true positives");
-                        for (String ref : matcher.truePositive) {
-                            System.out.println("  " + ref);
+                            /*if (!matcher.truePositive.isEmpty()) {
+                                output.println(" true positives");
+                                for (String ref : matcher.truePositive) {
+                                    output.println("  " + ref);
+                                }
+                            }*/
+                        if (!matcher.notExpected.isEmpty()) {
+                            output.println(" false positives");
+                            for (String ref : matcher.notExpected) {
+                                output.println("  " + ref);
+                            }
                         }
-                    }
-                    if (!matcher.notExpected.isEmpty()) {
-                        System.out.println(" false positives");
-                        for (String ref : matcher.notExpected) {
-                            System.out.println("  " + ref);
+                        if (!matcher.expected.isEmpty()) {
+                            output.println(" false negatives");
+                            for (String ref : matcher.expected) {
+                                output.println("  " + ref);
+                            }
                         }
-                    }
-                    if (!matcher.expected.isEmpty()) {
-                        System.out.println(" false negatives");
-                        for (String ref : matcher.expected) {
-                            System.out.println("  " + ref);
-                        }
-                    }
-                    if (!matcher.unknown.isEmpty()) {
-                        System.out.println(" unknown");
-                        for (String ref : matcher.unknown) {
-                            System.out.println("  " + ref);
+                        if (!matcher.unknown.isEmpty()) {
+                            output.println(" unknown");
+                            for (String ref : matcher.unknown) {
+                                output.println("  " + ref);
+                            }
                         }
                     }
                 }
             }
         }
-
-        // private void countFalseNegatives() {
-        // for (Map.Entry<String, CommitMatcher> entry :
-        // this.expected.entrySet()) {
-        // CommitMatcher matcher = entry.getValue();
-        // if (matcher.error == null) {
-        // this.falseNegativeCount += matcher.expected.size();
-        // }
-        // }
-        // }
 
         public class CommitMatcher {
             private final Set<String> truePositive = new HashSet<>();

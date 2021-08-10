@@ -42,6 +42,11 @@ public class PsiUtils {
     }
 
     @SuppressWarnings("unchecked")
+    public static <T> T findFirstChildOfType(PsiElement element, Class<T> type) {
+        return (T) findFirstForwardSibling(element.getFirstChild(), type::isInstance);
+    }
+
+    @SuppressWarnings("unchecked")
     public static <T> T findFirstForwardSiblingOfType(PsiElement element, Class<T> type) {
         return (T) findFirstForwardSibling(element, type::isInstance);
     }
