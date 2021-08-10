@@ -54,7 +54,7 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
         int endOffset = scopeNode.getTextRange().getEndOffset();
         this.scope = new VariableScope(file, filePath, startOffset, endOffset);
 
-        PsiModifierList modifierList = PsiUtils.findFirstForwardSiblingOfType(variable.getFirstChild(), PsiModifierList.class);
+        PsiModifierList modifierList = PsiUtils.findFirstChildOfType(variable, PsiModifierList.class);
         if (modifierList != null) {
             this.isFinal = modifierList.hasExplicitModifier(PsiModifier.FINAL);
         } else {
@@ -174,6 +174,7 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
         StringBuilder sb = new StringBuilder();
         sb.append(variableName).append(" : ").append(type);
         if (varargsParameter) {
+            sb.delete(sb.length() - 2, sb.length());
             sb.append("...");
         }
         return sb.toString();
@@ -183,6 +184,7 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
         StringBuilder sb = new StringBuilder();
         sb.append(variableName).append(" : ").append(type.toQualifiedString());
         if (varargsParameter) {
+            sb.delete(sb.length() - 2, sb.length());
             sb.append("...");
         }
         return sb.toString();
