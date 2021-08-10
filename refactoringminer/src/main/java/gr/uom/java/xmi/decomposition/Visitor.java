@@ -11,17 +11,15 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 import static gr.uom.java.xmi.Utils.createOrAppend;
 
 public class Visitor extends PsiRecursiveElementWalkingVisitor {
-    public static final Pattern METHOD_INVOCATION_PATTERN = Pattern.compile("!(\\w|\\.)*@\\w*");
     public static final Pattern METHOD_SIGNATURE_PATTERN =
         Pattern.compile("(public|protected|private|static|\\s)" +
-            " +[\\w\\<\\>\\[\\]]+\\s+(\\w+) *\\([^\\)]*\\) *(\\{?|[^;])");
-    public static final Pattern CONST_VARIABLE_PATTERN = Pattern.compile("[\\p{Upper}_]*");
+            " +[\\w<>\\[\\]]+\\s+(\\w+) *\\([^)]*\\) *(\\{?|[^;])");
+    public static final Pattern CONST_VARIABLE_PATTERN = Pattern.compile("[\\p{Upper}_]+");
     private final PsiFile file;
     private final String filePath;
     private final List<String> variables = new ArrayList<>();
@@ -56,33 +54,21 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
 
     private static @Nullable List<String> getReferenceTokens(@NotNull PsiReferenceExpression reference) {
         PsiExpression qualifier = reference.getQualifierExpression();
+        List<String> previousTokens = null;
         if (qualifier instanceof PsiThisExpression) {
-            List<String> previousTokens = new ArrayList<>();
+            previousTokens = new ArrayList<>();
             previousTokens.add("this");
-            return previousTokens;
         } else if (qualifier instanceof PsiReferenceExpression) {
-            List<String> previousTokens = getReferenceTokens((PsiReferenceExpression) qualifier);
-            if (previousTokens == null) {
-                return null;
-            }
-            PsiIdentifier identifier = PsiUtils.findFirstForwardSiblingOfType(qualifier, PsiIdentifier.class);
-            previousTokens.add(identifier.getText());
-            return previousTokens;
+            previousTokens = getReferenceTokens((PsiReferenceExpression) qualifier);
         } else if (qualifier == null) {
-            List<String> previousTokens = new ArrayList<>();
-            PsiIdentifier identifier =
-                PsiUtils.findFirstForwardSiblingOfType(reference.getFirstChild(), PsiIdentifier.class);
-            previousTokens.add(identifier.getText());
-            return previousTokens;
-        } else {
+            previousTokens = new ArrayList<>();
+        }
+        if (previousTokens == null) {
             return null;
         }
-    }
-
-    public void onLastAnonymous(@NotNull Consumer<AnonymousClassDeclarationObject> consumer) {
-        if (!stackAnonymous.isEmpty()) {
-            consumer.accept(stackAnonymous.peek());
-        }
+        PsiIdentifier identifier = PsiUtils.findFirstChildOfType(reference, PsiIdentifier.class);
+        previousTokens.add(identifier.getText());
+        return previousTokens;
     }
 
     @Override
@@ -90,54 +76,44 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
         boolean goInSubtree = true;
         if (element instanceof PsiArrayAccessExpression) {
             String source = Formatter.format(element);
-            arrayAccesses.add(source);
-            onLastAnonymous(anonymous -> anonymous.getArrayAccesses().add(source));
+            addArrayAccess(source);
         } else if (element instanceof PsiPrefixExpression) {
             String source = Formatter.format(element);
-            prefixExpressions.add(source);
-            onLastAnonymous(anonymous -> anonymous.getPrefixExpressions().add(source));
+            addPrefixExpression(source);
         } else if (element instanceof PsiPostfixExpression) {
             String source = Formatter.format(element);
-            postfixExpressions.add(source);
-            onLastAnonymous(anonymous -> anonymous.getPostfixExpressions().add(source));
+            addPostfixExpression(source);
         } else if (element instanceof PsiConditionalExpression) {
             TernaryOperatorExpression ternaryOperator =
                 new TernaryOperatorExpression(file, filePath, (PsiConditionalExpression) element);
-            ternaryOperatorExpressions.add(ternaryOperator);
-            onLastAnonymous(anonymous -> anonymous.getTernaryOperatorExpressions().add(ternaryOperator));
+            addTernaryOperator(ternaryOperator);
         } else if (element instanceof PsiPolyadicExpression) {
             PsiPolyadicExpression polyadic = (PsiPolyadicExpression) element;
             String polyadicStr = Formatter.format(polyadic);
             String operator = Formatter.format(polyadic.getTokenBeforeOperand(polyadic.getOperands()[1]));
-            infixExpressions.add(polyadicStr);
-            infixOperators.add(operator);
-            onLastAnonymous(anonymous -> anonymous.getInfixExpressions().add(polyadicStr));
-            onLastAnonymous(anonymous -> anonymous.getInfixOperators().add(operator));
+            addInfixExpression(polyadicStr);
+            addInfixOperator(operator);
         } else if (element instanceof PsiNewExpression) {
             goInSubtree = processNewExpression((PsiNewExpression) element);
         } else if (element instanceof PsiDeclarationStatement) {
             goInSubtree = processDeclaration((PsiDeclarationStatement) element);
         } else if (element instanceof PsiResourceVariable) {
             VariableDeclaration variableDeclaration = new VariableDeclaration(file, filePath, (PsiResourceVariable) element);
-            variableDeclarations.add(variableDeclaration);
-            onLastAnonymous(anonymous -> anonymous.getVariableDeclarations().add(variableDeclaration));
+            addVariableDeclaration(variableDeclaration);
         } else if (element instanceof PsiAnonymousClass) {
             AnonymousClassDeclarationObject anonymousObject =
                 new AnonymousClassDeclarationObject(file, filePath, (PsiAnonymousClass) element);
-            anonymousClassDeclarations.add(anonymousObject);
-            onLastAnonymous(anonymous -> anonymous.getAnonymousClassDeclarations().add(anonymousObject));
+            addAnonymousClassDeclaration(anonymousObject);
             stackAnonymous.add(anonymousObject);
         } else if (element instanceof PsiLiteralExpression) {
             processLiteral((PsiLiteral) element);
         } else if (element instanceof PsiClassObjectAccessExpression) {
             String source = Formatter.format(element);
-            typeLiterals.add(source);
-            onLastAnonymous(anonymous -> anonymous.getTypeLiterals().add(source));
+            addTypeLiteral(source);
         } else if (element instanceof PsiThisExpression) {
             if (!(element.getParent() instanceof PsiReference)) {
                 String source = Formatter.format(element);
-                variables.add(source);
-                onLastAnonymous(anonymous -> anonymous.getVariables().add(source));
+                addVariable(source);
             }
         } else if (element instanceof PsiIdentifier) {
             processIdentifier((PsiIdentifier) element);
@@ -151,8 +127,7 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
         } else if (element instanceof PsiTypeElement) {
             goInSubtree = false;
             String source = Formatter.format(element);
-            types.add(source);
-            onLastAnonymous(anonymous -> anonymous.getTypes().add(source));
+            addType(source);
         } else if (element instanceof PsiKeyword) {
             goInSubtree = false;
             if (PsiUtils.isTypeKeyword((PsiKeyword) element)) {
@@ -162,15 +137,165 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
             processMethodCall((PsiMethodCallExpression) element);
         } else if (element instanceof PsiTypeCastExpression) {
             String source = Formatter.format(element);
-            variables.add(source);
-            onLastAnonymous(anonymous -> anonymous.getVariables().add(source));
+            addVariable(source);
         } else if (element instanceof PsiLambdaExpression) {
             LambdaExpressionObject lambda = new LambdaExpressionObject(file, filePath, (PsiLambdaExpression) element);
-            lambdas.add(lambda);
-            onLastAnonymous(anonymous -> anonymous.getLambdas().add(lambda));
+            addLambda(lambda);
         }
         if (goInSubtree) {
             super.visitElement(element);
+        }
+    }
+
+    private void addLambda(LambdaExpressionObject lambda) {
+        if (stackAnonymous.isEmpty()) {
+            lambdas.add(lambda);
+        } else {
+            stackAnonymous.peek().getLambdas().add(lambda);
+        }
+    }
+
+    private void addType(String source) {
+        if (stackAnonymous.isEmpty()) {
+            types.add(source);
+        } else {
+            stackAnonymous.peek().getTypes().add(source);
+        }
+    }
+
+    private void addVariable(String source) {
+        if (stackAnonymous.isEmpty()) {
+            variables.add(source);
+        } else {
+            stackAnonymous.peek().getVariables().add(source);
+        }
+    }
+
+    private void addTypeLiteral(String source) {
+        if (stackAnonymous.isEmpty()) {
+            typeLiterals.add(source);
+        } else {
+            stackAnonymous.peek().getTypeLiterals().add(source);
+        }
+    }
+
+    private void addAnonymousClassDeclaration(AnonymousClassDeclarationObject anonymousObject) {
+        if (stackAnonymous.isEmpty()) {
+            anonymousClassDeclarations.add(anonymousObject);
+        } else {
+            stackAnonymous.peek().getAnonymousClassDeclarations().add(anonymousObject);
+        }
+    }
+
+    private void addVariableDeclaration(VariableDeclaration variableDeclaration) {
+        if (stackAnonymous.isEmpty()) {
+            variableDeclarations.add(variableDeclaration);
+        } else {
+            stackAnonymous.peek().getVariableDeclarations().add(variableDeclaration);
+        }
+    }
+
+    private void addInfixExpression(String polyadicStr) {
+        if (stackAnonymous.isEmpty()) {
+            infixExpressions.add(polyadicStr);
+        } else {
+            stackAnonymous.peek().getInfixExpressions().add(polyadicStr);
+        }
+    }
+
+    private void addInfixOperator(String operator) {
+        if (stackAnonymous.isEmpty()) {
+            infixOperators.add(operator);
+        } else {
+            stackAnonymous.peek().getInfixOperators().add(operator);
+        }
+    }
+
+    private void addTernaryOperator(TernaryOperatorExpression ternaryOperator) {
+        if (stackAnonymous.isEmpty()) {
+            ternaryOperatorExpressions.add(ternaryOperator);
+        } else {
+            stackAnonymous.peek().getTernaryOperatorExpressions().add(ternaryOperator);
+        }
+    }
+
+    private void addPostfixExpression(String source) {
+        if (stackAnonymous.isEmpty()) {
+            postfixExpressions.add(source);
+        } else {
+            stackAnonymous.peek().getPostfixExpressions().add(source);
+        }
+    }
+
+    private void addPrefixExpression(String source) {
+        if (stackAnonymous.isEmpty()) {
+            prefixExpressions.add(source);
+        } else {
+            stackAnonymous.peek().getPrefixExpressions().add(source);
+        }
+    }
+
+    private void addArrayAccess(String source) {
+        if (stackAnonymous.isEmpty()) {
+            arrayAccesses.add(source);
+        } else {
+            stackAnonymous.peek().getArrayAccesses().add(source);
+        }
+    }
+
+    private void addArgument(String source) {
+        if (stackAnonymous.isEmpty()) {
+            arguments.add(source);
+        } else {
+            stackAnonymous.peek().getArguments().add(source);
+        }
+    }
+
+    private void addMethodInvocation(String source, OperationInvocation invocation) {
+        if (stackAnonymous.isEmpty()) {
+            methodInvocationMap.compute(source, createOrAppend(invocation));
+        } else {
+            stackAnonymous.peek().getMethodInvocationMap().compute(source, createOrAppend(invocation));
+        }
+    }
+
+    private void addBooleanLiteral(String source) {
+        if (stackAnonymous.isEmpty()) {
+            booleanLiterals.add(source);
+        } else {
+            stackAnonymous.peek().getBooleanLiterals().add(source);
+        }
+    }
+
+    private void addNumberLiteral(String source) {
+        if (stackAnonymous.isEmpty()) {
+            numberLiterals.add(source);
+        } else {
+            stackAnonymous.peek().getNumberLiterals().add(source);
+        }
+    }
+
+    private void addStringLiteral(String source) {
+        if (stackAnonymous.isEmpty()) {
+            stringLiterals.add(source);
+        } else {
+            stackAnonymous.peek().getStringLiterals().add(source);
+        }
+    }
+
+    private void addNullLiteral(String source) {
+        if (stackAnonymous.isEmpty()) {
+            nullLiterals.add(source);
+        } else {
+            stackAnonymous.peek().getNullLiterals().add(source);
+        }
+    }
+
+    private void addCreation(ObjectCreation creation, String source) {
+        if (stackAnonymous.isEmpty()) {
+            creationMap.compute(source, createOrAppend(creation));
+        } else {
+            stackAnonymous.peek().getCreationMap().compute(source, createOrAppend(creation));
         }
     }
 
@@ -178,7 +303,6 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
     protected void elementFinished(PsiElement element) {
         if (element instanceof PsiAnonymousClass) {
             stackAnonymous.pop();
-            // TODO: remove if strange condition
         }
     }
 
@@ -189,25 +313,20 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
         }
         String source = Formatter.format(methodCall);
         OperationInvocation invocation = new OperationInvocation(file, filePath, methodCall);
-        methodInvocationMap.compute(source, createOrAppend(invocation));
-        onLastAnonymous(anonymous -> anonymous.getMethodInvocationMap().compute(source, createOrAppend(invocation)));
+        addMethodInvocation(source, invocation);
     }
 
     private void processLiteral(@NotNull PsiLiteral literal) {
         Object value = literal.getValue();
         String source = Formatter.format(literal);
         if (value == null) {
-            nullLiterals.add(source);
-            onLastAnonymous(anonymous -> anonymous.getNullLiterals().add(source));
+            addNullLiteral(source);
         } else if (value instanceof String) {
-            stringLiterals.add(source);
-            onLastAnonymous(anonymous -> anonymous.getStringLiterals().add(source));
+            addStringLiteral(source);
         } else if (value instanceof Number) {
-            numberLiterals.add(source);
-            onLastAnonymous(anonymous -> anonymous.getNumberLiterals().add(source));
+            addNumberLiteral(source);
         } else if (value instanceof Boolean) {
-            booleanLiterals.add(source);
-            onLastAnonymous(anonymous -> anonymous.getBooleanLiterals().add(source));
+            addBooleanLiteral(source);
         } else {
             // Characters not processed
             assert value instanceof Character;
@@ -220,8 +339,7 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
     private void processTypeIdentifier(@NotNull PsiElement element) {
         int arrayDimensions = TypeUtils.arrayDimensions(element);
         String typeStr = Formatter.format(element) + Strings.repeat("[]", arrayDimensions);
-        types.add(typeStr);
-        onLastAnonymous(anonymous -> anonymous.getTypes().add(typeStr));
+        addType(typeStr);
     }
 
     private boolean processDeclaration(@NotNull PsiDeclarationStatement declaration) {
@@ -229,8 +347,7 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
             if (declaredElement instanceof PsiVariable) {
                 VariableDeclaration variableDeclaration =
                     new VariableDeclaration(file, filePath, (PsiVariable) declaredElement);
-                variableDeclarations.add(variableDeclaration);
-                onLastAnonymous(anonymous -> anonymous.getVariableDeclarations().add(variableDeclaration));
+                addVariableDeclaration(variableDeclaration);
             } else if (declaredElement instanceof PsiClass) {
                 // Local classes are not yet supported
                 return false;
@@ -256,13 +373,11 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
             }
             if (firstNotTypeIndex != 0) {
                 String type = String.join(".", reference.subList(0, firstNotTypeIndex));
-                types.add(type);
-                onLastAnonymous(anonymous -> anonymous.getTypes().add(type));
+                addType(type);
             }
             if (firstNotTypeIndex != reference.size()) {
                 String variable = String.join(".", reference);
-                variables.add(variable);
-                onLastAnonymous(anonymous -> anonymous.getVariables().add(variable));
+                addVariable(variable);
             }
         }
     }
@@ -270,8 +385,7 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
     private boolean processNewExpression(@NotNull PsiNewExpression newExpression) {
         ObjectCreation creation = new ObjectCreation(file, filePath, newExpression);
         String source = Formatter.format(newExpression);
-        creationMap.compute(source, createOrAppend(creation));
-        onLastAnonymous(anonymous -> anonymous.getCreationMap().compute(source, createOrAppend(creation)));
+        addCreation(creation, source);
         if (newExpression.isArrayCreation()) {
             PsiArrayInitializerExpression initializer = newExpression.getArrayInitializer();
             return initializer == null || initializer.getInitializers().length <= 10;
@@ -289,9 +403,8 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
     private void processIdentifier(@NotNull PsiIdentifier identifier) {
         String source = Formatter.format(identifier);
         PsiElement parent = identifier.getParent();
-        if (!(parent instanceof PsiMethod || parent instanceof PsiParameter || parent instanceof PsiReference)) {
-            variables.add(source);
-            onLastAnonymous(anonymous -> anonymous.getVariables().add(source));
+        if (!(parent instanceof PsiMethod || parent instanceof PsiReference)) {
+            addVariable(source);
         }
     }
 
@@ -302,8 +415,7 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
             return;
         }
         String source = Formatter.format(argument);
-        arguments.add(source);
-        onLastAnonymous(anonymous -> anonymous.getArguments().add(source));
+        addArgument(source);
     }
 
     public @NotNull Map<String, List<OperationInvocation>> getMethodInvocationMap() {
