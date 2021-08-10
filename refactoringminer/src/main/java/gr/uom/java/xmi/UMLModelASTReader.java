@@ -183,30 +183,16 @@ public class UMLModelASTReader {
         this.umlModel.addClass(umlClass);
     }
 
-    private String getAnonymousCodePath(PsiAnonymousClass anonymous) {
-        LinkedList<String> elements = new LinkedList<>();
-        PsiElement parent = anonymous.getParent();
-        while (parent != null) {
-            if (parent instanceof PsiMethod) {
-                String methodName = ((PsiMethod) parent).getName();
-                elements.addFirst(methodName);
-            } else if (parent instanceof PsiVariable) {
-                String fieldName = ((PsiVariable) parent).getName();
-                elements.addFirst(fieldName);
-            } else if (parent instanceof PsiMethodCallExpression) {
-                PsiIdentifier identifier =
-                    PsiUtils.findFirstChildOfType(
-                        ((PsiMethodCallExpression) parent).getMethodExpression(),
-                        PsiIdentifier.class
-                    );
-                if (identifier != null) {
-                    String invocationName = Formatter.format(identifier);
-                    elements.addFirst(invocationName);
-                }
-            }
-            parent = parent.getParent();
+    private List<UMLType> getUMLTypesOfReferenceList(PsiFile file, String sourceFile, @Nullable PsiReferenceList list) {
+        if (list == null) {
+            return Collections.emptyList();
         }
-        return String.join(".", elements);
+        PsiJavaCodeReferenceElement[] superInterfaceElements = list.getReferenceElements();
+        List<UMLType> types = new ArrayList<>(superInterfaceElements.length);
+        for (PsiJavaCodeReferenceElement superInterfaceElement : superInterfaceElements) {
+            types.add(UMLTypePsiParser.extractTypeObject(file, sourceFile, superInterfaceElement));
+        }
+        return types;
     }
 
     /**
@@ -353,6 +339,32 @@ public class UMLModelASTReader {
         }
     }
 
+    private String getAnonymousCodePath(PsiAnonymousClass anonymous) {
+        LinkedList<String> elements = new LinkedList<>();
+        PsiElement parent = anonymous.getParent();
+        while (parent != null) {
+            if (parent instanceof PsiMethod) {
+                String methodName = ((PsiMethod) parent).getName();
+                elements.addFirst(methodName);
+            } else if (parent instanceof PsiVariable) {
+                String fieldName = ((PsiVariable) parent).getName();
+                elements.addFirst(fieldName);
+            } else if (parent instanceof PsiMethodCallExpression) {
+                PsiIdentifier identifier =
+                    PsiUtils.findFirstChildOfType(
+                        ((PsiMethodCallExpression) parent).getMethodExpression(),
+                        PsiIdentifier.class
+                    );
+                if (identifier != null) {
+                    String invocationName = Formatter.format(identifier);
+                    elements.addFirst(invocationName);
+                }
+            }
+            parent = parent.getParent();
+        }
+        return String.join(".", elements);
+    }
+
     private UMLOperation processMethodDeclaration(PsiFile file, PsiMethod psiMethod,
                                                   String sourceFile, List<UMLComment> comments) {
         String methodName = psiMethod.getName();
@@ -429,18 +441,6 @@ public class UMLModelASTReader {
         }
     }
 
-    private List<UMLType> getUMLTypesOfReferenceList(PsiFile file, String sourceFile, @Nullable PsiReferenceList list) {
-        if (list == null) {
-            return Collections.emptyList();
-        }
-        PsiJavaCodeReferenceElement[] superInterfaceElements = list.getReferenceElements();
-        List<UMLType> types = new ArrayList<>(superInterfaceElements.length);
-        for (PsiJavaCodeReferenceElement superInterfaceElement : superInterfaceElements) {
-            types.add(UMLTypePsiParser.extractTypeObject(file, sourceFile, superInterfaceElement));
-        }
-        return types;
-    }
-
     private void processModifiers(PsiFile file, String sourceFile, PsiMethod method, UMLOperation umlOperation) {
         PsiModifierList modifiers = method.getModifierList();
         if (modifiers.hasExplicitModifier(PsiModifier.ABSTRACT)) {
@@ -468,6 +468,33 @@ public class UMLModelASTReader {
 
         for (PsiAnnotation annotation : modifiers.getAnnotations()) {
             umlOperation.addAnnotation(new UMLAnnotation(file, sourceFile, annotation));
+        }
+    }
+
+    private void processModifiers(PsiField field, UMLAttribute umlAttribute) {
+        PsiModifierList modifiers = field.getModifierList();
+        assert modifiers != null;
+        if (modifiers.hasExplicitModifier(PsiModifier.STATIC)) {
+            umlAttribute.setStatic(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.FINAL)) {
+            umlAttribute.setFinal(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.VOLATILE)) {
+            umlAttribute.setVolatile(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.TRANSIENT)) {
+            umlAttribute.setTransient(true);
+        }
+
+        if (modifiers.hasModifierProperty(PsiModifier.PUBLIC)) {
+            umlAttribute.setVisibility("public");
+        } else if (modifiers.hasExplicitModifier(PsiModifier.PROTECTED)) {
+            umlAttribute.setVisibility("protected");
+        } else if (modifiers.hasExplicitModifier(PsiModifier.PRIVATE)) {
+            umlAttribute.setVisibility("private");
+        } else {
+            umlAttribute.setVisibility("package");
         }
     }
 
@@ -510,33 +537,6 @@ public class UMLModelASTReader {
         }
         enumConstant.setClassName(umlClass.getName());
         umlClass.addEnumConstant(enumConstant);
-    }
-
-    private void processModifiers(PsiField field, UMLAttribute umlAttribute) {
-        PsiModifierList modifiers = field.getModifierList();
-        assert modifiers != null;
-        if (modifiers.hasExplicitModifier(PsiModifier.STATIC)) {
-            umlAttribute.setStatic(true);
-        }
-        if (modifiers.hasExplicitModifier(PsiModifier.FINAL)) {
-            umlAttribute.setFinal(true);
-        }
-        if (modifiers.hasExplicitModifier(PsiModifier.VOLATILE)) {
-            umlAttribute.setVolatile(true);
-        }
-        if (modifiers.hasExplicitModifier(PsiModifier.TRANSIENT)) {
-            umlAttribute.setTransient(true);
-        }
-
-        if (modifiers.hasModifierProperty(PsiModifier.PUBLIC)) {
-            umlAttribute.setVisibility("public");
-        } else if (modifiers.hasExplicitModifier(PsiModifier.PROTECTED)) {
-            umlAttribute.setVisibility("protected");
-        } else if (modifiers.hasExplicitModifier(PsiModifier.PRIVATE)) {
-            umlAttribute.setVisibility("private");
-        } else {
-            umlAttribute.setVisibility("package");
-        }
     }
 
     private UMLAnonymousClass processAnonymousClassDeclaration(PsiFile file, PsiAnonymousClass psiAnonymousClass,
