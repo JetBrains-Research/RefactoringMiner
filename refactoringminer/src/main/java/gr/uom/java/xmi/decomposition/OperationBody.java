@@ -155,7 +155,7 @@ public class OperationBody {
             PsiParameter variableDeclaration = foreachStatement.getIterationParameter();
             VariableDeclaration vd = new VariableDeclaration(file, filePath, variableDeclaration);
             child.addVariableDeclaration(vd);
-            AbstractExpression variableDeclarationName = new AbstractExpression(file, filePath, variableDeclaration.getNameIdentifier(), CodeElementType.ENHANCED_FOR_STATEMENT_PARAMETER_NAME);
+            AbstractExpression variableDeclarationName = new AbstractExpression(file, filePath, variableDeclaration, CodeElementType.ENHANCED_FOR_STATEMENT_PARAMETER_NAME);
             child.addExpression(variableDeclarationName);
             AbstractExpression abstractExpression = new AbstractExpression(file, filePath, foreachStatement.getIteratedValue(), CodeElementType.ENHANCED_FOR_STATEMENT_EXPRESSION);
             child.addExpression(abstractExpression);
@@ -252,7 +252,7 @@ public class OperationBody {
                 parent.addStatement(catchClauseStatementObject);
                 VariableDeclaration vd = new VariableDeclaration(file, filePath, variableDeclaration);
                 catchClauseStatementObject.addVariableDeclaration(vd);
-                AbstractExpression variableDeclarationName = new AbstractExpression(file, filePath, variableDeclaration.getNameIdentifier(), CodeElementType.CATCH_CLAUSE_EXCEPTION_NAME);
+                AbstractExpression variableDeclarationName = new AbstractExpression(file, filePath, variableDeclaration, CodeElementType.CATCH_CLAUSE_EXCEPTION_NAME);
                 catchClauseStatementObject.addExpression(variableDeclarationName);
                 if (variableDeclaration.getInitializer() != null) {
                     AbstractExpression variableDeclarationInitializer = new AbstractExpression(file, filePath, variableDeclaration.getInitializer(), CodeElementType.VARIABLE_DECLARATION_INITIALIZER);
