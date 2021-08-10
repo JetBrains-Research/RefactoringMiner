@@ -1,7 +1,6 @@
 package gr.uom.java.xmi;
 
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiStatement;
 import gr.uom.java.xmi.decomposition.PsiUtils;
 import java.util.regex.Pattern;
 
@@ -17,10 +16,8 @@ public class Formatter {
         expression.accept(formatter);
         String text = formatter.getText();
 
-        if (expression instanceof PsiStatement && text.endsWith(";")) {
-            text = text + '\n';
-        }
         if (PsiUtils.isForInitializer(expression)) {
+            // remove ";\n"
             text = text.substring(0, text.length() - 2);
         }
         return text;

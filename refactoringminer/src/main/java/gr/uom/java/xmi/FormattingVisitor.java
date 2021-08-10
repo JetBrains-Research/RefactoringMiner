@@ -19,13 +19,17 @@ public class FormattingVisitor extends PsiRecursiveElementWalkingVisitor {
         JavaTokenType.EQ, JavaTokenType.LT, JavaTokenType.GT,
         JavaTokenType.DOT, JavaTokenType.COMMA,
         JavaTokenType.RBRACKET, JavaTokenType.LBRACKET,
-        JavaTokenType.LPARENTH, JavaTokenType.RPARENTH
+        JavaTokenType.LPARENTH, JavaTokenType.RPARENTH,
+        JavaTokenType.SEMICOLON, JavaTokenType.DOUBLE_COLON
     );
     private static final TokenSet noSpaceAfter = TokenSet.create(
-        JavaTokenType.AT
+        JavaTokenType.AT, JavaTokenType.LBRACE, JavaTokenType.RBRACE
     );
     private static final TokenSet noSpaceBefore = TokenSet.create(
-        JavaTokenType.SEMICOLON, JavaTokenType.ELLIPSIS
+        JavaTokenType.ELLIPSIS
+    );
+    private static final TokenSet endLineAfter = TokenSet.create(
+        JavaTokenType.LBRACE, JavaTokenType.RBRACE, JavaTokenType.SEMICOLON
     );
 
     private final StringBuilder sb = new StringBuilder();
@@ -42,6 +46,9 @@ public class FormattingVisitor extends PsiRecursiveElementWalkingVisitor {
                         sb.append(' ');
                     }
                     sb.append(element.getText());
+                    if (PsiUtil.isJavaToken(element, endLineAfter)) {
+                        sb.append('\n');
+                    }
                     previousNeedSpaceAfter = needSpaceAfter(element);
                 }
             }
