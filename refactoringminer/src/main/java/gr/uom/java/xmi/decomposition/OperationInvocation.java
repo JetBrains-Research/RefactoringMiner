@@ -10,6 +10,7 @@ import com.intellij.psi.PsiSuperExpression;
 import com.intellij.psi.PsiThisExpression;
 import gr.uom.java.xmi.Formatter;
 import gr.uom.java.xmi.LocationInfo;
+import gr.uom.java.xmi.TypeUtils;
 import gr.uom.java.xmi.UMLAbstractClass;
 import gr.uom.java.xmi.UMLClass;
 import gr.uom.java.xmi.UMLOperation;
@@ -208,21 +209,6 @@ public class OperationInvocation extends AbstractCall {
         }
         List<UMLType> inferredArgumentTypes = new ArrayList<>();
         for (String arg : arguments) {
-            int indexOfOpeningParenthesis = arg.indexOf("(");
-            int indexOfOpeningSquareBracket = arg.indexOf("[");
-            boolean openingParenthesisBeforeSquareBracket = false;
-            boolean openingSquareBracketBeforeParenthesis = false;
-            if (indexOfOpeningParenthesis != -1 && indexOfOpeningSquareBracket != -1) {
-                if (indexOfOpeningParenthesis < indexOfOpeningSquareBracket) {
-                    openingParenthesisBeforeSquareBracket = true;
-                } else if (indexOfOpeningSquareBracket < indexOfOpeningParenthesis) {
-                    openingSquareBracketBeforeParenthesis = true;
-                }
-            } else if (indexOfOpeningParenthesis != -1 && indexOfOpeningSquareBracket == -1) {
-                openingParenthesisBeforeSquareBracket = true;
-            } else if (indexOfOpeningParenthesis == -1 && indexOfOpeningSquareBracket != -1) {
-                openingSquareBracketBeforeParenthesis = true;
-            }
             if (variableDeclarationMap.containsKey(arg)) {
                 Set<VariableDeclaration> variableDeclarations = variableDeclarationMap.get(arg);
                 for (VariableDeclaration variableDeclaration : variableDeclarations) {
@@ -259,17 +245,14 @@ public class OperationInvocation extends AbstractCall {
                 inferredArgumentTypes.add(UMLType.extractTypeObject("boolean"));
             } else if (arg.equals("false")) {
                 inferredArgumentTypes.add(UMLType.extractTypeObject("boolean"));
-            } else if (arg.startsWith("new ") && arg.contains("(") && openingParenthesisBeforeSquareBracket) {
-                String type = arg.substring(4, arg.indexOf("("));
-                inferredArgumentTypes.add(UMLType.extractTypeObject(type));
-            } else if (arg.startsWith("new ") && arg.contains("[") && openingSquareBracketBeforeParenthesis) {
-                String type = arg.substring(4, arg.indexOf("["));
-                for (int i = 0; i < arg.length(); i++) {
-                    if (arg.charAt(i) == '[') {
-                        type = type + "[]";
-                    } else if (arg.charAt(i) == '\n' || arg.charAt(i) == '{') {
-                        break;
-                    }
+            } else if (arg.startsWith("new ")) {
+                int parenthese = arg.indexOf("(");
+                int brace = arg.indexOf("{");
+                parenthese = parenthese != -1 ? parenthese : arg.length();
+                brace = brace != -1 ? brace : arg.length();
+                String type = arg.substring(4, Math.min(parenthese, brace));
+                if (type.contains("[")) {
+                    type = TypeUtils.clearArrayLength(type);
                 }
                 inferredArgumentTypes.add(UMLType.extractTypeObject(type));
             } else if (arg.endsWith(".getClassLoader()")) {
