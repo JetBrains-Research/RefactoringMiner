@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class RefactoringPopulator {
     static final ObjectMapper mapper = new ObjectMapper();
@@ -54,17 +53,6 @@ public class RefactoringPopulator {
             }
         }
         return filtered;
-    }
-
-    public static void prepareRefactoringsAtCommit(TestBuilder test, BigInteger flag, String sha1) throws IOException {
-        mapper.<List<Root>>readValue(new File(test.dataFile),
-            mapper.getTypeFactory().constructCollectionType(List.class, Root.class)).stream()
-            .filter(root -> root.sha1.equals(sha1))
-            .peek(root -> root.refactorings = root.refactorings.stream()
-                .filter(ref -> isAdded(ref, flag))
-                .collect(Collectors.toList()))
-            .forEach(root -> test.project(root.repository, "master").atCommit(root.sha1)
-                .containsOnly(extractRefactorings(root.refactorings)));
     }
 
     private static List<String> getDeletedCommits() {
