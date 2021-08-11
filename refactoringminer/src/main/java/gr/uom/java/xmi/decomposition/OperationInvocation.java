@@ -121,8 +121,9 @@ public class OperationInvocation extends AbstractCall {
             if (subExpression != null) {
                 processSubExpression(subExpression);
                 PsiJavaToken dot = PsiUtils.findFirstForwardSiblingToken(subExpression, JavaTokenType.DOT);
-                String text = expression.getText().substring(dot.getTextOffset() + 1 - expression.getTextOffset());
-                subExpressions.add(Formatter.format(text));
+                // Text after dot (identifier and parameters)
+                subExpressions.add(Formatter.format(dot.getNextSibling(), null)
+                    + Formatter.format(dot.getParent().getNextSibling(), null));
             } else {
                 subExpressions.add(Formatter.format(expression));
             }
