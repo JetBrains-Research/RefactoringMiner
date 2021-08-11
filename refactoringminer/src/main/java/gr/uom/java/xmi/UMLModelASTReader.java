@@ -40,7 +40,7 @@ public class UMLModelASTReader {
         for (Map.Entry<String, String> file : javaFileContents.entrySet()) {
             PsiFile psiFile = factory.createFileFromText(JavaLanguage.INSTANCE, file.getValue());
             try {
-                processFile(file.getKey(), psiFile, file.getValue());
+                processFile(file.getKey(), psiFile);
             } catch (Exception e) {
                 LOG.error("Error on file: " + file.getKey(), e);
             } catch (AssertionError e) {
@@ -49,11 +49,11 @@ public class UMLModelASTReader {
         }
     }
 
-    private void processFile(String sourceFilePath, PsiFile file, String javaFileContent) {
+    private void processFile(String sourceFilePath, PsiFile file) {
         if (PsiTreeUtil.hasErrorElements(file)) {
             throw new IllegalArgumentException("PsiFile contains errors");
         }
-        List<UMLComment> comments = extractInternalComments(file, sourceFilePath, javaFileContent);
+        List<UMLComment> comments = extractInternalComments(file, sourceFilePath);
         String packageName = getPackageName(file);
         List<String> importedTypes = getImports(file);
 
@@ -97,8 +97,7 @@ public class UMLModelASTReader {
      */
     @NotNull
     private List<UMLComment> extractInternalComments(@NotNull PsiFile file,
-                                                     @NotNull String sourceFile,
-                                                     @NotNull String javaFileContent) {
+                                                     @NotNull String sourceFile) {
         Collection<PsiComment> psiComments = PsiTreeUtil.findChildrenOfType(file, PsiComment.class);
         List<UMLComment> umlComments = new ArrayList<>();
         for (PsiComment comment : psiComments) {
@@ -109,9 +108,7 @@ public class UMLModelASTReader {
                 locationInfo = new LocationInfo(file, sourceFile, comment, LocationInfo.CodeElementType.BLOCK_COMMENT);
             }
             if (locationInfo != null) {
-                int start = comment.getTextRange().getStartOffset();
-                int end = comment.getTextRange().getEndOffset();
-                String text = javaFileContent.substring(start, end);
+                String text = Formatter.format(comment);
                 UMLComment umlComment = new UMLComment(text, locationInfo);
                 umlComments.add(umlComment);
             }
