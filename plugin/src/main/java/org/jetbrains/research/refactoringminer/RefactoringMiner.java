@@ -60,6 +60,9 @@ public class RefactoringMiner implements ApplicationStarter {
                     detectAtGitHubPullRequest(out, args.get(PROJECT_PATH),
                         Integer.parseInt(args.get(START_POSITION)), Integer.parseInt(args.get(TIMEOUT)));
                     break;
+                default:
+                    System.out.println("Unknown command.");
+                    System.out.println("Call help to show usage.");
             }
         } catch (IllegalArgumentException e) {
             System.out.println("Call help to show usage.");
@@ -69,6 +72,7 @@ public class RefactoringMiner implements ApplicationStarter {
             System.out.println(e.getMessage());
             logger.error("Error processing arguments", e);
         }
+        System.exit(0);
     }
 
     private void detectAll(@NotNull JsonOutput out, @NotNull String folder, @Nullable String branch) throws Exception {
