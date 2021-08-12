@@ -2,7 +2,6 @@ package gr.uom.java.xmi.decomposition;
 
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiParameter;
 import gr.uom.java.xmi.Formatter;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
@@ -60,11 +59,7 @@ public class AbstractExpression extends AbstractCodeFragment {
         this.arguments = visitor.getArguments();
         this.ternaryOperatorExpressions = visitor.getTernaryOperatorExpressions();
         this.lambdas = visitor.getLambdas();
-        if (expression instanceof PsiParameter) {
-            this.expression = ((PsiParameter) expression).getName();
-        } else {
-            this.expression = Formatter.format(expression);
-        }
+        this.expression = Formatter.format(expression);
         this.owner = null;
     }
 
