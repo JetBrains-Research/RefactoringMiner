@@ -40,13 +40,13 @@ public class FormattingVisitor extends PsiRecursiveElementWalkingVisitor {
         if (element.getFirstChild() == null) {
             // Add text from leaves. Excluding comments and user-specific whitespaces
             if (!(element instanceof PsiWhiteSpace || element instanceof PsiComment)) {
-                String text = element.getText().trim();
+                String text = element.getText();
                 if (!text.isEmpty()) {
                     if (needSpaceBefore(element) && previousNeedSpaceAfter) {
                         sb.append(' ');
                     }
                     sb.append(element.getText());
-                    if (PsiUtil.isJavaToken(element, endLineAfter)) {
+                    if (needEndLineAfter(element)) {
                         sb.append('\n');
                     }
                     previousNeedSpaceAfter = needSpaceAfter(element);
@@ -55,6 +55,10 @@ public class FormattingVisitor extends PsiRecursiveElementWalkingVisitor {
         } else {
             super.visitElement(element);
         }
+    }
+
+    private boolean needEndLineAfter(@NotNull PsiElement element) {
+        return PsiUtil.isJavaToken(element, endLineAfter);
     }
 
     private static boolean needSpaceBefore(PsiElement element) {
