@@ -98,16 +98,12 @@ public class UMLTypePsiParser {
     }
 
     private static void addAnnotations(PsiFile file, String filePath, PsiTypeElement typeElement, UMLType umlType) {
-        if (typeElement.getParent() instanceof PsiMethod) {
-            // TODO: return type annotations attached only to method?
-        } else {
-            PsiModifierList modifierList = getPrecedingModifiersList(typeElement);
-            if (modifierList != null) {
-                Arrays.stream(modifierList.getChildren())
-                    .filter(element -> element instanceof PsiAnnotation)
-                    .map(annotation -> new UMLAnnotation(file, filePath, (PsiAnnotation) annotation))
-                    .forEach(umlType.annotations::add);
-            }
+        PsiModifierList modifierList = getPrecedingModifiersList(typeElement);
+        if (modifierList != null) {
+            Arrays.stream(modifierList.getChildren())
+                .filter(element -> element instanceof PsiAnnotation)
+                .map(annotation -> new UMLAnnotation(file, filePath, (PsiAnnotation) annotation))
+                .forEach(umlType.annotations::add);
         }
     }
 
