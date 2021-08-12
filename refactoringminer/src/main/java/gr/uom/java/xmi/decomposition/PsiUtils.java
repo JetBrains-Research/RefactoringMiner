@@ -29,18 +29,6 @@ public class PsiUtils {
         return PsiUtil.isJavaToken(keyword, typeKeywords);
     }
 
-    public static PsiJavaToken findLastCArrayBracket(PsiElement element) {
-        PsiJavaToken last = null;
-        PsiElement current = element;
-        while (current != null) {
-            if (PsiUtil.isJavaToken(current, JavaTokenType.RBRACKET)) {
-                last = (PsiJavaToken) current;
-            }
-            current = current.getNextSibling();
-        }
-        return last;
-    }
-
     @SuppressWarnings("unchecked")
     public static <T> T findFirstChildOfType(PsiElement element, Class<T> type) {
         return (T) findFirstForwardSibling(element.getFirstChild(), type::isInstance);
