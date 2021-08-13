@@ -1,6 +1,5 @@
 Table of Contents
 =================
-
    * [General info](#general-info)
    * [Support for other programming languages](#support-for-other-programming-languages)
       * [Kotlin](#kotlin)
@@ -13,9 +12,9 @@ Table of Contents
    * [Running RefactoringMiner from the command line](#running-refactoringminer-from-the-command-line)
 
 # General info
-RefactoringMiner is a library/API written in Java that can detect refactorings applied in the history of a Java project. 
-[Original tool](https://github.com/tsantalis/RefactoringMiner) developed by [Nikolaos Tsantalis](https://github.com/tsantalis) et al.
-This fork is being developed to implement RefactoringMiner using the IntelliJ Platform.
+RefactoringMiner is a library/API written in Java that can detect refactorings applied in the history of a Java project.
+
+The [original tool](https://github.com/tsantalis/RefactoringMiner) uses Eclipse JDT to parse Java code. At JetBrains Research, we are working on the migration of RefactoringMiner from Eclipse JDT to the IntelliJ Platform which provides a rich set of capabilities on code analysis.
 
 # Support for other programming languages
 ## Kotlin
@@ -223,30 +222,27 @@ final List<CourseInfo> courseInfos = getFromStepic("courses",CoursesContainer.cl
 ```
 
 # Running RefactoringMiner from the command line
-
-You can run RefactoringMiner as a command line application. 
+ 
 Run `./gradlew -q refactoringminer-CLI -Pcommand=help` for help.
 
-     command                    gitProjectPath     startPosition        endPosition        timeout  output                                                                                                                                                                                                                                                                          
-     detectAll                  <git-repo-folder>  <branch>?                                        +       Detect all refactorings at <branch> for <git-repo-folder>. If <branch> is not specified, commits from all branches are analyzed                                                                                                                                         
-     detectBetweenCommits       <git-repo-folder>  <start-commit-sha1>  <end-commit-sha1>           +       Detect refactorings between <start-commit-sha1> and <end-commit-sha1> for project <git-repo-folder>                                                                                                                                                                     
-     detectBetweenTags          <git-repo-folder>  <start-tag>          <end-tag>                   +       Detect refactorings between <start-tag> and <end-tag> for project <git-repo-folder>                                                                                                                                                                                     
-     detectAtCommit             <git-repo-folder>  <commit-sha1>                                    +       Detect refactorings at specified commit <commit-sha1> for project <git-repo-folder>                                                                                                                                                                                     
-     detectAtGitHubCommit       <git-URL>          <commit-sha1>                           +        +       Detect refactorings at specified commit <commit-sha1> for project <git-URL> within the given <timeout> in seconds. All required information is obtained directly from GitHub using the OAuth token in github-oauth.properties                                           
-     detectAtGitHubPullRequest  <git-URL>          <pull-request>                          +        +       Detect refactorings at specified pull request <pull-request> for project <git-URL> within the given <timeout> in seconds for each commit in the pull request. All required information is obtained directly from GitHub using the OAuth token in github-oauth.properties
+     command                    gitProjectPath      startPosition        endPosition                                                                                                                                                                                                                                                                                    
+     detectAll                  <git-repo-folder>   <branch>                                 Detect all refactorings at <branch> for <git-repo-folder>. If <branch> is not specified, commits from all branches are analyzed                                                                                                                                         
+     detectBetweenCommits       <git-repo-folder>   <start-commit-sha1>  <end-commit-sha1>   Detect refactorings between <start-commit-sha1> and <end-commit-sha1> for project <git-repo-folder>                                                                                                                                                                     
+     detectBetweenTags          <git-repo-folder>   <start-tag>          <end-tag>           Detect refactorings between <start-tag> and <end-tag> for project <git-repo-folder>                                                                                                                                                                                     
+     detectAtCommit             <git-repo-folder>   <commit-sha1>                            Detect refactorings at specified commit <commit-sha1> for project <git-repo-folder>                                                                                                                                                                                     
+     detectAtGitHubCommit       <git-URL>           <commit-sha1>                            Detect refactorings at specified commit <commit-sha1> for project <git-URL> within the given <timeout> in seconds. All required information is obtained directly from GitHub using the OAuth token in github-oauth.properties                                           
+     detectAtGitHubPullRequest  <git-URL>           <pull-request>                           Detect refactorings at specified pull request <pull-request> for project <git-URL> within the given <timeout> in seconds for each commit in the pull request. All required information is obtained directly from GitHub using the OAuth token in github-oauth.properties
 	
-You can specify other parameters using the same syntax `-Pname=value`. 
+To specify parameters, use the syntax `-Pname=value`. 
 With a locally cloned repository, run:
 
-    > git clone https://github.com/danilofes/refactoring-toy-example.git refactoring-toy-example
-    > ./gradlew -q refactoringminer-CLI -Pcommand=detectAtCommit -PgitProjectPath=refactoring-toy-example -PstartPosition=36287f7c3b09eff78395267a3ac0d7da067863fd
+     > git clone https://github.com/danilofes/refactoring-toy-example.git refactoring-toy-example
+     > ./gradlew -q refactoringminer-CLI -Pcommand=detectAtCommit -PgitProjectPath=refactoring-toy-example -PstartPosition=36287f7c3b09eff78395267a3ac0d7da067863fd
 
-If you don't want to clone locally the repository, run:
-
-    > ./gradlew -q refactoringminer-CLI -Pcommand=detectAtGitHubCommit -PgitProjectPath=https://github.com/danilofes/refactoring-toy-example.git -PstartPosition=36287f7c3b09eff78395267a3ac0d7da067863fd -Ptimeout=10
-
-**For all options you can add the `-Poutput=<path-to-json-file>` to save the JSON output in a file. 
-The results are appended to the file after each processed commit.**
+If you don't want to clone locally the repository, run: 
+     
+     > ./gradlew -q refactoringminer-CLI -Pcommand=detectAtGitHubCommit -PgitProjectPath=https://github.com/danilofes/refactoring-toy-example.git -PstartPosition=36287f7c3b09eff78395267a3ac0d7da067863fd -Ptimeout=10
+**To save the output to the file, use the command `-Poutput=<path-to-json-file>`.**
 
 For the `detectAtGitHubCommit` and `detectAtGitHubPullRequest` options you must provide a valid OAuth token in the `github-oauth.properties` file stored in the `bin` folder.
 You can generate an OAuth token in GitHub `Settings` -> `Developer settings` -> `Personal access tokens`.
