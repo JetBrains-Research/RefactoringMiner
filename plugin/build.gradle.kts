@@ -4,20 +4,31 @@ dependencies {
 
 open class IOCliTask : org.jetbrains.intellij.tasks.RunIdeTask() {
     // Name of operation to perform (h/help for usage)
+    @get:Input
     val command: String? by project
 
     // Path to the local git directory or URL
+    @get:Input
+    @get:Optional
     val gitProjectPath: String? by project
 
     // Commit, tag, branch or pull-request
+    @get:Input
+    @get:Optional
     val startPosition: String? by project
 
     // Commit or tag for bt and bc options
+    @get:Input
+    @get:Optional
     val endPosition: String? by project
 
+    @get:Input
+    @get:Optional
     val timeout: String? by project
 
     // Path to json for output
+    @get:Input
+    @get:Optional
     val output: String? by project
 
     init {
