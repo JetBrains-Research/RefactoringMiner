@@ -137,8 +137,10 @@ public class VariableReplacementAnalysis {
                         addedVariablesToBeRemoved.add(addedVariable);
                     }
                     Pair<VariableDeclaration, VariableDeclaration> pair = Pair.of(removedVariable, addedVariable);
-                    if (!matchedVariables.contains(pair) && removedVariable.getVariableName().equals(addedVariable.getVariableName()) &&
-                        mappedStatementWithinVariableScopes(removedVariable.getStatementsInScopeUsingVariable(), addedVariable.getStatementsInScopeUsingVariable())) {
+                    if (!matchedVariables.contains(pair)
+                        && removedVariable.getVariableName().equals(addedVariable.getVariableName())
+                        && !bothCatchExceptionVariables(removedVariable, addedVariable)
+                        && mappedStatementWithinVariableScopes(removedVariable.getStatementsInScopeUsingVariable(), addedVariable.getStatementsInScopeUsingVariable())) {
                         removedVariablesToBeRemoved.add(removedVariable);
                         addedVariablesToBeRemoved.add(addedVariable);
                         matchedVariables.add(pair);
@@ -156,8 +158,10 @@ public class VariableReplacementAnalysis {
                         removedVariablesToBeRemoved.add(removedVariable);
                     }
                     Pair<VariableDeclaration, VariableDeclaration> pair = Pair.of(removedVariable, addedVariable);
-                    if (!matchedVariables.contains(pair) && removedVariable.getVariableName().equals(addedVariable.getVariableName()) &&
-                        mappedStatementWithinVariableScopes(removedVariable.getStatementsInScopeUsingVariable(), addedVariable.getStatementsInScopeUsingVariable())) {
+                    if (!matchedVariables.contains(pair)
+                        && removedVariable.getVariableName().equals(addedVariable.getVariableName())
+                        && !bothCatchExceptionVariables(removedVariable, addedVariable)
+                        && mappedStatementWithinVariableScopes(removedVariable.getStatementsInScopeUsingVariable(), addedVariable.getStatementsInScopeUsingVariable())) {
                         removedVariablesToBeRemoved.add(removedVariable);
                         addedVariablesToBeRemoved.add(addedVariable);
                         matchedVariables.add(pair);
@@ -168,6 +172,26 @@ public class VariableReplacementAnalysis {
         }
         removedVariables.removeAll(removedVariablesToBeRemoved);
         addedVariables.removeAll(addedVariablesToBeRemoved);
+    }
+
+    private boolean bothCatchExceptionVariables(VariableDeclaration removedVariable, VariableDeclaration addedVariable) {
+        boolean isRemovedVariableCatchException = false;
+        for (CompositeStatementObject composite : nonMappedInnerNodesT1) {
+            if (composite.getLocationInfo().getCodeElementType().equals(CodeElementType.CATCH_CLAUSE) &&
+                composite.getVariableDeclarations().contains(removedVariable)) {
+                isRemovedVariableCatchException = true;
+                break;
+            }
+        }
+        boolean isAddedVariableCatchException = false;
+        for (CompositeStatementObject composite : nonMappedInnerNodesT2) {
+            if (composite.getLocationInfo().getCodeElementType().equals(CodeElementType.CATCH_CLAUSE) &&
+                composite.getVariableDeclarations().contains(addedVariable)) {
+                isAddedVariableCatchException = true;
+                break;
+            }
+        }
+        return isRemovedVariableCatchException && isAddedVariableCatchException;
     }
 
     private boolean mappedStatementWithinVariableScopes(List<AbstractCodeFragment> statementsInScope1, List<AbstractCodeFragment> statementsInScope2) {
