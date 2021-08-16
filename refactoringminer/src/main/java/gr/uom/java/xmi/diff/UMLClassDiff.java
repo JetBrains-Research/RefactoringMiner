@@ -104,8 +104,6 @@ public class UMLClassDiff extends UMLClassBaseDiff {
                         }
                     }
                     UMLOperationBodyMapper operationBodyMapper = new UMLOperationBodyMapper(originalOperation, nextOperation, this);
-                    UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(originalOperation, nextOperation, operationBodyMapper.getMappings());
-                    refactorings.addAll(operationSignatureDiff.getRefactorings());
                     this.addOperationBodyMapper(operationBodyMapper);
                 }
             }
@@ -127,8 +125,6 @@ public class UMLClassDiff extends UMLClassBaseDiff {
                     }
                 }
                 UMLOperationBodyMapper operationBodyMapper = new UMLOperationBodyMapper(operation, nextClass.getOperations().get(finalIndex), this);
-                UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(operation, nextClass.getOperations().get(finalIndex), operationBodyMapper.getMappings());
-                refactorings.addAll(operationSignatureDiff.getRefactorings());
                 this.addOperationBodyMapper(operationBodyMapper);
             }
         }
@@ -138,15 +134,11 @@ public class UMLClassDiff extends UMLClassBaseDiff {
             for (UMLOperation addedOperation : addedOperations) {
                 if (removedOperation.equalsIgnoringVisibility(addedOperation)) {
                     UMLOperationBodyMapper operationBodyMapper = new UMLOperationBodyMapper(removedOperation, addedOperation, this);
-                    UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(removedOperation, addedOperation, operationBodyMapper.getMappings());
-                    refactorings.addAll(operationSignatureDiff.getRefactorings());
                     this.addOperationBodyMapper(operationBodyMapper);
                     removedOperationsToBeRemoved.add(removedOperation);
                     addedOperationsToBeRemoved.add(addedOperation);
                 } else if (removedOperation.equalsIgnoringNameCase(addedOperation)) {
                     UMLOperationBodyMapper operationBodyMapper = new UMLOperationBodyMapper(removedOperation, addedOperation, this);
-                    UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(removedOperation, addedOperation, operationBodyMapper.getMappings());
-                    refactorings.addAll(operationSignatureDiff.getRefactorings());
                     if (!removedOperation.getName().equals(addedOperation.getName()) &&
                         !(removedOperation.isConstructor() && addedOperation.isConstructor())) {
                         RenameOperationRefactoring rename = new RenameOperationRefactoring(operationBodyMapper, new HashSet<>());

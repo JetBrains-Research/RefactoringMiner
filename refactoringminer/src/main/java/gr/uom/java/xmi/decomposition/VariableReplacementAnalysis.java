@@ -5,6 +5,7 @@ import gr.uom.java.xmi.UMLAnnotation;
 import gr.uom.java.xmi.UMLAttribute;
 import gr.uom.java.xmi.UMLOperation;
 import gr.uom.java.xmi.UMLParameter;
+import gr.uom.java.xmi.UMLType;
 import gr.uom.java.xmi.decomposition.replacement.ConsistentReplacementDetector;
 import gr.uom.java.xmi.decomposition.replacement.MergeVariableReplacement;
 import gr.uom.java.xmi.decomposition.replacement.MethodInvocationReplacement;
@@ -68,8 +69,13 @@ public class VariableReplacementAnalysis {
         this.callSiteOperation = mapper.getCallSiteOperation();
         this.operationDiff = classDiff != null ? classDiff.getOperationDiff(operation1, operation2) : null;
         this.classDiff = classDiff;
-        this.removedVariables.addAll(operation1.getBody() != null ? operation1.getBody().getAllVariableDeclarations() : Collections.emptySet());
-        this.addedVariables.addAll(operation2.getBody() != null ? operation2.getBody().getAllVariableDeclarations() : Collections.emptySet());
+        if (parentMapper != null) {
+            this.removedVariables.addAll(operation1.getBody() != null ? operation1.getBody().getAllVariableDeclarations() : Collections.emptySet());
+            this.addedVariables.addAll(operation2.getBody() != null ? operation2.getBody().getAllVariableDeclarations() : Collections.emptySet());
+        } else {
+            this.removedVariables.addAll(operation1.getAllVariableDeclarations());
+            this.addedVariables.addAll(operation2.getAllVariableDeclarations());
+        }
         findVariableSplits();
         findVariableMerges();
         findConsistentVariableRenames();
@@ -140,7 +146,7 @@ public class VariableReplacementAnalysis {
                     if (!matchedVariables.contains(pair)
                         && removedVariable.getVariableName().equals(addedVariable.getVariableName())
                         && !bothCatchExceptionVariables(removedVariable, addedVariable)
-                        && mappedStatementWithinVariableScopes(removedVariable.getStatementsInScopeUsingVariable(), addedVariable.getStatementsInScopeUsingVariable())) {
+                        && !containerElementRelationship(removedVariable, addedVariable) && mappedStatementWithinVariableScopes(removedVariable.getStatementsInScopeUsingVariable(), addedVariable.getStatementsInScopeUsingVariable())) {
                         removedVariablesToBeRemoved.add(removedVariable);
                         addedVariablesToBeRemoved.add(addedVariable);
                         matchedVariables.add(pair);
@@ -161,7 +167,7 @@ public class VariableReplacementAnalysis {
                     if (!matchedVariables.contains(pair)
                         && removedVariable.getVariableName().equals(addedVariable.getVariableName())
                         && !bothCatchExceptionVariables(removedVariable, addedVariable)
-                        && mappedStatementWithinVariableScopes(removedVariable.getStatementsInScopeUsingVariable(), addedVariable.getStatementsInScopeUsingVariable())) {
+                        && !containerElementRelationship(removedVariable, addedVariable) && mappedStatementWithinVariableScopes(removedVariable.getStatementsInScopeUsingVariable(), addedVariable.getStatementsInScopeUsingVariable())) {
                         removedVariablesToBeRemoved.add(removedVariable);
                         addedVariablesToBeRemoved.add(addedVariable);
                         matchedVariables.add(pair);
@@ -172,6 +178,15 @@ public class VariableReplacementAnalysis {
         }
         removedVariables.removeAll(removedVariablesToBeRemoved);
         addedVariables.removeAll(addedVariablesToBeRemoved);
+    }
+
+    private boolean containerElementRelationship(VariableDeclaration removedVariable, VariableDeclaration addedVariable) {
+        UMLType type1 = removedVariable.getType();
+        UMLType type2 = addedVariable.getType();
+        if (!type1.equals(type2) && !removedVariable.sameKind(addedVariable)) {
+            return type1.equalClassType(type2) && type1.getArrayDimension() != type2.getArrayDimension();
+        }
+        return false;
     }
 
     private boolean bothCatchExceptionVariables(VariableDeclaration removedVariable, VariableDeclaration addedVariable) {
@@ -351,6 +366,10 @@ public class VariableReplacementAnalysis {
 
     public Set<SplitVariableRefactoring> getVariableSplits() {
         return variableSplits;
+    }
+
+    public Set<Pair<VariableDeclaration, VariableDeclaration>> getMatchedVariables() {
+        return matchedVariables;
     }
 
     public Set<CandidateAttributeRefactoring> getCandidateAttributeRenames() {

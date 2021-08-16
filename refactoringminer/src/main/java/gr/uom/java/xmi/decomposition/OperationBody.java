@@ -5,6 +5,7 @@ import gr.uom.java.xmi.Formatter;
 import gr.uom.java.xmi.LocationInfo;
 import gr.uom.java.xmi.LocationInfo.CodeElementType;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -21,8 +22,12 @@ public class OperationBody {
     private Set<VariableDeclaration> activeVariableDeclarations;
 
     public OperationBody(PsiFile file, String filePath, PsiCodeBlock codeBlock) {
+        this(file, filePath, codeBlock, Collections.emptyList());
+    }
+
+    public OperationBody(PsiFile file, String filePath, PsiCodeBlock codeBlock, List<VariableDeclaration> parameters) {
         this.compositeStatement = new CompositeStatementObject(file, filePath, codeBlock, 0, CodeElementType.BLOCK);
-        this.activeVariableDeclarations = new HashSet<>();
+        this.activeVariableDeclarations = new HashSet<>(parameters);
         PsiStatement[] statements = codeBlock.getStatements();
         for (PsiStatement statement : statements) {
             processStatement(file, filePath, compositeStatement, statement);

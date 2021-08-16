@@ -31,6 +31,7 @@ import gr.uom.java.xmi.diff.UMLClassMoveDiff;
 import gr.uom.java.xmi.diff.UMLModelDiff;
 import gr.uom.java.xmi.diff.UMLOperationDiff;
 import gr.uom.java.xmi.diff.UMLParameterDiff;
+import org.apache.commons.lang3.tuple.Pair;
 import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringMinerTimedOutException;
 import org.refactoringminer.util.PrefixSuffixUtils;
@@ -62,6 +63,7 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
     private List<CompositeStatementObject> nonMappedInnerNodesT1;
     private List<CompositeStatementObject> nonMappedInnerNodesT2;
     private final Set<Refactoring> refactorings = new LinkedHashSet<>();
+    private final Set<Pair<VariableDeclaration, VariableDeclaration>> matchedVariables = new LinkedHashSet<>();
     private final Set<CandidateAttributeRefactoring> candidateAttributeRenames = new LinkedHashSet<>();
     private final Set<CandidateMergeVariableRefactoring> candidateAttributeMerges = new LinkedHashSet<>();
     private final Set<CandidateSplitVariableRefactoring> candidateAttributeSplits = new LinkedHashSet<>();
@@ -697,11 +699,16 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
         return operation2;
     }
 
+    public Set<Pair<VariableDeclaration, VariableDeclaration>> getMatchedVariables() {
+        return matchedVariables;
+    }
+
     public Set<Refactoring> getRefactorings() {
         VariableReplacementAnalysis analysis = new VariableReplacementAnalysis(this, refactorings, classDiff);
         refactorings.addAll(analysis.getVariableRenames());
         refactorings.addAll(analysis.getVariableMerges());
         refactorings.addAll(analysis.getVariableSplits());
+        matchedVariables.addAll(analysis.getMatchedVariables());
         candidateAttributeRenames.addAll(analysis.getCandidateAttributeRenames());
         candidateAttributeMerges.addAll(analysis.getCandidateAttributeMerges());
         candidateAttributeSplits.addAll(analysis.getCandidateAttributeSplits());

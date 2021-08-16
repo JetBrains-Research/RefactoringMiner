@@ -134,6 +134,10 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
         return varargsParameter;
     }
 
+    public boolean sameKind(VariableDeclaration other) {
+        return this.isParameter == other.isParameter && this.isEnumConstant == other.isEnumConstant && this.isAttribute == other.isAttribute;
+    }
+
     public boolean isFinal() {
         return isFinal;
     }
