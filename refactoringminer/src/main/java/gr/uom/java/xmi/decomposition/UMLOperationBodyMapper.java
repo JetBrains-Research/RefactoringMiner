@@ -54,19 +54,19 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
     public static final Pattern SPLIT_CONCAT_STRING_PATTERN = Pattern.compile("(\\s)*(\\+)(\\s)*");
     private static final Pattern SPLIT_CONDITIONAL_PATTERN = Pattern.compile("(\\|\\|)|(&&)|(\\?)|(:)");
     private static final int MAXIMUM_NUMBER_OF_COMPARED_STRINGS = 100;
-    private final UMLOperation operation1;
-    private final UMLOperation operation2;
+    private UMLOperation operation1;
+    private UMLOperation operation2;
     private final Set<AbstractCodeMapping> mappings;
-    private final List<StatementObject> nonMappedLeavesT1;
-    private final List<StatementObject> nonMappedLeavesT2;
-    private final List<CompositeStatementObject> nonMappedInnerNodesT1;
-    private final List<CompositeStatementObject> nonMappedInnerNodesT2;
+    private List<StatementObject> nonMappedLeavesT1;
+    private List<StatementObject> nonMappedLeavesT2;
+    private List<CompositeStatementObject> nonMappedInnerNodesT1;
+    private List<CompositeStatementObject> nonMappedInnerNodesT2;
     private final Set<Refactoring> refactorings = new LinkedHashSet<>();
     private final Set<CandidateAttributeRefactoring> candidateAttributeRenames = new LinkedHashSet<>();
     private final Set<CandidateMergeVariableRefactoring> candidateAttributeMerges = new LinkedHashSet<>();
     private final Set<CandidateSplitVariableRefactoring> candidateAttributeSplits = new LinkedHashSet<>();
     private final List<UMLOperationBodyMapper> childMappers = new ArrayList<>();
-    private final UMLClassBaseDiff classDiff;
+    private UMLClassBaseDiff classDiff;
     private final Map<AbstractCodeFragment, UMLOperation> codeFragmentOperationMap1 = new LinkedHashMap<>();
     private final Map<AbstractCodeFragment, UMLOperation> codeFragmentOperationMap2 = new LinkedHashMap<>();
     private UMLOperationBodyMapper parentMapper;
@@ -180,6 +180,15 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
                 inlinedVariableAssignment(statement, nonMappedLeavesT2);
             }
         }
+    }
+
+    public UMLOperationBodyMapper(AbstractExpression expression1, AbstractExpression expression2) throws RefactoringMinerTimedOutException {
+        this.mappings = new LinkedHashSet<>();
+        List<AbstractExpression> leaves1 = new ArrayList<>();
+        leaves1.add(expression1);
+        List<AbstractExpression> leaves2 = new ArrayList<>();
+        leaves2.add(expression2);
+        processLeaves(leaves1, leaves2, new LinkedHashMap<>());
     }
 
     private UMLOperationBodyMapper(LambdaExpressionObject lambda1, LambdaExpressionObject lambda2, UMLOperationBodyMapper parentMapper) throws RefactoringMinerTimedOutException {
@@ -1896,7 +1905,7 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
                                 }
                             }
                             VariableDeclaration v1 = statement1.searchVariableDeclaration(s1);
-                            if (v1 == null) {
+                            if (v1 == null && operation1 != null) {
                                 for (VariableDeclaration declaration : operation1.getParameterDeclarationList()) {
                                     if (declaration.getVariableName().equals(s1)) {
                                         v1 = declaration;
@@ -1905,7 +1914,7 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
                                 }
                             }
                             VariableDeclaration v2 = statement2.searchVariableDeclaration(s2);
-                            if (v2 == null) {
+                            if (v2 == null && operation2 != null) {
                                 for (VariableDeclaration declaration : operation2.getParameterDeclarationList()) {
                                     if (declaration.getVariableName().equals(s2)) {
                                         v2 = declaration;
@@ -1913,7 +1922,7 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
                                     }
                                 }
                             }
-                            if (inconsistentVariableMappingCount(statement1, statement2, v1, v2) > 1 && !existsVariableDeclarationForV2InitializedWithV1(v1, v2, replacementInfo) && operation2.loopWithVariables(v1.getVariableName(), v2.getVariableName()) == null) {
+                            if (inconsistentVariableMappingCount(statement1, statement2, v1, v2) > 1 && !existsVariableDeclarationForV2InitializedWithV1(v1, v2, replacementInfo) && operation2 != null && operation2.loopWithVariables(v1.getVariableName(), v2.getVariableName()) == null) {
                                 replacement = null;
                             }
                         } else if (variables1.contains(s1) && methodInvocations2.contains(s2)) {
@@ -2103,7 +2112,7 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
             }
             return replacementInfo.getReplacements();
         }
-        if (!anonymousClassDeclarations1.isEmpty() && !anonymousClassDeclarations2.isEmpty()) {
+        if (!anonymousClassDeclarations1.isEmpty() && !anonymousClassDeclarations2.isEmpty() && operation1 != null && operation2 != null) {
             for (AnonymousClassDeclarationObject classDeclarationObject : anonymousClassDeclarations1) {
                 for (AnonymousClassDeclarationObject anonymousClassDeclarationObject : anonymousClassDeclarations2) {
                     AnonymousClassDeclarationObject anonymousClassDeclaration1 = classDeclarationObject;
@@ -2136,7 +2145,7 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
                     }
                 }
             }
-        } else if (anonymousClassDeclarations1.size() == 0 && anonymousClassDeclarations2.size() == 1) {
+        } else if (anonymousClassDeclarations1.size() == 0 && anonymousClassDeclarations2.size() == 1 && operation2 != null) {
             AnonymousClassDeclarationObject anonymousClassDeclaration2 = anonymousClassDeclarations2.get(0);
             UMLAnonymousClass anonymousClass2 = operation2.findAnonymousClass(anonymousClassDeclaration2);
             if (anonymousClass2.getOperations().size() == 1) {
@@ -2161,7 +2170,7 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
                     }
                 }
             }
-        } else if (anonymousClassDeclarations1.size() == 1 && anonymousClassDeclarations2.size() == 0) {
+        } else if (anonymousClassDeclarations1.size() == 1 && anonymousClassDeclarations2.size() == 0 && operation1 != null) {
             AnonymousClassDeclarationObject anonymousClassDeclaration1 = anonymousClassDeclarations1.get(0);
             UMLAnonymousClass anonymousClass1 = operation1.findAnonymousClass(anonymousClassDeclaration1);
             if (anonymousClass1.getOperations().size() == 1) {
@@ -2376,8 +2385,8 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
             }
             String expression1 = invocationCoveringTheEntireStatement1.getExpression();
             String expression2 = invocationCoveringTheEntireStatement2.getExpression();
-            boolean staticVSNonStatic = (expression1 == null && expression2 != null && operation1.getClassName().endsWith("." + expression2)) ||
-                (expression1 != null && expression2 == null && operation2.getClassName().endsWith("." + expression1));
+            boolean staticVSNonStatic = (expression1 == null && expression2 != null && operation1 != null && operation1.getClassName().endsWith("." + expression2)) ||
+                (expression1 != null && expression2 == null && operation2 != null && operation2.getClassName().endsWith("." + expression1));
             if (invocationCoveringTheEntireStatement1.identicalName(invocationCoveringTheEntireStatement2) && staticVSNonStatic &&
                 invocationCoveringTheEntireStatement1.identicalOrReplacedArguments(invocationCoveringTheEntireStatement2, replacementInfo.getReplacements(), lambdaMappers)) {
                 return replacementInfo.getReplacements();
@@ -3557,6 +3566,9 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
     }
 
     private boolean equalAfterNewArgumentAdditions(String s1, String s2, ReplacementInfo replacementInfo) {
+        if (operation1 == null && operation2 == null) {
+            return false;
+        }
         UMLOperationDiff operationDiff = classDiff != null ? classDiff.getOperationDiff(operation1, operation2) : null;
         if (operationDiff == null) {
             operationDiff = new UMLOperationDiff(operation1, operation2);
@@ -4348,6 +4360,7 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
                     boolean containsMethodSignatureOfAnonymousClass1 = containsMethodSignatureOfAnonymousClass(s1);
                     boolean containsMethodSignatureOfAnonymousClass2 = containsMethodSignatureOfAnonymousClass(s2);
                     if (containsMethodSignatureOfAnonymousClass1 != containsMethodSignatureOfAnonymousClass2 &&
+                        operation1 != null && operation2 != null &&
                         operation1.getVariableDeclaration(s1) == null && operation2.getVariableDeclaration(s2) == null) {
                         continue;
                     }
@@ -4394,6 +4407,7 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
                     boolean containsMethodSignatureOfAnonymousClass1 = containsMethodSignatureOfAnonymousClass(s1);
                     boolean containsMethodSignatureOfAnonymousClass2 = containsMethodSignatureOfAnonymousClass(s2);
                     if (containsMethodSignatureOfAnonymousClass1 != containsMethodSignatureOfAnonymousClass2 &&
+                        operation1 != null && operation2 != null &&
                         operation1.getVariableDeclaration(s1) == null && operation2.getVariableDeclaration(s2) == null) {
                         continue;
                     }

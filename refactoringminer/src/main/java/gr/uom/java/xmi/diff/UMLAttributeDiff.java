@@ -4,12 +4,15 @@ import gr.uom.java.xmi.UMLAnnotation;
 import gr.uom.java.xmi.UMLAnonymousClass;
 import gr.uom.java.xmi.UMLAttribute;
 import gr.uom.java.xmi.UMLOperation;
+import gr.uom.java.xmi.decomposition.AbstractCodeMapping;
+import gr.uom.java.xmi.decomposition.AbstractExpression;
 import gr.uom.java.xmi.decomposition.UMLOperationBodyMapper;
 import gr.uom.java.xmi.decomposition.VariableDeclaration;
 import gr.uom.java.xmi.decomposition.VariableReferenceExtractor;
 import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringMinerTimedOutException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -31,9 +34,17 @@ public class UMLAttributeDiff {
     private boolean transientChanged;
     private UMLOperation addedGetter;
     private UMLOperation addedSetter;
+    private Set<AbstractCodeMapping> initializerMappings;
 
     public UMLAttributeDiff(UMLAttribute removedAttribute, UMLAttribute addedAttribute, UMLClassBaseDiff classDiff, UMLModelDiff modelDiff) throws RefactoringMinerTimedOutException {
         this(removedAttribute, addedAttribute, classDiff.getOperationBodyMapperList());
+        AbstractExpression initializer1 = removedAttribute.getVariableDeclaration().getInitializer();
+        AbstractExpression initializer2 = addedAttribute.getVariableDeclaration().getInitializer();
+        if (initializer1 != null && initializer2 != null) {
+            this.initializerMappings = new UMLOperationBodyMapper(initializer1, initializer2).getMappings();
+        } else {
+            this.initializerMappings = Collections.emptySet();
+        }
         List<UMLAnonymousClass> removedAttributeAnonymousClassList = removedAttribute.getAnonymousClassList();
         List<UMLAnonymousClass> addedAttributeAnonymousClassList = addedAttribute.getAnonymousClassList();
         if (removedAttributeAnonymousClassList.size() == addedAttributeAnonymousClassList.size() && removedAttributeAnonymousClassList.size() > 0) {
@@ -148,6 +159,10 @@ public class UMLAttributeDiff {
 
     public boolean isEmpty() {
         return !visibilityChanged && !staticChanged && !finalChanged && !volatileChanged && !transientChanged && !typeChanged && !renamed && !qualifiedTypeChanged && annotationListDiff.isEmpty() && anonymousClassDiffList.isEmpty() && addedGetter == null && addedSetter == null;
+    }
+
+    public Set<AbstractCodeMapping> getInitializerMappings() {
+        return initializerMappings;
     }
 
     public Set<Refactoring> getRefactorings() {
