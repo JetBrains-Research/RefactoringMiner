@@ -133,52 +133,6 @@ public class RefactoringMiner implements ApplicationStarter {
     }
 
     private void printTips() {
-        String delimiter = "  ";
-        List<String> headers =
-            List.of("command", "gitProjectPath", "startPosition", "endPosition", "timeout", "output", "");
-        List<String> detectAll = List.of("detectAll", "<git-repo-folder>", "<branch>?", "", "", "+",
-            "Detect all refactorings at <branch> for <git-repo-folder>. " +
-                "If <branch> is not specified, commits from all branches are analyzed");
-        List<String> betweenCommits = List.of("detectBetweenCommits", "<git-repo-folder>",
-            "<start-commit-sha1>", "<end-commit-sha1>", "", "+",
-            "Detect refactorings between <start-commit-sha1> and <end-commit-sha1> for project <git-repo-folder>");
-        List<String> betweenTags = List.of("detectBetweenTags", "<git-repo-folder>", "<start-tag>", "<end-tag>", "", "+",
-            "Detect refactorings between <start-tag> and <end-tag> for project <git-repo-folder>");
-        List<String> atCommit = List.of("detectAtCommit", "<git-repo-folder>", "<commit-sha1>", "", "", "+",
-            "Detect refactorings at specified commit <commit-sha1> for project <git-repo-folder>");
-        List<String> githubCommit = List.of("detectAtGitHubCommit", "<git-URL>", "<commit-sha1>", "", "+", "+",
-            "Detect refactorings at specified commit <commit-sha1> " +
-                "for project <git-URL> within the given <timeout> in seconds. " +
-                "All required information is obtained directly from GitHub " +
-                "using the OAuth token in github-oauth.properties");
-        List<String> githubPR = List.of("detectAtGitHubPullRequest", "<git-URL>", "<pull-request>", "", "+", "+",
-            "Detect refactorings at specified pull request <pull-request> " +
-                "for project <git-URL> within the given <timeout> in seconds for each commit in the pull request. " +
-                "All required information is obtained directly from GitHub " +
-                "using the OAuth token in github-oauth.properties");
-        List<List<String>> table =
-            List.of(headers, detectAll, betweenCommits, betweenTags, atCommit, githubCommit, githubPR);
-        List<Integer> length = headers.stream().map(String::length).collect(Collectors.toList());
-        for (List<String> line : table) {
-            for (int i = 0; i < line.size(); i++) {
-                if (line.get(i).length() > length.get(i)) {
-                    length.set(i, line.get(i).length());
-                }
-            }
-        }
-        for (List<String> line : table) {
-            for (int i = 0; i < line.size(); i++) {
-                System.out.print(toSize(line.get(i), length.get(i)));
-                if (i + 1 < line.size()) {
-                    System.out.print(delimiter);
-                } else {
-                    System.out.println();
-                }
-            }
-        }
-    }
-
-    private static String toSize(String string, int size) {
-        return string + Strings.repeat(" ", size - string.length());
+        new HelpPrinter(System.out).print();
     }
 }
