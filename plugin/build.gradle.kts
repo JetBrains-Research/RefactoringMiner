@@ -1,3 +1,5 @@
+import java.io.OutputStream
+
 dependencies {
     implementation(project(":refactoringminer"))
 }
@@ -41,6 +43,7 @@ open class IOCliTask : org.jetbrains.intellij.tasks.RunIdeTask() {
         maxHeapSize = "12g"
         standardInput = System.`in`
         standardOutput = System.`out`
+        errorOutput = OutputStream.nullOutputStream()
     }
 }
 
