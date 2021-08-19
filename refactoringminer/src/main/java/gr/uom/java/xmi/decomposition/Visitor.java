@@ -73,7 +73,7 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
 
     @Override
     public void visitElement(@NotNull PsiElement element) {
-        boolean goInSubtree = true;
+        boolean visitSubtree = true;
         if (element instanceof PsiArrayAccessExpression) {
             String source = Formatter.format(element);
             addArrayAccess(source);
@@ -89,14 +89,14 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
             addTernaryOperator(ternaryOperator);
         } else if (element instanceof PsiPolyadicExpression) {
             PsiPolyadicExpression polyadic = (PsiPolyadicExpression) element;
-            String polyadicStr = Formatter.format(polyadic);
+            String polyadicString = Formatter.format(polyadic);
             String operator = Formatter.format(polyadic.getTokenBeforeOperand(polyadic.getOperands()[1]));
-            addInfixExpression(polyadicStr);
+            addInfixExpression(polyadicString);
             addInfixOperator(operator);
         } else if (element instanceof PsiNewExpression) {
-            goInSubtree = processNewExpression((PsiNewExpression) element);
+            visitSubtree = processNewExpression((PsiNewExpression) element);
         } else if (element instanceof PsiDeclarationStatement) {
-            goInSubtree = processDeclaration((PsiDeclarationStatement) element);
+            visitSubtree = processDeclaration((PsiDeclarationStatement) element);
         } else if (element instanceof PsiResourceVariable) {
             VariableDeclaration variableDeclaration = new VariableDeclaration(file, filePath, (PsiResourceVariable) element);
             addVariableDeclaration(variableDeclaration);
@@ -120,16 +120,16 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
         } else if (element instanceof PsiReferenceExpression) {
             processReference((PsiReferenceExpression) element);
         } else if (element instanceof PsiJavaCodeReferenceElement) {
-            goInSubtree = false;
+            visitSubtree = false;
             if (!(element.getParent() instanceof PsiAnnotation)) {
                 processTypeIdentifier(element);
             }
         } else if (element instanceof PsiTypeElement) {
-            goInSubtree = false;
+            visitSubtree = false;
             String source = Formatter.format(element);
             addType(source);
         } else if (element instanceof PsiKeyword) {
-            goInSubtree = false;
+            visitSubtree = false;
             if (PsiUtils.isTypeKeyword((PsiKeyword) element)) {
                 processTypeIdentifier(element);
             }
@@ -142,7 +142,7 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
             LambdaExpressionObject lambda = new LambdaExpressionObject(file, filePath, (PsiLambdaExpression) element);
             addLambda(lambda);
         }
-        if (goInSubtree) {
+        if (visitSubtree) {
             super.visitElement(element);
         }
     }
@@ -338,8 +338,8 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
      */
     private void processTypeIdentifier(@NotNull PsiElement element) {
         int arrayDimensions = TypeUtils.arrayDimensions(element);
-        String typeStr = Formatter.format(element) + Strings.repeat("[]", arrayDimensions);
-        addType(typeStr);
+        String typeString = Formatter.format(element) + Strings.repeat("[]", arrayDimensions);
+        addType(typeString);
     }
 
     private boolean processDeclaration(@NotNull PsiDeclarationStatement declaration) {
@@ -384,8 +384,8 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
 
     private boolean processNewExpression(@NotNull PsiNewExpression newExpression) {
         ObjectCreation creation = new ObjectCreation(file, filePath, newExpression);
-        String source = Formatter.format(newExpression);
-        addCreation(creation, source);
+        String expressionAsString = Formatter.format(newExpression);
+        addCreation(creation, expressionAsString);
         if (newExpression.isArrayCreation()) {
             PsiArrayInitializerExpression initializer = newExpression.getArrayInitializer();
             return initializer == null || initializer.getInitializers().length <= 10;
@@ -401,9 +401,9 @@ public class Visitor extends PsiRecursiveElementWalkingVisitor {
     }
 
     private void processIdentifier(@NotNull PsiIdentifier identifier) {
-        String source = Formatter.format(identifier);
         PsiElement parent = identifier.getParent();
         if (!(parent instanceof PsiMethod || parent instanceof PsiReference)) {
+            String source = Formatter.format(identifier);
             addVariable(source);
         }
     }

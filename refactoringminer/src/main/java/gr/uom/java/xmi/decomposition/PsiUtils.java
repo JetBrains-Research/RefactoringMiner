@@ -2,11 +2,9 @@ package gr.uom.java.xmi.decomposition;
 
 import com.intellij.psi.JavaTokenType;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiForStatement;
 import com.intellij.psi.PsiJavaToken;
 import com.intellij.psi.PsiKeyword;
 import com.intellij.psi.PsiMethodCallExpression;
-import com.intellij.psi.PsiStatement;
 import com.intellij.psi.tree.IElementType;
 import com.intellij.psi.tree.TokenSet;
 import com.intellij.psi.util.PsiUtil;
@@ -51,29 +49,6 @@ public class PsiUtils {
 
     public static PsiJavaToken findFirstForwardSiblingToken(PsiElement element, IElementType token) {
         return (PsiJavaToken) findFirstForwardSibling(element, (elem) -> PsiUtil.isJavaToken(elem, token));
-    }
-
-    // Special cases differs from eclipse
-    public static boolean isForInitializer(PsiElement element) {
-        if (element instanceof PsiStatement && element.getParent() instanceof PsiForStatement) {
-            PsiElement prev = element.getPrevSibling();
-            while (prev != null) {
-                if (prev instanceof PsiStatement) {
-                    break;
-                }
-                if (PsiUtil.isJavaToken(prev, JavaTokenType.FOR_KEYWORD)) {
-                    return true;
-                }
-                prev = prev.getPrevSibling();
-            }
-        }
-        return false;
-    }
-
-    public static boolean isConstructor(PsiElement element) {
-        return element instanceof PsiMethodCallExpression &&
-            (isThisConstructorInvocation((PsiMethodCallExpression) element)
-                || isSuperConstructorInvocation((PsiMethodCallExpression) element));
     }
 
     public static boolean isThisConstructorInvocation(PsiMethodCallExpression callExpression) {
