@@ -227,7 +227,7 @@ final List<CourseInfo> courseInfos = getFromStepic("courses",CoursesContainer.cl
 
 Run `./gradlew -q refactoringminer-CLI -Pcommand=help` for help.
 
-     Command usage:
+     Command description:
      detectAll                  Detect all refactorings at <branch> for <git-repo-folder>. If <branch> is not specified, commits from all branches are analyzed
      detectBetweenCommits       Detect refactorings between <start-commit-sha1> and <end-commit-sha1> for project <git-repo-folder>                            
      detectBetweenTags          Detect refactorings between <start-tag> and <end-tag> for project <git-repo-folder>                                            
@@ -235,18 +235,18 @@ Run `./gradlew -q refactoringminer-CLI -Pcommand=help` for help.
      detectAtGitHubCommit       Detect refactorings at specified commit <commit-sha1> for project <git-URL>                                                    
      detectAtGitHubPullRequest  Detect refactorings at specified pull request <pull-request> for project <git-URL> for each commit in the pull request
      
-     For all commands you can define the <output> argument to save the JSON output in a file
-     For some commands you can define the <timeout> argument to set the maximum execution time in seconds
-     For commands using GitHub you must provide a valid OAuthToken in github-oauth.properties
+     Command usage:
+     command                    gitProjectPath     startPosition        endPosition      
+     detectAll                  <git-repo-folder>  <branch>                              
+     detectBetweenCommits       <git-repo-folder>  <start-commit-sha1>  <end-commit-sha1>
+     detectBetweenTags          <git-repo-folder>  <start-tag>          <end-tag>        
+     detectAtCommit             <git-repo-folder>  <commit-sha1>                         
+     detectAtGitHubCommit       <git-URL>          <commit-sha1>                         
+     detectAtGitHubPullRequest  <git-URL>          <pull-request>
      
-     Usage of arguments table:
-     command                    gitProjectPath     startPosition        endPosition        timeout
-     detectAll                  <git-repo-folder>  <branch>                                       
-     detectBetweenCommits       <git-repo-folder>  <start-commit-sha1>  <end-commit-sha1>         
-     detectBetweenTags          <git-repo-folder>  <start-tag>          <end-tag>                 
-     detectAtCommit             <git-repo-folder>  <commit-sha1>                                  
-     detectAtGitHubCommit       <git-URL>          <commit-sha1>                           +      
-     detectAtGitHubPullRequest  <git-URL>          <pull-request>                          +
+     For all commands, you can define the <output> argument to save the output in a JSON file.
+     For detectAtGitHubCommit and detectAtGitHubPullRequest commands, you can define the <timeout> argument to set the maximum execution time in seconds.
+     For commands using GitHub, you must provide a valid OAuthToken in github-oauth.properties.
 
 To specify parameters, use the syntax `-Pname=value`. With a locally cloned repository, run:
 

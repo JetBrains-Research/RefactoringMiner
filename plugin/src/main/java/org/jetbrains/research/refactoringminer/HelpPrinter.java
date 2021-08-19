@@ -15,8 +15,8 @@ public class HelpPrinter {
 
     public void print() {
         printCommandsTable();
-        printCommonTips();
         printArgumentsTable();
+        printCommonTips();
     }
 
     private void printCommandsTable() {
@@ -36,30 +36,32 @@ public class HelpPrinter {
                 "for project <git-URL> for each commit in the pull request");
         List<List<String>> table = List.of(detectAll, betweenCommits, betweenTags, atCommit, githubCommit, githubPR);
 
-        out.println("Command usage:");
+        out.println("Command description:");
         printTable(table);
         out.println();
     }
 
     private void printCommonTips() {
-        out.println("For all commands you can define the <output> argument to save the JSON output in a file");
-        out.println("For some commands you can define the <timeout> argument to set the maximum execution time in seconds");
-        out.println("For commands using GitHub you must provide a valid OAuthToken in github-oauth.properties");
+        out.println("For all commands, you can define the <output> argument to save the output in a JSON file.");
+        out.println("For detectAtGitHubCommit and detectAtGitHubPullRequest commands, " +
+            "you can define the <timeout> argument to set the maximum execution time in seconds.");
+        out.println("For commands using GitHub, you must provide a valid OAuthToken in github-oauth.properties.");
         out.println();
     }
 
     private void printArgumentsTable() {
-        List<String> headers = List.of("command", "gitProjectPath", "startPosition", "endPosition", "timeout");
-        List<String> detectAll = List.of("detectAll", "<git-repo-folder>", "<branch>", "", "");
+        List<String> headers = List.of("command", "gitProjectPath", "startPosition", "endPosition");
+        List<String> detectAll = List.of("detectAll", "<git-repo-folder>", "<branch>", "");
         List<String> betweenCommits = List.of("detectBetweenCommits", "<git-repo-folder>",
-            "<start-commit-sha1>", "<end-commit-sha1>", "");
-        List<String> betweenTags = List.of("detectBetweenTags", "<git-repo-folder>", "<start-tag>", "<end-tag>", "");
-        List<String> atCommit = List.of("detectAtCommit", "<git-repo-folder>", "<commit-sha1>", "", "");
-        List<String> githubCommit = List.of("detectAtGitHubCommit", "<git-URL>", "<commit-sha1>", "", "+");
-        List<String> githubPR = List.of("detectAtGitHubPullRequest", "<git-URL>", "<pull-request>", "", "+");
-        List<List<String>> table = List.of(headers, detectAll, betweenCommits, betweenTags, atCommit, githubCommit, githubPR);
+            "<start-commit-sha1>", "<end-commit-sha1>");
+        List<String> betweenTags = List.of("detectBetweenTags", "<git-repo-folder>", "<start-tag>", "<end-tag>");
+        List<String> atCommit = List.of("detectAtCommit", "<git-repo-folder>", "<commit-sha1>", "");
+        List<String> githubCommit = List.of("detectAtGitHubCommit", "<git-URL>", "<commit-sha1>", "");
+        List<String> githubPR = List.of("detectAtGitHubPullRequest", "<git-URL>", "<pull-request>", "");
+        List<List<String>> table =
+            List.of(headers, detectAll, betweenCommits, betweenTags, atCommit, githubCommit, githubPR);
 
-        out.println("Usage of arguments table:");
+        out.println("Command usage:");
         printTable(table);
         out.println();
     }
