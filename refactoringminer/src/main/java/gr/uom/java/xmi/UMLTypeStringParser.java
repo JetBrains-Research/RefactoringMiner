@@ -58,7 +58,8 @@ public class UMLTypeStringParser {
     }
 
     /**
-     * Split string by separator chars not captured by <>
+     * Split string by separator chars not captured by <>. <br>
+     * For example: (Type1.Type2&lt;Type3.Type4&gt;.Type5, '.') -> [Type1, Type2&lt;Type3.Type4&gt;, Type5]
      */
     @NotNull
     private static List<String> splitCapturing(String qualifiedName, char separator) {
