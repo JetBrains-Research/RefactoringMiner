@@ -16,15 +16,20 @@ import org.jetbrains.annotations.NotNull;
  */
 public class FormattingVisitor extends PsiRecursiveElementWalkingVisitor {
     private static final TokenSet noSpaces = TokenSet.create(
-        JavaTokenType.EQ, JavaTokenType.RBRACKET, JavaTokenType.RBRACE, JavaTokenType.LBRACE, JavaTokenType.LBRACKET,
-        JavaTokenType.LT, JavaTokenType.GT, JavaTokenType.DOT, JavaTokenType.COMMA,
-        JavaTokenType.RPARENTH, JavaTokenType.LPARENTH
+        JavaTokenType.EQ, JavaTokenType.LT, JavaTokenType.GT,
+        JavaTokenType.DOT, JavaTokenType.COMMA,
+        JavaTokenType.RBRACKET, JavaTokenType.LBRACKET,
+        JavaTokenType.LPARENTH, JavaTokenType.RPARENTH,
+        JavaTokenType.SEMICOLON, JavaTokenType.DOUBLE_COLON
     );
     private static final TokenSet noSpaceAfter = TokenSet.create(
-        JavaTokenType.ASTERISK
+        JavaTokenType.AT, JavaTokenType.LBRACE, JavaTokenType.RBRACE
     );
     private static final TokenSet noSpaceBefore = TokenSet.create(
-        JavaTokenType.SEMICOLON, JavaTokenType.ELLIPSIS
+        JavaTokenType.ELLIPSIS
+    );
+    private static final TokenSet endLineAfter = TokenSet.create(
+        JavaTokenType.LBRACE, JavaTokenType.RBRACE, JavaTokenType.SEMICOLON
     );
 
     private final StringBuilder sb = new StringBuilder();
@@ -35,13 +40,16 @@ public class FormattingVisitor extends PsiRecursiveElementWalkingVisitor {
         if (element.getFirstChild() == null) {
             // Add text from leaves. Excluding comments and user-specific whitespaces
             if (!(element instanceof PsiWhiteSpace || element instanceof PsiComment)) {
-                String text = element.getText().trim();
+                String text = element.getText();
                 if (!text.isEmpty()) {
-                    if (needSpaceBefore(element, text) && previousNeedSpaceAfter) {
+                    if (needSpaceBefore(element) && previousNeedSpaceAfter) {
                         sb.append(' ');
                     }
                     sb.append(element.getText());
-                    previousNeedSpaceAfter = needSpaceAfter(element, text);
+                    if (needEndLineAfter(element)) {
+                        sb.append('\n');
+                    }
+                    previousNeedSpaceAfter = needSpaceAfter(element);
                 }
             }
         } else {
@@ -49,11 +57,15 @@ public class FormattingVisitor extends PsiRecursiveElementWalkingVisitor {
         }
     }
 
-    private static boolean needSpaceBefore(PsiElement element, String elementText) {
+    private boolean needEndLineAfter(@NotNull PsiElement element) {
+        return PsiUtil.isJavaToken(element, endLineAfter);
+    }
+
+    private static boolean needSpaceBefore(PsiElement element) {
         return !(PsiUtil.isJavaToken(element, noSpaces) || PsiUtil.isJavaToken(element, noSpaceBefore));
     }
 
-    private static boolean needSpaceAfter(PsiElement element, String elementText) {
+    private static boolean needSpaceAfter(PsiElement element) {
         return !(PsiUtil.isJavaToken(element, noSpaces) || PsiUtil.isJavaToken(element, noSpaceAfter));
     }
 

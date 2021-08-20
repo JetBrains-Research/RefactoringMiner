@@ -17,7 +17,7 @@ public class UMLAnnotation implements Serializable, LocationInfoProvider {
     private AbstractExpression value;
 
     public UMLAnnotation(PsiFile file, String filePath, PsiAnnotation annotation) {
-        this.typeName = annotation.getNameReferenceElement().getReferenceName();
+        this.typeName = Formatter.format(annotation.getNameReferenceElement());
         this.locationInfo = new LocationInfo(file, filePath, annotation, CodeElementType.ANNOTATION);
         PsiNameValuePair[] parameters = annotation.getParameterList().getAttributes();
         if (parameters.length == 1 && parameters[0].getName() == null) {

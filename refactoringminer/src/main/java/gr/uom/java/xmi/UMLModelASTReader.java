@@ -40,7 +40,7 @@ public class UMLModelASTReader {
         for (Map.Entry<String, String> file : javaFileContents.entrySet()) {
             PsiFile psiFile = factory.createFileFromText(JavaLanguage.INSTANCE, file.getValue());
             try {
-                processFile(file.getKey(), psiFile, file.getValue());
+                processFile(file.getKey(), psiFile);
             } catch (Exception e) {
                 LOG.error("Error on file: " + file.getKey(), e);
             } catch (AssertionError e) {
@@ -49,11 +49,11 @@ public class UMLModelASTReader {
         }
     }
 
-    private void processFile(String sourceFilePath, PsiFile file, String javaFileContent) {
+    private void processFile(String sourceFilePath, PsiFile file) {
         if (PsiTreeUtil.hasErrorElements(file)) {
             throw new IllegalArgumentException("PsiFile contains errors");
         }
-        List<UMLComment> comments = extractInternalComments(file, sourceFilePath, javaFileContent);
+        List<UMLComment> comments = extractInternalComments(file, sourceFilePath);
         String packageName = getPackageName(file);
         List<String> importedTypes = getImports(file);
 
@@ -72,7 +72,7 @@ public class UMLModelASTReader {
 
     @NotNull
     private List<String> getImports(PsiFile file) {
-        PsiImportList imports = PsiUtils.findFirstForwardSiblingOfType(file.getFirstChild(), PsiImportList.class);
+        PsiImportList imports = PsiUtils.findFirstChildOfType(file, PsiImportList.class);
         return Arrays.stream(imports.getAllImportStatements())
             .map(imp -> imp.isOnDemand()
                 ? imp.getImportReference().getText() + ".*"
@@ -97,11 +97,10 @@ public class UMLModelASTReader {
      */
     @NotNull
     private List<UMLComment> extractInternalComments(@NotNull PsiFile file,
-                                                     @NotNull String sourceFile,
-                                                     @NotNull String javaFileContent) {
-        Collection<PsiComment> astComments = PsiTreeUtil.findChildrenOfType(file, PsiComment.class);
-        List<UMLComment> comments = new ArrayList<>();
-        for (PsiComment comment : astComments) {
+                                                     @NotNull String sourceFile) {
+        Collection<PsiComment> psiComments = PsiTreeUtil.findChildrenOfType(file, PsiComment.class);
+        List<UMLComment> umlComments = new ArrayList<>();
+        for (PsiComment comment : psiComments) {
             LocationInfo locationInfo = null;
             if (comment.getTokenType() == JavaTokenType.END_OF_LINE_COMMENT) {
                 locationInfo = new LocationInfo(file, sourceFile, comment, LocationInfo.CodeElementType.LINE_COMMENT);
@@ -109,14 +108,12 @@ public class UMLModelASTReader {
                 locationInfo = new LocationInfo(file, sourceFile, comment, LocationInfo.CodeElementType.BLOCK_COMMENT);
             }
             if (locationInfo != null) {
-                int start = comment.getTextRange().getStartOffset();
-                int end = comment.getTextRange().getEndOffset();
-                String text = javaFileContent.substring(start, end);
+                String text = Formatter.format(comment);
                 UMLComment umlComment = new UMLComment(text, locationInfo);
-                comments.add(umlComment);
+                umlComments.add(umlComment);
             }
         }
-        return comments;
+        return umlComments;
     }
 
     private void distributeComments(List<UMLComment> compilationUnitComments, LocationInfo codeElementLocationInfo, List<UMLComment> codeElementComments) {
@@ -190,7 +187,7 @@ public class UMLModelASTReader {
         PsiJavaCodeReferenceElement[] superInterfaceElements = list.getReferenceElements();
         List<UMLType> types = new ArrayList<>(superInterfaceElements.length);
         for (PsiJavaCodeReferenceElement superInterfaceElement : superInterfaceElements) {
-            types.add(UMLType.extractTypeObject(file, sourceFile, superInterfaceElement));
+            types.add(UMLTypePsiParser.extractTypeObject(file, sourceFile, superInterfaceElement));
         }
         return types;
     }
@@ -346,12 +343,12 @@ public class UMLModelASTReader {
             if (parent instanceof PsiMethod) {
                 String methodName = ((PsiMethod) parent).getName();
                 elements.addFirst(methodName);
-            } else if (parent instanceof PsiField) {
-                String fieldName = ((PsiField) parent).getName();
+            } else if (parent instanceof PsiVariable) {
+                String fieldName = ((PsiVariable) parent).getName();
                 elements.addFirst(fieldName);
             } else if (parent instanceof PsiMethodCallExpression) {
                 PsiIdentifier identifier =
-                    PsiUtils.findFirstForwardSiblingOfType(
+                    PsiUtils.findFirstChildOfType(
                         ((PsiMethodCallExpression) parent).getMethodExpression(),
                         PsiIdentifier.class
                     );
@@ -363,34 +360,6 @@ public class UMLModelASTReader {
             parent = parent.getParent();
         }
         return String.join(".", elements);
-    }
-
-    private void processModifiers(PsiFile file, String sourceFile, PsiClass psiClass, UMLClass umlClass) {
-        PsiModifierList modifiers = psiClass.getModifierList();
-        assert modifiers != null;
-        if (modifiers.hasExplicitModifier(PsiModifier.ABSTRACT)) {
-            umlClass.setAbstract(true);
-        }
-        if (modifiers.hasExplicitModifier(PsiModifier.STATIC)) {
-            umlClass.setStatic(true);
-        }
-        if (modifiers.hasExplicitModifier(PsiModifier.FINAL)) {
-            umlClass.setFinal(true);
-        }
-
-        if (modifiers.hasExplicitModifier(PsiModifier.PUBLIC)) {
-            umlClass.setVisibility("public");
-        } else if (modifiers.hasExplicitModifier(PsiModifier.PROTECTED)) {
-            umlClass.setVisibility("protected");
-        } else if (modifiers.hasExplicitModifier(PsiModifier.PRIVATE)) {
-            umlClass.setVisibility("private");
-        } else {
-            umlClass.setVisibility("package");
-        }
-
-        for (PsiAnnotation annotation : modifiers.getAnnotations()) {
-            umlClass.addAnnotation(new UMLAnnotation(file, sourceFile, annotation));
-        }
     }
 
     private UMLOperation processMethodDeclaration(PsiFile file, PsiMethod psiMethod,
@@ -419,14 +388,14 @@ public class UMLModelASTReader {
         }
 
         if (!psiMethod.isConstructor()) {
-            UMLType type = UMLType.extractTypeObject(file, sourceFile, psiMethod.getReturnTypeElement(), psiMethod.getReturnType());
+            UMLType type = UMLTypePsiParser.extractTypeObject(file, sourceFile, psiMethod.getReturnTypeElement(), psiMethod.getReturnType());
             UMLParameter returnParameter = new UMLParameter("return", type, "return", false);
             umlOperation.addParameter(returnParameter);
         }
 
         PsiParameter[] parameters = psiMethod.getParameterList().getParameters();
         for (PsiParameter parameter : parameters) {
-            UMLType type = UMLType.extractTypeObject(file, sourceFile, parameter.getTypeElement(), parameter.getType());
+            UMLType type = UMLTypePsiParser.extractTypeObject(file, sourceFile, parameter.getTypeElement(), parameter.getType());
             String parameterName = parameter.getName();
             UMLParameter umlParameter = new UMLParameter(parameterName, type, "in", parameter.isVarArgs());
             VariableDeclaration variableDeclaration = new VariableDeclaration(file, sourceFile, parameter, parameter.isVarArgs());
@@ -439,6 +408,34 @@ public class UMLModelASTReader {
             umlOperation.addThrownExceptionType(umlType);
         }
         return umlOperation;
+    }
+
+    private void processModifiers(PsiFile file, String sourceFile, PsiClass psiClass, UMLClass umlClass) {
+        PsiModifierList modifiers = psiClass.getModifierList();
+        assert modifiers != null;
+        if (modifiers.hasExplicitModifier(PsiModifier.ABSTRACT)) {
+            umlClass.setAbstract(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.STATIC)) {
+            umlClass.setStatic(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.FINAL)) {
+            umlClass.setFinal(true);
+        }
+
+        if (modifiers.hasExplicitModifier(PsiModifier.PUBLIC)) {
+            umlClass.setVisibility("public");
+        } else if (modifiers.hasExplicitModifier(PsiModifier.PROTECTED)) {
+            umlClass.setVisibility("protected");
+        } else if (modifiers.hasExplicitModifier(PsiModifier.PRIVATE)) {
+            umlClass.setVisibility("private");
+        } else {
+            umlClass.setVisibility("package");
+        }
+
+        for (PsiAnnotation annotation : modifiers.getAnnotations()) {
+            umlClass.addAnnotation(new UMLAnnotation(file, sourceFile, annotation));
+        }
     }
 
     private void processModifiers(PsiFile file, String sourceFile, PsiMethod method, UMLOperation umlOperation) {
@@ -471,11 +468,38 @@ public class UMLModelASTReader {
         }
     }
 
+    private void processModifiers(PsiField field, UMLAttribute umlAttribute) {
+        PsiModifierList modifiers = field.getModifierList();
+        assert modifiers != null;
+        if (modifiers.hasExplicitModifier(PsiModifier.STATIC)) {
+            umlAttribute.setStatic(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.FINAL)) {
+            umlAttribute.setFinal(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.VOLATILE)) {
+            umlAttribute.setVolatile(true);
+        }
+        if (modifiers.hasExplicitModifier(PsiModifier.TRANSIENT)) {
+            umlAttribute.setTransient(true);
+        }
+
+        if (modifiers.hasModifierProperty(PsiModifier.PUBLIC)) {
+            umlAttribute.setVisibility("public");
+        } else if (modifiers.hasExplicitModifier(PsiModifier.PROTECTED)) {
+            umlAttribute.setVisibility("protected");
+        } else if (modifiers.hasExplicitModifier(PsiModifier.PRIVATE)) {
+            umlAttribute.setVisibility("private");
+        } else {
+            umlAttribute.setVisibility("package");
+        }
+    }
+
     private List<UMLAttribute> processFieldDeclaration(PsiFile file, PsiField psiField,
                                                        String sourceFile, List<UMLComment> comments) {
         UMLJavadoc javadoc = generateJavadoc(file, psiField, sourceFile);
         List<UMLAttribute> attributes = new ArrayList<>();
-        UMLType type = UMLType.extractTypeObject(file, sourceFile, psiField.getTypeElement(), psiField.getType());
+        UMLType type = UMLTypePsiParser.extractTypeObject(file, sourceFile, psiField.getTypeElement(), psiField.getType());
         String fieldName = psiField.getName();
         LocationInfo locationInfo = new LocationInfo(file, sourceFile, psiField, LocationInfo.CodeElementType.FIELD_DECLARATION);
         VariableDeclaration variableDeclaration = new VariableDeclaration(file, sourceFile, psiField);
@@ -510,33 +534,6 @@ public class UMLModelASTReader {
         }
         enumConstant.setClassName(umlClass.getName());
         umlClass.addEnumConstant(enumConstant);
-    }
-
-    private void processModifiers(PsiField field, UMLAttribute umlAttribute) {
-        PsiModifierList modifiers = field.getModifierList();
-        assert modifiers != null;
-        if (modifiers.hasExplicitModifier(PsiModifier.STATIC)) {
-            umlAttribute.setStatic(true);
-        }
-        if (modifiers.hasExplicitModifier(PsiModifier.FINAL)) {
-            umlAttribute.setFinal(true);
-        }
-        if (modifiers.hasExplicitModifier(PsiModifier.VOLATILE)) {
-            umlAttribute.setVolatile(true);
-        }
-        if (modifiers.hasExplicitModifier(PsiModifier.TRANSIENT)) {
-            umlAttribute.setTransient(true);
-        }
-
-        if (modifiers.hasModifierProperty(PsiModifier.PUBLIC)) {
-            umlAttribute.setVisibility("public");
-        } else if (modifiers.hasExplicitModifier(PsiModifier.PROTECTED)) {
-            umlAttribute.setVisibility("protected");
-        } else if (modifiers.hasExplicitModifier(PsiModifier.PRIVATE)) {
-            umlAttribute.setVisibility("private");
-        } else {
-            umlAttribute.setVisibility("package");
-        }
     }
 
     private UMLAnonymousClass processAnonymousClassDeclaration(PsiFile file, PsiAnonymousClass psiAnonymousClass,
