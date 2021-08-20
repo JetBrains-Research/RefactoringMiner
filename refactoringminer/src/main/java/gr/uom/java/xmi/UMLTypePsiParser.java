@@ -108,11 +108,11 @@ public class UMLTypePsiParser {
     }
 
     private static PsiModifierList getPrecedingModifiersList(PsiTypeElement typeElement) {
-        PsiElement prev = typeElement;
-        while (prev != null) {
-            prev = prev.getPrevSibling();
-            if (prev instanceof PsiModifierList) {
-                return (PsiModifierList) prev;
+        PsiElement previousModifier = typeElement;
+        while (previousModifier != null) {
+            previousModifier = previousModifier.getPrevSibling();
+            if (previousModifier instanceof PsiModifierList) {
+                return (PsiModifierList) previousModifier;
             }
         }
         return null;
