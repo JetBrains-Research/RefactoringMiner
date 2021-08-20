@@ -160,35 +160,35 @@ public class UMLTypePsiParser {
 
     private static List<Reference> parseReferences(PsiFile file, String filePath, PsiJavaCodeReferenceElement typeReference) {
         PsiJavaCodeReferenceElement reference = findFirstChildOfType(typeReference, PsiJavaCodeReferenceElement.class);
-        List<Reference> preceding;
+        List<Reference> previousReferences;
         if (reference == null) {
-            preceding = new ArrayList<>();
+            previousReferences = new ArrayList<>();
         } else {
-            preceding = parseReferences(file, filePath, reference);
+            previousReferences = parseReferences(file, filePath, reference);
         }
 
         String identifier = Formatter.format(findFirstChildOfType(typeReference, PsiIdentifier.class));
 
         PsiReferenceParameterList typeParameters = findFirstChildOfType(typeReference, PsiReferenceParameterList.class);
-        List<UMLType> generics = parseGenerics(file, filePath, typeParameters);
+        List<UMLType> generics = parseGenericTypes(file, filePath, typeParameters);
 
         LocationInfo locationInfo = new LocationInfo(file, filePath, typeReference, LocationInfo.CodeElementType.TYPE);
 
         Reference referenceElement = new Reference(identifier, generics, locationInfo);
-        preceding.add(referenceElement);
-        return preceding;
+        previousReferences.add(referenceElement);
+        return previousReferences;
     }
 
-    private static List<UMLType> parseGenerics(PsiFile file, String filePath,
-                                               @Nullable PsiReferenceParameterList generics) {
-        if (generics == null || generics.getFirstChild() == null) {
+    private static List<UMLType> parseGenericTypes(PsiFile file, String filePath,
+                                                   @Nullable PsiReferenceParameterList genericTypes) {
+        if (genericTypes == null || genericTypes.getFirstChild() == null) {
             return null;
         }
-        PsiTypeElement[] types = generics.getTypeParameterElements();
+        PsiTypeElement[] types = genericTypes.getTypeParameterElements();
         if (types.length == 1 && types[0].getType() instanceof PsiDiamondType) {
             return Collections.emptyList();
         }
-        return Arrays.stream(generics.getTypeParameterElements())
+        return Arrays.stream(genericTypes.getTypeParameterElements())
             .map(type -> extractTypeObject(file, filePath, type))
             .collect(Collectors.toList());
     }

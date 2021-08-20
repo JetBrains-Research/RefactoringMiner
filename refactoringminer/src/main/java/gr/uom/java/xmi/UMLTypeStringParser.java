@@ -46,13 +46,13 @@ public class UMLTypeStringParser {
                 continue;
             }
             if (left == null) {
-                left = extractGenerics(String.join(".", elements.subList(0, i + 1)));
+                left = extractGenericTypes(String.join(".", elements.subList(0, i + 1)));
             } else {
-                left = new CompositeType(left, extractGenerics(elements.get(i)));
+                left = new CompositeType(left, extractGenericTypes(elements.get(i)));
             }
         }
         if (left == null) {
-            left = extractGenerics(qualifiedName);
+            left = extractGenericTypes(qualifiedName);
         }
         return left;
     }
@@ -87,7 +87,7 @@ public class UMLTypeStringParser {
     }
 
     @NotNull
-    private static LeafType extractGenerics(String qualifiedName) {
+    private static LeafType extractGenericTypes(String qualifiedName) {
         if (qualifiedName.contains("<")) {
             String typeArguments = qualifiedName.substring(qualifiedName.indexOf('<') + 1, qualifiedName.lastIndexOf('>'));
             List<UMLType> typeArgumentsList;
