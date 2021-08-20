@@ -216,31 +216,45 @@ For the Extract Method Refactoring example shown above `mapper.getRefactorings()
 `private addCoursesFromStepic(result List<CourseInfo>, pageNumber int) : boolean`
 from class `com.jetbrains.edu.stepic.EduStepicConnector`
 
-because variable `coursesContainer = getFromStepic(url,CoursesContainer.class)` has been extracted from the following statement of the original method by replacing string literal `"courses"` with variable `url`:
+because variable `coursesContainer = getFromStepic(url,CoursesContainer.class)` has been extracted from the following
+statement of the original method by replacing string literal `"courses"` with variable `url`:
+
 ```java
 final List<CourseInfo> courseInfos = getFromStepic("courses",CoursesContainer.class).courses;
 ```
 
 # Running RefactoringMiner from the command line
- 
+
 Run `./gradlew -q refactoringminer-CLI -Pcommand=help` for help.
 
-     command                    gitProjectPath      startPosition        endPosition                                                                                                                                                                                                                                                                                    
-     detectAll                  <git-repo-folder>   <branch>                                 Detect all refactorings at <branch> for <git-repo-folder>. If <branch> is not specified, commits from all branches are analyzed                                                                                                                                         
-     detectBetweenCommits       <git-repo-folder>   <start-commit-sha1>  <end-commit-sha1>   Detect refactorings between <start-commit-sha1> and <end-commit-sha1> for project <git-repo-folder>                                                                                                                                                                     
-     detectBetweenTags          <git-repo-folder>   <start-tag>          <end-tag>           Detect refactorings between <start-tag> and <end-tag> for project <git-repo-folder>                                                                                                                                                                                     
-     detectAtCommit             <git-repo-folder>   <commit-sha1>                            Detect refactorings at specified commit <commit-sha1> for project <git-repo-folder>                                                                                                                                                                                     
-     detectAtGitHubCommit       <git-URL>           <commit-sha1>                            Detect refactorings at specified commit <commit-sha1> for project <git-URL> within the given <timeout> in seconds. All required information is obtained directly from GitHub using the OAuth token in github-oauth.properties                                           
-     detectAtGitHubPullRequest  <git-URL>           <pull-request>                           Detect refactorings at specified pull request <pull-request> for project <git-URL> within the given <timeout> in seconds for each commit in the pull request. All required information is obtained directly from GitHub using the OAuth token in github-oauth.properties
-	
-To specify parameters, use the syntax `-Pname=value`. 
-With a locally cloned repository, run:
+     Command description:
+     detectAll                  Detect all refactorings at <branch> for <git-repo-folder>. If <branch> is not specified, commits from all branches are analyzed
+     detectBetweenCommits       Detect refactorings between <start-commit-sha1> and <end-commit-sha1> for project <git-repo-folder>                            
+     detectBetweenTags          Detect refactorings between <start-tag> and <end-tag> for project <git-repo-folder>                                            
+     detectAtCommit             Detect refactorings at specified commit <commit-sha1> for project <git-repo-folder>                                            
+     detectAtGitHubCommit       Detect refactorings at specified commit <commit-sha1> for project <git-URL>                                                    
+     detectAtGitHubPullRequest  Detect refactorings at specified pull request <pull-request> for project <git-URL> for each commit in the pull request
+     
+     Command usage:
+     command                    gitProjectPath     startPosition        endPosition      
+     detectAll                  <git-repo-folder>  <branch>                              
+     detectBetweenCommits       <git-repo-folder>  <start-commit-sha1>  <end-commit-sha1>
+     detectBetweenTags          <git-repo-folder>  <start-tag>          <end-tag>        
+     detectAtCommit             <git-repo-folder>  <commit-sha1>                         
+     detectAtGitHubCommit       <git-URL>          <commit-sha1>                         
+     detectAtGitHubPullRequest  <git-URL>          <pull-request>
+     
+     For all commands, you can define the <output> argument to save the output in a JSON file.
+     For detectAtGitHubCommit and detectAtGitHubPullRequest commands, you can define the <timeout> argument to set the maximum execution time in seconds.
+     For commands using GitHub, you must provide a valid OAuthToken in github-oauth.properties.
+
+To specify parameters, use the syntax `-Pname=value`. With a locally cloned repository, run:
 
      > git clone https://github.com/danilofes/refactoring-toy-example.git refactoring-toy-example
      > ./gradlew -q refactoringminer-CLI -Pcommand=detectAtCommit -PgitProjectPath=refactoring-toy-example -PstartPosition=36287f7c3b09eff78395267a3ac0d7da067863fd
 
-If you don't want to clone locally the repository, run: 
-     
+If you don't want to clone locally the repository, run:
+
      > ./gradlew -q refactoringminer-CLI -Pcommand=detectAtGitHubCommit -PgitProjectPath=https://github.com/danilofes/refactoring-toy-example.git -PstartPosition=36287f7c3b09eff78395267a3ac0d7da067863fd -Ptimeout=10
 **To save the output to the file, use the command `-Poutput=<path-to-json-file>`.**
 
