@@ -26,6 +26,7 @@ public abstract class AbstractCodeMapping {
     private final Set<Replacement> replacements;
     private boolean identicalWithExtractedVariable;
     private boolean identicalWithInlinedVariable;
+    private final Set<Refactoring> refactorings = new LinkedHashSet<>();
 
     public AbstractCodeMapping(AbstractCodeFragment fragment1, AbstractCodeFragment fragment2,
                                UMLOperation operation1, UMLOperation operation2) {
@@ -50,6 +51,10 @@ public abstract class AbstractCodeMapping {
 
     public boolean isIdenticalWithInlinedVariable() {
         return identicalWithInlinedVariable;
+    }
+
+    public Set<Refactoring> getRefactorings() {
+        return refactorings;
     }
 
     public boolean isExact() {
@@ -200,7 +205,7 @@ public abstract class AbstractCodeMapping {
     }
 
     public void temporaryVariableAssignment(AbstractCodeFragment statement,
-                                            List<? extends AbstractCodeFragment> nonMappedLeavesT2, Set<Refactoring> refactorings, UMLClassBaseDiff classDiff) {
+                                            List<? extends AbstractCodeFragment> nonMappedLeavesT2, UMLClassBaseDiff classDiff) {
         for (VariableDeclaration declaration : statement.getVariableDeclarations()) {
             String variableName = declaration.getVariableName();
             AbstractExpression initializer = declaration.getInitializer();
@@ -225,6 +230,7 @@ public abstract class AbstractCodeMapping {
                     if (initializer.toString().equals(replacement.getBefore()) ||
                         (initializer.toString().equals("(" + declaration.getType() + ")" + replacement.getBefore()) && !containsVariableNameReplacement(variableName)) ||
                         ternaryMatch(initializer, replacement.getBefore()) ||
+                        wrappedAsArgument(initializer, replacement.getBefore()) ||
                         reservedTokenMatch(initializer, replacement, replacement.getBefore()) ||
                         overlappingExtractVariable(initializer, replacement.getBefore(), nonMappedLeavesT2, refactorings)) {
                         ExtractVariableRefactoring ref = new ExtractVariableRefactoring(declaration, operation1, operation2);
@@ -279,6 +285,33 @@ public abstract class AbstractCodeMapping {
                 }
             }
         }
+    }
+
+    private boolean wrappedAsArgument(AbstractExpression initializer, String replacedExpression) {
+        int replacementCount = 0;
+        for (Replacement r : replacements) {
+            if (r.getBefore().equals(replacedExpression) || r.getAfter().equals(replacedExpression)) {
+                replacementCount++;
+            }
+        }
+        if (replacementCount > 1) {
+            return false;
+        }
+        OperationInvocation invocation = initializer.invocationCoveringEntireFragment();
+        if (invocation != null) {
+            if (invocation.getArguments().contains(replacedExpression)) {
+                return true;
+            }
+            String expression = invocation.getExpression();
+            if (expression != null && expression.contains(replacedExpression)) {
+                return true;
+            }
+        }
+        ObjectCreation creation = initializer.creationCoveringEntireFragment();
+        if (creation != null) {
+            return creation.getArguments().contains(replacedExpression);
+        }
+        return false;
     }
 
     private boolean ternaryMatch(AbstractExpression initializer, String replacedExpression) {
@@ -371,7 +404,7 @@ public abstract class AbstractCodeMapping {
     }
 
     public void inlinedVariableAssignment(AbstractCodeFragment statement,
-                                          List<? extends AbstractCodeFragment> nonMappedLeavesT2, Set<Refactoring> refactorings) {
+                                          List<? extends AbstractCodeFragment> nonMappedLeavesT2) {
         for (VariableDeclaration declaration : statement.getVariableDeclarations()) {
             for (Replacement replacement : getReplacements()) {
                 String variableName = declaration.getVariableName();
@@ -396,6 +429,7 @@ public abstract class AbstractCodeMapping {
                     if (initializer.toString().equals(replacement.getAfter()) ||
                         (initializer.toString().equals("(" + declaration.getType() + ")" + replacement.getAfter()) && !containsVariableNameReplacement(variableName)) ||
                         ternaryMatch(initializer, replacement.getAfter()) ||
+                        wrappedAsArgument(initializer, replacement.getAfter()) ||
                         reservedTokenMatch(initializer, replacement, replacement.getAfter()) ||
                         overlappingExtractVariable(initializer, replacement.getAfter(), nonMappedLeavesT2, refactorings)) {
                         InlineVariableRefactoring ref = new InlineVariableRefactoring(declaration, operation1, operation2);
