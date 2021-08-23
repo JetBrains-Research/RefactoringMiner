@@ -219,12 +219,13 @@ public class VariableReplacementAnalysis {
     }
 
     private boolean callsExtractedMethod(VariableDeclaration addedVariable) {
+        UMLModelDiff modelDiff = classDiff != null ? classDiff.getModelDiff() : null;
         AbstractExpression initializer = addedVariable.getInitializer();
         if (initializer != null) {
             OperationInvocation invocation = initializer.invocationCoveringEntireFragment();
             if (invocation != null) {
                 for (UMLOperationBodyMapper childMapper : childMappers) {
-                    if (invocation.matchesOperation(childMapper.getOperation2(), operation2, classDiff.getModelDiff())) {
+                    if (invocation.matchesOperation(childMapper.getOperation2(), operation2, modelDiff)) {
                         return true;
                     }
                 }
@@ -234,12 +235,13 @@ public class VariableReplacementAnalysis {
     }
 
     private boolean callsInlinedMethod(VariableDeclaration removedVariable) {
+        UMLModelDiff modelDiff = classDiff != null ? classDiff.getModelDiff() : null;
         AbstractExpression initializer = removedVariable.getInitializer();
         if (initializer != null) {
             OperationInvocation invocation = initializer.invocationCoveringEntireFragment();
             if (invocation != null) {
                 for (UMLOperationBodyMapper childMapper : childMappers) {
-                    if (invocation.matchesOperation(childMapper.getOperation1(), operation1, classDiff.getModelDiff())) {
+                    if (invocation.matchesOperation(childMapper.getOperation1(), operation1, modelDiff)) {
                         return true;
                     }
                 }
@@ -306,16 +308,18 @@ public class VariableReplacementAnalysis {
     }
 
     private void findAttributeExtractions() {
-        for (AbstractCodeMapping mapping : mappings) {
-            for (Replacement replacement : mapping.getReplacements()) {
-                if (replacement.involvesVariable()) {
-                    for (UMLAttribute addedAttribute : classDiff.getAddedAttributes()) {
-                        VariableDeclaration variableDeclaration = addedAttribute.getVariableDeclaration();
-                        if (addedAttribute.getName().equals(replacement.getAfter()) && variableDeclaration.getInitializer() != null &&
-                            variableDeclaration.getInitializer().getString().equals(replacement.getBefore())) {
-                            ExtractAttributeRefactoring refactoring = new ExtractAttributeRefactoring(addedAttribute, classDiff.getOriginalClass(), classDiff.getNextClass());
-                            refactoring.addReference(mapping);
-                            refactorings.add(refactoring);
+        if (classDiff != null) {
+            for (AbstractCodeMapping mapping : mappings) {
+                for (Replacement replacement : mapping.getReplacements()) {
+                    if (replacement.involvesVariable()) {
+                        for (UMLAttribute addedAttribute : classDiff.getAddedAttributes()) {
+                            VariableDeclaration variableDeclaration = addedAttribute.getVariableDeclaration();
+                            if (addedAttribute.getName().equals(replacement.getAfter()) && variableDeclaration.getInitializer() != null &&
+                                variableDeclaration.getInitializer().getString().equals(replacement.getBefore())) {
+                                ExtractAttributeRefactoring refactoring = new ExtractAttributeRefactoring(addedAttribute, classDiff.getOriginalClass(), classDiff.getNextClass());
+                                refactoring.addReference(mapping);
+                                refactorings.add(refactoring);
+                            }
                         }
                     }
                 }
@@ -611,10 +615,10 @@ public class VariableReplacementAnalysis {
                 String value2 = fragment2.substring(fragment2.indexOf("=") + 1, fragment2.lastIndexOf(";\n"));
                 String attribute1 = PrefixSuffixUtils.normalize(fragment1.substring(0, fragment1.indexOf("=")));
                 String attribute2 = PrefixSuffixUtils.normalize(fragment2.substring(0, fragment2.indexOf("=")));
-                if (value1.equals(attribute1) && classDiff.getOriginalClass().containsAttributeWithName(attribute1) && classDiff.getNextClass().containsAttributeWithName(attribute1)) {
+                if (value1.equals(attribute1) && classDiff != null && classDiff.getOriginalClass().containsAttributeWithName(attribute1) && classDiff.getNextClass().containsAttributeWithName(attribute1)) {
                     return true;
                 }
-                return value2.equals(attribute2) && classDiff.getOriginalClass().containsAttributeWithName(attribute2) && classDiff.getNextClass().containsAttributeWithName(attribute2);
+                return value2.equals(attribute2) && classDiff != null && classDiff.getOriginalClass().containsAttributeWithName(attribute2) && classDiff.getNextClass().containsAttributeWithName(attribute2);
             }
         }
         return false;
@@ -1261,6 +1265,7 @@ public class VariableReplacementAnalysis {
 
     private boolean variableAppearsInExtractedMethod(VariableDeclaration v1, VariableDeclaration v2) {
         if (v1 != null) {
+            UMLModelDiff modelDiff = classDiff != null ? classDiff.getModelDiff() : null;
             for (UMLOperationBodyMapper mapper : childMappers) {
                 for (AbstractCodeMapping mapping : mapper.getMappings()) {
                     if (mapping.getFragment1().getVariableDeclarations().contains(v1)) {
@@ -1269,7 +1274,7 @@ public class VariableReplacementAnalysis {
                             Map<String, List<OperationInvocation>> methodInvocationMap = v2.getInitializer().getMethodInvocationMap();
                             for (String key : methodInvocationMap.keySet()) {
                                 for (OperationInvocation invocation : methodInvocationMap.get(key)) {
-                                    if (invocation.matchesOperation(extractedMethod, operation2, classDiff.getModelDiff())) {
+                                    if (invocation.matchesOperation(extractedMethod, operation2, modelDiff)) {
                                         return false;
                                     } else {
                                         //check if the extracted method is called in the initializer of a variable used in the initializer of v2
@@ -1280,7 +1285,7 @@ public class VariableReplacementAnalysis {
                                                     Map<String, List<OperationInvocation>> methodInvocationMap2 = declaration.getInitializer().getMethodInvocationMap();
                                                     for (String key2 : methodInvocationMap2.keySet()) {
                                                         for (OperationInvocation invocation2 : methodInvocationMap2.get(key2)) {
-                                                            if (invocation2.matchesOperation(extractedMethod, operation2, classDiff.getModelDiff())) {
+                                                            if (invocation2.matchesOperation(extractedMethod, operation2, modelDiff)) {
                                                                 return false;
                                                             }
                                                         }
