@@ -2299,7 +2299,8 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
             AbstractExpression enhancedForExpression = expressions2.get(expressions2.size() - 1);
             for (AbstractExpression expression1 : for1.getExpressions()) {
                 if (expression1.getString().contains(enhancedForExpression.getString() + ".length") ||
-                    expression1.getString().contains(enhancedForExpression.getString() + ".size()")) {
+                    expression1.getString().contains(enhancedForExpression.getString() + ".size()") ||
+                    expression1.getString().contains(enhancedForExpression.getString() + ".iterator()")) {
                     return replacementInfo.getReplacements();
                 }
             }
@@ -2312,7 +2313,8 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
             AbstractExpression enhancedForExpression = expressions1.get(expressions1.size() - 1);
             for (AbstractExpression expression2 : for2.getExpressions()) {
                 if (expression2.getString().contains(enhancedForExpression.getString() + ".length") ||
-                    expression2.getString().contains(enhancedForExpression.getString() + ".size()")) {
+                    expression2.getString().contains(enhancedForExpression.getString() + ".size()") ||
+                    expression2.getString().contains(enhancedForExpression.getString() + ".iterator()")) {
                     return replacementInfo.getReplacements();
                 }
             }
