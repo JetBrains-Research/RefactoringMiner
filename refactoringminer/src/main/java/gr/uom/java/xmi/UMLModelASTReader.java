@@ -1,6 +1,7 @@
 package gr.uom.java.xmi;
 
 import com.intellij.lang.java.JavaLanguage;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.psi.*;
 import com.intellij.psi.javadoc.PsiDocComment;
 import com.intellij.psi.javadoc.PsiDocTag;
@@ -29,7 +30,8 @@ public class UMLModelASTReader {
 
     public UMLModelASTReader(Map<String, String> javaFileContents, Set<String> repositoryDirectories) {
         this.umlModel = new UMLModel(repositoryDirectories);
-        processJavaFileContents(javaFileContents, PsiFactoryManager.getFactory());
+        ApplicationManager.getApplication().runReadAction(() ->
+            processJavaFileContents(javaFileContents, PsiFactoryManager.getFactory()));
     }
 
     public UMLModel getUmlModel() {
