@@ -432,15 +432,6 @@ public class OperationInvocation extends AbstractCall {
         return intersection;
     }
 
-    public boolean containsVeryLongSubExpression() {
-        for (String expression : subExpressions) {
-            if (expression.length() > 100 && !UMLOperationBodyMapper.containsMethodSignatureOfAnonymousClass(expression)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private Set<String> subExpressionIntersection(OperationInvocation other) {
         Set<String> subExpressions1 = this.subExpressions();
         Set<String> subExpressions2 = other.subExpressions();
