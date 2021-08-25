@@ -13,7 +13,6 @@ import org.refactoringminer.api.Refactoring;
 import org.refactoringminer.api.RefactoringType;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -375,7 +374,7 @@ public class UMLOperationDiff {
                 exactMappings++;
             }
         }
-        if (condition(removedParameters, exactMappings)) {
+        if (removedParameters.isEmpty() || exactMappings > 0) {
             for (UMLParameter umlParameter : addedParameters) {
                 boolean conflictFound = false;
                 for (Refactoring refactoring : this.refactorings) {
@@ -399,7 +398,7 @@ public class UMLOperationDiff {
                 }
             }
         }
-        if (condition(addedParameters, exactMappings)) {
+        if (addedParameters.isEmpty() || exactMappings > 0) {
             for (UMLParameter umlParameter : removedParameters) {
                 boolean conflictFound = false;
                 for (Refactoring refactoring : this.refactorings) {
@@ -496,14 +495,5 @@ public class UMLOperationDiff {
 
     public List<UMLParameterDiff> getParameterDiffList() {
         return parameterDiffList;
-    }
-
-    private boolean condition(List<UMLParameter> parameters, int exactMappings) {
-        if (parameters.isEmpty())
-            return true;
-        List<VariableDeclaration> declarations1 = removedOperation.getBody() != null ? removedOperation.getBody().getAllVariableDeclarations() : Collections.emptyList();
-        List<VariableDeclaration> declarations2 = addedOperation.getBody() != null ? addedOperation.getBody().getAllVariableDeclarations() : Collections.emptyList();
-        boolean moved = !removedOperation.getClassName().equals(addedOperation.getClassName());
-        return exactMappings > 0 && (moved || !matchedVariables.isEmpty() || declarations1.isEmpty() || declarations2.isEmpty());
     }
 }
