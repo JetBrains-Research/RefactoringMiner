@@ -17,6 +17,7 @@ import gr.uom.java.xmi.decomposition.replacement.ObjectCreationReplacement;
 import gr.uom.java.xmi.decomposition.replacement.Replacement;
 import gr.uom.java.xmi.decomposition.replacement.Replacement.ReplacementType;
 import gr.uom.java.xmi.decomposition.replacement.SplitVariableReplacement;
+import gr.uom.java.xmi.decomposition.replacement.SwapArgumentReplacement;
 import gr.uom.java.xmi.decomposition.replacement.VariableReplacementWithMethodInvocation;
 import gr.uom.java.xmi.decomposition.replacement.VariableReplacementWithMethodInvocation.Direction;
 import gr.uom.java.xmi.diff.CandidateAttributeRefactoring;
@@ -3693,6 +3694,27 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
                 String prepend = commonPrefix.substring(commonPrefix.lastIndexOf(",") + 1);
                 diff1 = prepend + diff1;
                 diff2 = prepend + diff2;
+            }
+            //check for argument swap
+            if (diff1.contains(",") && diff2.contains(",")) {
+                String beforeComma1 = diff1.substring(0, diff1.indexOf(","));
+                String afterComma1 = diff1.substring(diff1.indexOf(",") + 1);
+                String beforeComma2 = diff2.substring(0, diff2.indexOf(","));
+                String afterComma2 = diff2.substring(diff2.indexOf(",") + 1);
+                if (beforeComma1.equals(afterComma2) && beforeComma2.equals(afterComma1)) {
+                    boolean conflictReplacement = false;
+                    for (Replacement r : replacementInfo.getReplacements()) {
+                        if (r.getAfter().equals(beforeComma2)) {
+                            conflictReplacement = true;
+                            break;
+                        }
+                    }
+                    if (!conflictReplacement) {
+                        SwapArgumentReplacement r = new SwapArgumentReplacement(beforeComma1, beforeComma2);
+                        replacementInfo.getReplacements().add(r);
+                        return true;
+                    }
+                }
             }
             //if there is a variable replacement diff1 should be empty, otherwise diff1 should include a single variable
             if (diff1.isEmpty() ||
