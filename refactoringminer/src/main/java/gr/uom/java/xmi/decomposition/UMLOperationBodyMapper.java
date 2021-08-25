@@ -59,10 +59,10 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
     private UMLOperation operation1;
     private UMLOperation operation2;
     private final Set<AbstractCodeMapping> mappings;
-    private List<StatementObject> nonMappedLeavesT1;
-    private List<StatementObject> nonMappedLeavesT2;
-    private List<CompositeStatementObject> nonMappedInnerNodesT1;
-    private List<CompositeStatementObject> nonMappedInnerNodesT2;
+    private final List<StatementObject> nonMappedLeavesT1;
+    private final List<StatementObject> nonMappedLeavesT2;
+    private final List<CompositeStatementObject> nonMappedInnerNodesT1;
+    private final List<CompositeStatementObject> nonMappedInnerNodesT2;
     private final Set<Refactoring> refactorings = new LinkedHashSet<>();
     private final Set<Pair<VariableDeclaration, VariableDeclaration>> matchedVariables = new LinkedHashSet<>();
     private final Set<CandidateAttributeRefactoring> candidateAttributeRenames = new LinkedHashSet<>();
@@ -216,6 +216,10 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
 
     public UMLOperationBodyMapper(AbstractExpression expression1, AbstractExpression expression2) throws RefactoringMinerTimedOutException {
         this.mappings = new LinkedHashSet<>();
+        this.nonMappedLeavesT1 = new ArrayList<>();
+        this.nonMappedLeavesT2 = new ArrayList<>();
+        this.nonMappedInnerNodesT1 = new ArrayList<>();
+        this.nonMappedInnerNodesT2 = new ArrayList<>();
         List<AbstractExpression> leaves1 = new ArrayList<>();
         leaves1.add(expression1);
         List<AbstractExpression> leaves2 = new ArrayList<>();
@@ -2347,7 +2351,9 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
                             this.nonMappedInnerNodesT2.addAll(mapper.nonMappedInnerNodesT2);
                             this.nonMappedLeavesT1.addAll(mapper.nonMappedLeavesT1);
                             this.nonMappedLeavesT2.addAll(mapper.nonMappedLeavesT2);
-                            this.refactorings.addAll(mapper.getRefactorings());
+                            if (this.operation1 != null && this.operation2 != null) {
+                                this.refactorings.addAll(mapper.getRefactorings());
+                            }
                             lambdaMappers.add(mapper);
                         }
                     }
