@@ -553,6 +553,7 @@ public class UMLModelASTReader {
         for (PsiMethod method : psiAnonymousClass.getMethods()) {
             UMLOperation operation = processMethodDeclaration(file, method, sourceFile, comments);
             operation.setClassName(anonymousClass.getCodePath());
+            operation.setDeclaredInAnonymousClass(true);
             anonymousClass.addOperation(operation);
         }
 
