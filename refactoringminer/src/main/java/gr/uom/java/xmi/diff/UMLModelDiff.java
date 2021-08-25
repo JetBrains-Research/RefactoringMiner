@@ -2280,7 +2280,11 @@ public class UMLModelDiff {
                 for (UMLOperation removedOperation : removedOperations) {
                     Pair<UMLOperation, UMLOperation> pair = Pair.of(removedOperation, addedOperation);
                     if (!processedOperationPairs.contains(pair) && removedOperation.testMethodCheck(addedOperation)) {
-                        UMLOperationBodyMapper operationBodyMapper = new UMLOperationBodyMapper(removedOperation, addedOperation, getUMLClassDiff(removedOperation.getClassName()));
+                        UMLClassBaseDiff umlClassDiff = getUMLClassDiff(removedOperation.getClassName());
+                        if (umlClassDiff == null) {
+                            umlClassDiff = getUMLClassDiff(addedOperation.getClassName());
+                        }
+                        UMLOperationBodyMapper operationBodyMapper = new UMLOperationBodyMapper(removedOperation, addedOperation, umlClassDiff);
                         processedOperationPairs.add(pair);
                         int mappings = operationBodyMapper.mappingsWithoutBlocks();
                         if ((mappings > 0 && mappedElementsMoreThanNonMappedT1AndT2(mappings, operationBodyMapper)) || addedOperation.equalSignatureForAbstractMethods(removedOperation) ||
@@ -2369,7 +2373,11 @@ public class UMLModelDiff {
                 for (UMLOperation addedOperation : addedOperations) {
                     Pair<UMLOperation, UMLOperation> pair = Pair.of(removedOperation, addedOperation);
                     if (!processedOperationPairs.contains(pair) && removedOperation.testMethodCheck(addedOperation)) {
-                        UMLOperationBodyMapper operationBodyMapper = new UMLOperationBodyMapper(removedOperation, addedOperation, getUMLClassDiff(removedOperation.getClassName()));
+                        UMLClassBaseDiff umlClassDiff = getUMLClassDiff(removedOperation.getClassName());
+                        if (umlClassDiff == null) {
+                            umlClassDiff = getUMLClassDiff(addedOperation.getClassName());
+                        }
+                        UMLOperationBodyMapper operationBodyMapper = new UMLOperationBodyMapper(removedOperation, addedOperation, umlClassDiff);
                         processedOperationPairs.add(pair);
                         int mappings = operationBodyMapper.mappingsWithoutBlocks();
                         if ((mappings > 0 && mappedElementsMoreThanNonMappedT1AndT2(mappings, operationBodyMapper)) || removedOperation.equalSignatureForAbstractMethods(addedOperation) ||
