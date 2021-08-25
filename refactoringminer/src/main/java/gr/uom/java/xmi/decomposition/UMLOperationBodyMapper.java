@@ -1683,6 +1683,10 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
         VariableDeclaration variableDeclarationWithArrayInitializer2 = declarationWithArrayInitializer(variableDeclarations2);
         OperationInvocation invocationCoveringTheEntireStatement1 = statement1.invocationCoveringEntireFragment();
         OperationInvocation invocationCoveringTheEntireStatement2 = statement2.invocationCoveringEntireFragment();
+        ObjectCreation creationCoveringTheEntireStatement1 = statement1.creationCoveringEntireFragment();
+        ObjectCreation creationCoveringTheEntireStatement2 = statement2.creationCoveringEntireFragment();
+        Map<String, List<? extends AbstractCall>> methodInvocationMap1 = new LinkedHashMap<String, List<? extends AbstractCall>>(statement1.getMethodInvocationMap());
+        Map<String, List<? extends AbstractCall>> methodInvocationMap2 = new LinkedHashMap<String, List<? extends AbstractCall>>(statement2.getMethodInvocationMap());
         Set<String> variables1 = new LinkedHashSet<>(statement1.getVariables());
         Set<String> variables2 = new LinkedHashSet<>(statement2.getVariables());
         Set<String> variableIntersection = new LinkedHashSet<>(variables1);
@@ -1690,6 +1694,7 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
         // ignore the variables in the intersection that also appear with "this." prefix in the sets of variables
         // ignore the variables in the intersection that are static fields
         // ignore the variables in the intersection that one of them is a variable declaration and the other is not
+        // ignore the variables in the intersection that one of them is part of a method invocation, but the same method invocation does not appear on the other side
         Set<String> variablesToBeRemovedFromTheIntersection = new LinkedHashSet<>();
         for (String variable : variableIntersection) {
             if (!variable.startsWith("this.") && !variableIntersection.contains("this." + variable) &&
@@ -1739,6 +1744,28 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
             }
             if (foundInDeclaration1 != foundInDeclaration2) {
                 variablesToBeRemovedFromTheIntersection.add(variable);
+            } else if (!variable.contains(".")) {
+                boolean foundInInvocation1 = false;
+                for (String key : methodInvocationMap1.keySet()) {
+                    if (key.startsWith(variable + ".")) {
+                        foundInInvocation1 = true;
+                        break;
+                    }
+                }
+                boolean foundInInvocation2 = false;
+                for (String key : methodInvocationMap2.keySet()) {
+                    if (key.startsWith(variable + ".")) {
+                        foundInInvocation2 = true;
+                        break;
+                    }
+                }
+                boolean sameCoverageInvocations = invocationCoveringTheEntireStatement1 != null && invocationCoveringTheEntireStatement2 != null &&
+                    invocationCoveringTheEntireStatement1.getCoverage().equals(invocationCoveringTheEntireStatement2.getCoverage());
+                boolean sameCoverageCreations = creationCoveringTheEntireStatement1 != null && creationCoveringTheEntireStatement2 != null &&
+                    creationCoveringTheEntireStatement1.getCoverage().equals(creationCoveringTheEntireStatement2.getCoverage());
+                if ((sameCoverageInvocations || sameCoverageCreations) && foundInInvocation1 != foundInInvocation2) {
+                    variablesToBeRemovedFromTheIntersection.add(variable);
+                }
             }
         }
         variableIntersection.removeAll(variablesToBeRemovedFromTheIntersection);
@@ -1750,8 +1777,6 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
         replaceVariablesWithArguments(variables1, parameterToArgumentMap);
         replaceVariablesWithArguments(variables2, parameterToArgumentMap);
 
-        Map<String, List<? extends AbstractCall>> methodInvocationMap1 = new LinkedHashMap<>(statement1.getMethodInvocationMap());
-        Map<String, List<? extends AbstractCall>> methodInvocationMap2 = new LinkedHashMap<>(statement2.getMethodInvocationMap());
         Set<String> methodInvocations1 = new LinkedHashSet<>(methodInvocationMap1.keySet());
         Set<String> methodInvocations2 = new LinkedHashSet<>(methodInvocationMap2.keySet());
 
@@ -1845,8 +1870,6 @@ public class UMLOperationBodyMapper implements Comparable<UMLOperationBodyMapper
 
         replaceVariablesWithArguments(creationMap1, creations1, map);
 
-        ObjectCreation creationCoveringTheEntireStatement1 = statement1.creationCoveringEntireFragment();
-        ObjectCreation creationCoveringTheEntireStatement2 = statement2.creationCoveringEntireFragment();
         //remove objectCreation covering the entire statement
         for (String objectCreation1 : creationMap1.keySet()) {
             for (AbstractCall creation1 : creationMap1.get(objectCreation1)) {
