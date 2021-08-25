@@ -110,6 +110,10 @@ public class VariableDeclaration implements LocationInfoProvider, VariableDeclar
         return scope;
     }
 
+    public boolean isLocalVariable() {
+        return !isParameter && !isAttribute && !isEnumConstant;
+    }
+
     public boolean isParameter() {
         return isParameter;
     }
