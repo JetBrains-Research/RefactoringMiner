@@ -10,7 +10,6 @@ import gr.uom.java.xmi.decomposition.VariableDeclaration;
 import gr.uom.java.xmi.decomposition.VariableReferenceExtractor;
 import org.apache.commons.lang3.tuple.Pair;
 import org.refactoringminer.api.Refactoring;
-import org.refactoringminer.api.RefactoringType;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -380,7 +379,7 @@ public class UMLOperationDiff {
                 for (Refactoring refactoring : this.refactorings) {
                     if (refactoring instanceof RenameVariableRefactoring) {
                         RenameVariableRefactoring rename = (RenameVariableRefactoring) refactoring;
-                        if (rename.getRefactoringType().equals(RefactoringType.RENAME_PARAMETER) && rename.getRenamedVariable().equals(umlParameter.getVariableDeclaration())) {
+                        if (rename.getRenamedVariable().equals(umlParameter.getVariableDeclaration())) {
                             conflictFound = true;
                             break;
                         }
@@ -404,7 +403,7 @@ public class UMLOperationDiff {
                 for (Refactoring refactoring : this.refactorings) {
                     if (refactoring instanceof RenameVariableRefactoring) {
                         RenameVariableRefactoring rename = (RenameVariableRefactoring) refactoring;
-                        if (rename.getRefactoringType().equals(RefactoringType.RENAME_PARAMETER) && rename.getOriginalVariable().equals(umlParameter.getVariableDeclaration())) {
+                        if (rename.getOriginalVariable().equals(umlParameter.getVariableDeclaration())) {
                             conflictFound = true;
                             break;
                         }
