@@ -1,8 +1,5 @@
 apply {
     plugin 'application'
-    plugin 'eclipse'
-    plugin 'maven-publish'
-    plugin 'signing'
 }
 
 group = "com.github.tsantalis"
