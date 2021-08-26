@@ -1,2 +1,2 @@
 rootProject.name = 'RefactoringMiner'
-include "plugin", "refactoringminer"
+include "plugin", "refactoringminer", "refactoringminer-API"

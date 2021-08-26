@@ -7,7 +7,7 @@ import gr.uom.java.xmi.decomposition.AbstractCodeFragment;
 import java.util.List;
 import java.util.Set;
 
-public class CodeRange {
+public class CodeRange implements org.refactoringminer.api.CodeRange {
     private final String filePath;
     private final int startLine;
     private final int endLine;

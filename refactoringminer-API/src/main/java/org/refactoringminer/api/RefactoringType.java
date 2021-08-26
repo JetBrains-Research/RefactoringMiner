@@ -1,9 +1,5 @@
 package org.refactoringminer.api;
 
-import org.refactoringminer.util.AstUtils;
-import org.refactoringminer.utils.RefactoringRelationship;
-import java.util.Collection;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -95,90 +91,6 @@ public enum RefactoringType {
     SPLIT_PACKAGE("Split Package", "Split Package (.+) to \\[(.+)\\]"),
     MERGE_PACKAGE("Merge Package", "Merge Package \\[(.+)\\] to (.+)");
 
-    public static final RefactoringType[] ALL = {
-        RENAME_CLASS,
-        MOVE_CLASS,
-        MOVE_SOURCE_FOLDER,
-        RENAME_METHOD,
-        EXTRACT_OPERATION,
-        INLINE_OPERATION,
-        MOVE_OPERATION,
-        PULL_UP_OPERATION,
-        PUSH_DOWN_OPERATION,
-        MOVE_ATTRIBUTE,
-        MOVE_RENAME_ATTRIBUTE,
-        REPLACE_ATTRIBUTE,
-        PULL_UP_ATTRIBUTE,
-        PUSH_DOWN_ATTRIBUTE,
-        EXTRACT_INTERFACE,
-        EXTRACT_SUPERCLASS,
-        EXTRACT_SUBCLASS,
-        EXTRACT_CLASS,
-        EXTRACT_AND_MOVE_OPERATION,
-        MOVE_RENAME_CLASS,
-        RENAME_PACKAGE,
-        MOVE_PACKAGE,
-        EXTRACT_VARIABLE,
-        INLINE_VARIABLE,
-        RENAME_VARIABLE,
-        RENAME_PARAMETER,
-        RENAME_ATTRIBUTE,
-        REPLACE_VARIABLE_WITH_ATTRIBUTE,
-        REPLACE_ATTRIBUTE_WITH_VARIABLE,
-        PARAMETERIZE_VARIABLE,
-        LOCALIZE_PARAMETER,
-        PARAMETERIZE_ATTRIBUTE,
-        MERGE_VARIABLE,
-        MERGE_PARAMETER,
-        MERGE_ATTRIBUTE,
-        SPLIT_VARIABLE,
-        SPLIT_PARAMETER,
-        SPLIT_ATTRIBUTE,
-        CHANGE_RETURN_TYPE,
-        CHANGE_VARIABLE_TYPE,
-        CHANGE_PARAMETER_TYPE,
-        CHANGE_ATTRIBUTE_TYPE,
-        EXTRACT_ATTRIBUTE,
-        MOVE_AND_RENAME_OPERATION,
-        MOVE_AND_INLINE_OPERATION,
-        ADD_METHOD_ANNOTATION,
-        REMOVE_METHOD_ANNOTATION,
-        MODIFY_METHOD_ANNOTATION,
-        ADD_ATTRIBUTE_ANNOTATION,
-        REMOVE_ATTRIBUTE_ANNOTATION,
-        MODIFY_ATTRIBUTE_ANNOTATION,
-        ADD_CLASS_ANNOTATION,
-        REMOVE_CLASS_ANNOTATION,
-        MODIFY_CLASS_ANNOTATION,
-        ADD_PARAMETER,
-        REMOVE_PARAMETER,
-        REORDER_PARAMETER,
-        ADD_PARAMETER_ANNOTATION,
-        REMOVE_PARAMETER_ANNOTATION,
-        MODIFY_PARAMETER_ANNOTATION,
-        ADD_VARIABLE_ANNOTATION,
-        REMOVE_VARIABLE_ANNOTATION,
-        MODIFY_VARIABLE_ANNOTATION,
-        ADD_THROWN_EXCEPTION_TYPE,
-        REMOVE_THROWN_EXCEPTION_TYPE,
-        CHANGE_THROWN_EXCEPTION_TYPE,
-        CHANGE_OPERATION_ACCESS_MODIFIER,
-        CHANGE_ATTRIBUTE_ACCESS_MODIFIER,
-        ENCAPSULATE_ATTRIBUTE,
-        ADD_METHOD_MODIFIER,
-        REMOVE_METHOD_MODIFIER,
-        ADD_ATTRIBUTE_MODIFIER,
-        REMOVE_ATTRIBUTE_MODIFIER,
-        ADD_VARIABLE_MODIFIER,
-        ADD_PARAMETER_MODIFIER,
-        REMOVE_VARIABLE_MODIFIER,
-        REMOVE_PARAMETER_MODIFIER,
-        CHANGE_CLASS_ACCESS_MODIFIER,
-        ADD_CLASS_MODIFIER,
-        REMOVE_CLASS_MODIFIER,
-        SPLIT_PACKAGE,
-        MERGE_PACKAGE
-    };
     private final String displayName;
     private final Pattern regex;
     private final int[] aggregateGroups;
@@ -187,73 +99,6 @@ public enum RefactoringType {
         this.displayName = displayName;
         this.regex = Pattern.compile(regex);
         this.aggregateGroups = aggregateGroups;
-    }
-
-    public static void parse(String refactoringDescription, Collection<RefactoringRelationship> result) {
-        RefactoringType refType = extractFromDescription(refactoringDescription);
-        Matcher m = refType.regex.matcher(refactoringDescription);
-        if (m.matches()) {
-            switch (refType) {
-                case RENAME_CLASS:
-                case MOVE_CLASS:
-                case RENAME_PACKAGE: {
-                    String entityBefore = m.group(1);
-                    String entityAfter = m.group(2);
-                    result.add(new RefactoringRelationship(refType, entityBefore, entityAfter));
-                    return;
-                }
-                case MOVE_OPERATION:
-                case PULL_UP_OPERATION:
-                case PUSH_DOWN_OPERATION: {
-                    String entityBefore = methodKey(m.group(1), m.group(2));
-                    String entityAfter = methodKey(m.group(3), m.group(4));
-                    result.add(new RefactoringRelationship(refType, entityBefore, entityAfter));
-                    return;
-                }
-                case RENAME_METHOD:
-                case INLINE_OPERATION: {
-                    String entityBefore = methodKey(m.group(1), m.group(3));
-                    String entityAfter = methodKey(m.group(2), m.group(3));
-                    result.add(new RefactoringRelationship(refType, entityBefore, entityAfter));
-                    return;
-                }
-                case EXTRACT_OPERATION: {
-                    String entityBefore = methodKey(m.group(2), m.group(3));
-                    String entityAfter = methodKey(m.group(1), m.group(3));
-                    result.add(new RefactoringRelationship(refType, entityBefore, entityAfter));
-                    return;
-                }
-                case EXTRACT_INTERFACE:
-                case EXTRACT_SUPERCLASS: {
-                    String entityAfter = m.group(1);
-                    String[] entityBeforeArray = m.group(2).split(" *, *");
-                    for (String entityBefore : entityBeforeArray) {
-                        result.add(new RefactoringRelationship(refType, entityBefore, entityAfter));
-                    }
-                    return;
-                }
-                case MOVE_ATTRIBUTE:
-                case PULL_UP_ATTRIBUTE:
-                case PUSH_DOWN_ATTRIBUTE: {
-                    String entityBefore = attributeKey(m.group(1), m.group(2));
-                    String entityAfter = attributeKey(m.group(1), m.group(3));
-                    result.add(new RefactoringRelationship(refType, entityBefore, entityAfter));
-                    return;
-                }
-                default:
-                    throw new RuntimeException("Unable do parse: " + refactoringDescription);
-            }
-        } else {
-            throw new RuntimeException("Pattern not matched: " + refactoringDescription);
-        }
-    }
-
-    private static String methodKey(String methodSignature, String typeKey) {
-        return typeKey + "#" + AstUtils.normalizeMethodSignature(methodSignature);
-    }
-
-    private static String attributeKey(String attribute, String typeKey) {
-        return typeKey + "#" + AstUtils.normalizeAttribute(attribute);
     }
 
     public static RefactoringType extractFromDescription(String refactoringDescription) {
@@ -279,21 +124,6 @@ public enum RefactoringType {
         throw new IllegalArgumentException("refactoring type not known " + name);
     }
 
-    public Pattern getRegex() {
-        return regex;
-    }
-
-    public String getAbbreviation() {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < this.displayName.length(); i++) {
-            char c = this.displayName.charAt(i);
-            if (Character.isLetter(c) && Character.isUpperCase(c)) {
-                sb.append(c);
-            }
-        }
-        return sb.toString();
-    }
-
     public String aggregate(String refactoringDescription) {
         Matcher m = regex.matcher(refactoringDescription);
         if (m.matches()) {
@@ -312,29 +142,6 @@ public enum RefactoringType {
             }
             sb.append(refactoringDescription, current, refactoringDescription.length());
             return sb.toString();
-        } else {
-            throw new RuntimeException("Pattern not matched: " + refactoringDescription);
-        }
-    }
-
-    public List<RefactoringRelationship> parseRefactoring(String refactoringDescription) {
-        List<RefactoringRelationship> result;
-        Matcher m = regex.matcher(refactoringDescription);
-        if (m.matches()) {
-
-            for (int g = 1; g <= m.groupCount(); g++) {
-
-            }
-            return null;
-        } else {
-            throw new RuntimeException("Pattern not matched: " + refactoringDescription);
-        }
-    }
-
-    public String getGroup(String refactoringDescription, int group) {
-        Matcher m = regex.matcher(refactoringDescription);
-        if (m.matches()) {
-            return m.group(group);
         } else {
             throw new RuntimeException("Pattern not matched: " + refactoringDescription);
         }
