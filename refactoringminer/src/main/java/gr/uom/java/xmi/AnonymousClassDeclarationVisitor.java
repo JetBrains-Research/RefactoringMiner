@@ -18,14 +18,15 @@ public class AnonymousClassDeclarationVisitor extends PsiRecursiveElementWalking
      */
     private final Stack<PsiAnonymousClass> stackDeclarations = new Stack<>();
     /**
-     * Count of top-level anonymous classes inside
-     * For 0     : root element from which visit starts
+     * Count of top-level anonymous classes inside <br>
+     * For 0     : root element from which visit starts <br>
      * For i > 0 : i-1 element in stack declarations
      */
     private final Stack<Integer> childCount = new Stack<>();
     private final List<AnonymousClassDeclaration> declarationsPostOrdered = new ArrayList<>();
 
     {
+        // initialize the count for root element
         childCount.add(1);
     }
 
