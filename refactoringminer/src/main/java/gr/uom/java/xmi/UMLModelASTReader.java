@@ -118,8 +118,8 @@ public class UMLModelASTReader {
         return umlComments;
     }
 
-    private void distributeComments(List<UMLComment> compilationUnitComments, LocationInfo codeElementLocationInfo, List<UMLComment> codeElementComments) {
-        ListIterator<UMLComment> listIterator = compilationUnitComments.listIterator(compilationUnitComments.size());
+    private void distributeComments(List<UMLComment> fileComments, LocationInfo codeElementLocationInfo, List<UMLComment> codeElementComments) {
+        ListIterator<UMLComment> listIterator = fileComments.listIterator(fileComments.size());
         while (listIterator.hasPrevious()) {
             UMLComment comment = listIterator.previous();
             LocationInfo commentLocationInfo = comment.getLocationInfo();
@@ -130,7 +130,7 @@ public class UMLModelASTReader {
                 codeElementComments.add(0, comment);
             }
         }
-        compilationUnitComments.removeAll(codeElementComments);
+        fileComments.removeAll(codeElementComments);
     }
 
     private UMLJavadoc generateJavadoc(PsiFile file, PsiJavaDocumentedElement element, String sourceFile) {
