@@ -1,0 +1,16 @@
+apply {
+    plugin 'application'
+}
+
+group = "com.github.tsantalis"
+version = "2.1.0"
+
+applicationName = rootProject.name
+
+dependencies {
+    compile 'org.slf4j:slf4j-log4j12:1.7.30'
+    compile 'org.apache.commons:commons-text:1.9'
+    compile 'org.kohsuke:github-api:1.123'
+
+    testCompile 'junit:junit:4.11'
+}

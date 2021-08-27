@@ -1,0 +1,11 @@
+<idea-plugin>
+    <id>org.jetbrains.research.refactoringminer</id>
+    <name>RefactoringMiner</name>
+    <vendor>JetBrains Research</vendor>
+
+    <depends>com.intellij.modules.java</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <appStarter implementation="org.jetbrains.research.refactoringminer.RefactoringMiner"/>
+    </extensions>
+</idea-plugin>
