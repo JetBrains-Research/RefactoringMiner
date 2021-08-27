@@ -126,6 +126,45 @@ public class CompositeStatementObject extends AbstractStatement {
         return sb.toString();
     }
 
+    public String toStringForStringRepresentation() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(locationInfo.getCodeElementType().getName());
+        if (expressionList.size() > 0) {
+            sb.append("(");
+            for (int i = 0; i < expressionList.size() - 1; i++) {
+                AbstractExpression expression = expressionList.get(i);
+                //special handling for the string representation of enhanced-for parameter declaration
+                if (expression.getLocationInfo().getCodeElementType().equals(CodeElementType.ENHANCED_FOR_STATEMENT_PARAMETER_NAME)) {
+                    VariableDeclaration parameterDeclaration = this.getVariableDeclaration(expression.toString());
+                    if (parameterDeclaration != null) {
+                        if (parameterDeclaration.isFinal()) {
+                            sb.append("final").append(" ");
+                        }
+                        sb.append(parameterDeclaration.getType()).append(" ");
+                        sb.append(parameterDeclaration.getVariableName()).append(": ");
+                    }
+                } else {
+                    sb.append(expression).append("; ");
+                }
+            }
+            AbstractExpression lastExpression = expressionList.get(expressionList.size() - 1);
+            if (lastExpression.getLocationInfo().getCodeElementType().equals(CodeElementType.CATCH_CLAUSE_EXCEPTION_NAME)) {
+                VariableDeclaration exceptionDeclaration = this.getVariableDeclaration(lastExpression.toString());
+                if (exceptionDeclaration != null) {
+                    if (exceptionDeclaration.isFinal()) {
+                        sb.append("final").append(" ");
+                    }
+                    sb.append(exceptionDeclaration.getType()).append(" ");
+                    sb.append(exceptionDeclaration.getVariableName());
+                }
+            } else {
+                sb.append(lastExpression);
+            }
+            sb.append(")");
+        }
+        return sb.toString();
+    }
+
     @Override
     public List<String> getTypes() {
         List<String> types = new ArrayList<>();
@@ -547,7 +586,7 @@ public class CompositeStatementObject extends AbstractStatement {
     @Override
     public List<String> stringRepresentation() {
         List<String> stringRepresentation = new ArrayList<>();
-        stringRepresentation.add(this.toString());
+        stringRepresentation.add(this.toStringForStringRepresentation());
         for (AbstractStatement statement : statementList) {
             stringRepresentation.addAll(statement.stringRepresentation());
         }

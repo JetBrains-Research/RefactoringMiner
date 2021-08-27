@@ -36,6 +36,7 @@ public class UMLOperation implements Comparable<UMLOperation>, Serializable, Loc
     private boolean isStatic;
     private boolean isSynchronized;
     private boolean emptyBody;
+    private boolean declaredInAnonymousClass;
     private OperationBody operationBody;
     private UMLJavadoc javadoc;
     private Map<String, Set<VariableDeclaration>> variableDeclarationMap;
@@ -129,6 +130,14 @@ public class UMLOperation implements Comparable<UMLOperation>, Serializable, Loc
 
     public void setEmptyBody(boolean emptyBody) {
         this.emptyBody = emptyBody;
+    }
+
+    public boolean isDeclaredInAnonymousClass() {
+        return declaredInAnonymousClass;
+    }
+
+    public void setDeclaredInAnonymousClass(boolean declaredInAnonymousClass) {
+        this.declaredInAnonymousClass = declaredInAnonymousClass;
     }
 
     public boolean hasOverrideAnnotation() {
@@ -552,6 +561,29 @@ public class UMLOperation implements Comparable<UMLOperation>, Serializable, Loc
                 parameterNameList.add(parameter.getName());
         }
         return parameterNameList;
+    }
+
+    public boolean isMultiSetter() {
+        List<String> parameterNames = getParameterNameList();
+        int matchCount = 0;
+        if (getBody() != null) {
+            List<AbstractStatement> statements = getBody().getCompositeStatement().getStatements();
+            for (AbstractStatement statement : statements) {
+                if (statement instanceof StatementObject) {
+                    for (String variable : statement.getVariables()) {
+                        if (statement.getString().startsWith(variable + "=")) {
+                            for (String parameterName : parameterNames) {
+                                if (statement.getString().equals(variable + "=" + parameterName + ";\n")) {
+                                    matchCount++;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return matchCount > 0;
     }
 
     public boolean equalsIgnoringVisibility(UMLOperation operation) {

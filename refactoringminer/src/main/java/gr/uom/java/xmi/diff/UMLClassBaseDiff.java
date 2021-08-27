@@ -504,8 +504,6 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
     public List<Refactoring> getRefactorings() throws RefactoringMinerTimedOutException {
         List<Refactoring> refactorings = new ArrayList<>(this.refactorings);
         for (UMLOperationBodyMapper mapper : operationBodyMapperList) {
-            UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(mapper.getOperation1(), mapper.getOperation2(), mapper.getMappings());
-            refactorings.addAll(operationSignatureDiff.getRefactorings());
             processMapperRefactorings(mapper, refactorings);
         }
         refactorings.addAll(inferAttributeMergesAndSplits(renameMap, refactorings));
@@ -634,7 +632,12 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
     }
 
     private void processMapperRefactorings(UMLOperationBodyMapper mapper, List<Refactoring> refactorings) {
-        for (Refactoring refactoring : mapper.getRefactorings()) {
+        Set<Refactoring> refactorings2 = mapper.getRefactorings();
+        if (mapper.getParentMapper() == null) {
+            UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(mapper);
+            refactorings.addAll(operationSignatureDiff.getRefactorings());
+        }
+        for (Refactoring refactoring : refactorings2) {
             if (refactorings.contains(refactoring)) {
                 //special handling for replacing rename variable refactorings having statement mapping information
                 int index = refactorings.indexOf(refactoring);
@@ -1098,9 +1101,8 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
                         addedOperations.remove(addedOperation);
                         removedOperationIterator.remove();
 
-                        UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(removedOperation, addedOperation, bestMapper.getMappings());
+                        UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(bestMapper);
                         operationDiffList.add(operationSignatureDiff);
-                        refactorings.addAll(operationSignatureDiff.getRefactorings());
                         if (!removedOperation.getName().equals(addedOperation.getName()) &&
                             !(removedOperation.isConstructor() && addedOperation.isConstructor())) {
                             Set<MethodInvocationReplacement> callReferences = getCallReferences(removedOperation, addedOperation);
@@ -1141,9 +1143,8 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
                         removedOperations.remove(removedOperation);
                         addedOperationIterator.remove();
 
-                        UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(removedOperation, addedOperation, bestMapper.getMappings());
+                        UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(bestMapper);
                         operationDiffList.add(operationSignatureDiff);
-                        refactorings.addAll(operationSignatureDiff.getRefactorings());
                         if (!removedOperation.getName().equals(addedOperation.getName()) &&
                             !(removedOperation.isConstructor() && addedOperation.isConstructor())) {
                             Set<MethodInvocationReplacement> callReferences = getCallReferences(removedOperation, addedOperation);
@@ -1419,7 +1420,9 @@ public abstract class UMLClassBaseDiff extends UMLAbstractClassDiff implements C
         int nonMappedElementsT2CallingAddedOperation = operationBodyMapper.nonMappedElementsT2CallingAddedOperation(addedOperations);
         int nonMappedElementsT2WithoutThoseCallingAddedOperation = nonMappedElementsT2 - nonMappedElementsT2CallingAddedOperation;
         return mappings > nonMappedElementsT2 || (mappings >= nonMappedElementsT2WithoutThoseCallingAddedOperation &&
-            nonMappedElementsT2CallingAddedOperation >= nonMappedElementsT2WithoutThoseCallingAddedOperation);
+            nonMappedElementsT2CallingAddedOperation >= nonMappedElementsT2WithoutThoseCallingAddedOperation) ||
+            (operationBodyMapper.getMappings().size() > nonMappedElementsT2 && nonMappedElementsT2CallingAddedOperation > 0 &&
+                operationBodyMapper.getOperation1().getClassName().equals(operationBodyMapper.getOperation2().getClassName()));
     }
 
     private boolean mappedElementsMoreThanNonMappedT1(int mappings, UMLOperationBodyMapper operationBodyMapper) {

@@ -76,6 +76,7 @@ public abstract class UMLAbstractClassDiff {
         int numberOfInvocationsMissingFromRemovedOperation = new LinkedHashSet<>(removedOperationInvocations).size() - intersection.size();
 
         Set<OperationInvocation> operationInvocationsInMethodsCalledByAddedOperation = new LinkedHashSet<>();
+        Set<OperationInvocation> matchedOperationInvocations = new LinkedHashSet<>();
         for (OperationInvocation addedOperationInvocation : addedOperationInvocations) {
             if (!intersection.contains(addedOperationInvocation)) {
                 for (UMLOperation operation : addedOperations) {
@@ -83,7 +84,20 @@ public abstract class UMLAbstractClassDiff {
                         if (addedOperationInvocation.matchesOperation(operation, addedOperation, modelDiff)) {
                             //addedOperation calls another added method
                             operationInvocationsInMethodsCalledByAddedOperation.addAll(operation.getAllOperationInvocations());
+                            matchedOperationInvocations.add(addedOperationInvocation);
                         }
+                    }
+                }
+            }
+        }
+        if (modelDiff != null) {
+            for (OperationInvocation addedOperationInvocation : addedOperationInvocations) {
+                String expression = addedOperationInvocation.getExpression();
+                if (expression != null && !expression.equals("this") &&
+                    !intersection.contains(addedOperationInvocation) && !matchedOperationInvocations.contains(addedOperationInvocation)) {
+                    UMLOperation operation = modelDiff.findOperationInAddedClasses(addedOperationInvocation, addedOperation);
+                    if (operation != null) {
+                        operationInvocationsInMethodsCalledByAddedOperation.addAll(operation.getAllOperationInvocations());
                     }
                 }
             }
@@ -94,9 +108,11 @@ public abstract class UMLAbstractClassDiff {
         Set<OperationInvocation> removedOperationInvocationsWithIntersectionsAndGetterInvocationsSubtracted = new LinkedHashSet<>(removedOperationInvocations);
         removedOperationInvocationsWithIntersectionsAndGetterInvocationsSubtracted.removeAll(intersection);
         removedOperationInvocationsWithIntersectionsAndGetterInvocationsSubtracted.removeAll(newIntersection);
-        removedOperationInvocationsWithIntersectionsAndGetterInvocationsSubtracted.removeIf(invocation -> invocation.getMethodName().startsWith("get"));
+        removedOperationInvocationsWithIntersectionsAndGetterInvocationsSubtracted.removeIf(invocation ->
+            invocation.getMethodName().startsWith("get") || invocation.getMethodName().equals("add") || invocation.getMethodName().equals("contains"));
         int numberOfInvocationsOriginallyCalledByRemovedOperationFoundInOtherAddedOperations = newIntersection.size();
-        int numberOfInvocationsMissingFromRemovedOperationWithoutThoseFoundInOtherAddedOperations = numberOfInvocationsMissingFromRemovedOperation - numberOfInvocationsOriginallyCalledByRemovedOperationFoundInOtherAddedOperations;
+        int numberOfInvocationsMissingFromRemovedOperationWithoutThoseFoundInOtherAddedOperations =
+            numberOfInvocationsMissingFromRemovedOperation - numberOfInvocationsOriginallyCalledByRemovedOperationFoundInOtherAddedOperations;
         return numberOfInvocationsOriginallyCalledByRemovedOperationFoundInOtherAddedOperations > numberOfInvocationsMissingFromRemovedOperationWithoutThoseFoundInOtherAddedOperations ||
             numberOfInvocationsOriginallyCalledByRemovedOperationFoundInOtherAddedOperations > removedOperationInvocationsWithIntersectionsAndGetterInvocationsSubtracted.size();
     }

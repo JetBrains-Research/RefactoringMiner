@@ -71,6 +71,10 @@ public abstract class UMLAbstractClass {
 
     public abstract String getName();
 
+    public String getNonQualifiedName() {
+        return name;
+    }
+
     public UMLOperation operationWithTheSameSignature(UMLOperation operation) {
         for (UMLOperation originalOperation : operations) {
             if (originalOperation.equalSignature(operation))

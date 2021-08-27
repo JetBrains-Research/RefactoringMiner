@@ -387,6 +387,20 @@ public class UMLModelDiff {
         return null;
     }
 
+    public UMLOperation findOperationInAddedClasses(OperationInvocation operationInvocation, UMLOperation callerOperation) {
+        for (UMLClass umlClass : addedClasses) {
+            String expression = operationInvocation.getExpression();
+            if (expression != null && umlClass.getNonQualifiedName().equalsIgnoreCase(expression)) {
+                for (UMLOperation operation : umlClass.getOperations()) {
+                    if (operationInvocation.matchesOperation(operation, callerOperation, this)) {
+                        return operation;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
     public UMLClass getAddedClass(String className) {
         for (UMLClass umlClass : addedClasses) {
             if (umlClass.getName().equals(className))
@@ -884,7 +898,7 @@ public class UMLModelDiff {
         List<UMLOperation> addedOperations = new ArrayList<>();
         for (UMLClassDiff classDiff : commonClassDiffList) {
             addedOperations.addAll(classDiff.getAddedOperations());
-            for (Refactoring ref : classDiff.getRefactorings()) {
+            for (Refactoring ref : classDiff.getRefactoringsBeforePostProcessing()) {
                 if (ref instanceof ExtractOperationRefactoring) {
                     ExtractOperationRefactoring extractRef = (ExtractOperationRefactoring) ref;
                     addedOperations.add(extractRef.getExtractedOperation());
@@ -937,7 +951,7 @@ public class UMLModelDiff {
         List<UMLOperation> removedOperations = new ArrayList<>();
         for (UMLClassDiff classDiff : commonClassDiffList) {
             removedOperations.addAll(classDiff.getRemovedOperations());
-            for (Refactoring ref : classDiff.getRefactorings()) {
+            for (Refactoring ref : classDiff.getRefactoringsBeforePostProcessing()) {
                 if (ref instanceof InlineOperationRefactoring) {
                     InlineOperationRefactoring extractRef = (InlineOperationRefactoring) ref;
                     removedOperations.add(extractRef.getInlinedOperation());
@@ -1125,7 +1139,7 @@ public class UMLModelDiff {
                 }
                 this.refactorings.add(ref);
                 UMLOperationBodyMapper mapper = new UMLOperationBodyMapper(removedOperation, addedOperation, classDiff);
-                UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(removedOperation, addedOperation, mapper.getMappings());
+                UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(mapper);
                 refactorings.addAll(operationSignatureDiff.getRefactorings());
                 checkForExtractedOperationsWithinMovedMethod(mapper, addedClass);
             }
@@ -1655,57 +1669,97 @@ public class UMLModelDiff {
     }
 
     private void inferRefactoringsFromMatchingMappers(List<UMLOperationBodyMapper> mappers, UMLOperationDiff operationSignatureDiff, Set<Refactoring> refactorings) {
+        Set<Refactoring> refactoringsToBeAdded = new HashSet<Refactoring>();
         for (UMLOperationBodyMapper mapper : mappers) {
-            for (Refactoring refactoring : mapper.getRefactoringsAfterPostProcessing()) {
+            for (Refactoring refactoring : refactorings) {
                 if (refactoring instanceof RenameVariableRefactoring) {
                     RenameVariableRefactoring rename = (RenameVariableRefactoring) refactoring;
-                    UMLParameter matchingRemovedParameter = null;
-                    for (UMLParameter parameter : operationSignatureDiff.getRemovedParameters()) {
-                        if (parameter.getName().equals(rename.getOriginalVariable().getVariableName()) &&
-                            parameter.getType().equals(rename.getOriginalVariable().getType())) {
-                            matchingRemovedParameter = parameter;
-                            break;
+                    if (mapper.getOperation1().equals(rename.getOperationBefore()) && mapper.getOperation2().equals(rename.getOperationAfter())) {
+                        UMLParameter matchingRemovedParameter = null;
+                        for (UMLParameter parameter : operationSignatureDiff.getRemovedParameters()) {
+                            if (parameter.getName().equals(rename.getOriginalVariable().getVariableName()) &&
+                                parameter.getType().equals(rename.getOriginalVariable().getType())) {
+                                matchingRemovedParameter = parameter;
+                                break;
+                            }
                         }
-                    }
-                    UMLParameter matchingAddedParameter = null;
-                    for (UMLParameter parameter : operationSignatureDiff.getAddedParameters()) {
-                        if (parameter.getName().equals(rename.getRenamedVariable().getVariableName()) &&
-                            parameter.getType().equals(rename.getRenamedVariable().getType())) {
-                            matchingAddedParameter = parameter;
-                            break;
+                        UMLParameter matchingAddedParameter = null;
+                        for (UMLParameter parameter : operationSignatureDiff.getAddedParameters()) {
+                            if (parameter.getName().equals(rename.getRenamedVariable().getVariableName()) &&
+                                parameter.getType().equals(rename.getRenamedVariable().getType())) {
+                                matchingAddedParameter = parameter;
+                                break;
+                            }
                         }
-                    }
-                    if (matchingRemovedParameter != null && matchingAddedParameter != null) {
-                        RenameVariableRefactoring newRename = new RenameVariableRefactoring(matchingRemovedParameter.getVariableDeclaration(), matchingAddedParameter.getVariableDeclaration(),
-                            operationSignatureDiff.getRemovedOperation(), operationSignatureDiff.getAddedOperation(), new LinkedHashSet<>());
-                        refactorings.add(newRename);
+                        if (matchingRemovedParameter != null && matchingAddedParameter != null) {
+                            RenameVariableRefactoring newRename = new RenameVariableRefactoring(matchingRemovedParameter.getVariableDeclaration(), matchingAddedParameter.getVariableDeclaration(),
+                                operationSignatureDiff.getRemovedOperation(), operationSignatureDiff.getAddedOperation(), new LinkedHashSet<AbstractCodeMapping>());
+                            refactoringsToBeAdded.add(newRename);
+                        }
                     }
                 } else if (refactoring instanceof ChangeVariableTypeRefactoring) {
                     ChangeVariableTypeRefactoring changeType = (ChangeVariableTypeRefactoring) refactoring;
-                    UMLParameter matchingRemovedParameter = null;
-                    for (UMLParameter parameter : operationSignatureDiff.getRemovedParameters()) {
-                        if (parameter.getName().equals(changeType.getOriginalVariable().getVariableName()) &&
-                            parameter.getType().equals(changeType.getOriginalVariable().getType())) {
-                            matchingRemovedParameter = parameter;
-                            break;
+                    if (mapper.getOperation1().equals(changeType.getOperationBefore()) && mapper.getOperation2().equals(changeType.getOperationAfter())) {
+                        UMLParameter matchingRemovedParameter = null;
+                        for (UMLParameter parameter : operationSignatureDiff.getRemovedParameters()) {
+                            if (parameter.getName().equals(changeType.getOriginalVariable().getVariableName()) &&
+                                parameter.getType().equals(changeType.getOriginalVariable().getType())) {
+                                matchingRemovedParameter = parameter;
+                                break;
+                            }
+                        }
+                        UMLParameter matchingAddedParameter = null;
+                        for (UMLParameter parameter : operationSignatureDiff.getAddedParameters()) {
+                            if (parameter.getName().equals(changeType.getChangedTypeVariable().getVariableName()) &&
+                                parameter.getType().equals(changeType.getChangedTypeVariable().getType())) {
+                                matchingAddedParameter = parameter;
+                                break;
+                            }
+                        }
+                        if (matchingRemovedParameter != null && matchingAddedParameter != null) {
+                            ChangeVariableTypeRefactoring newChangeType = new ChangeVariableTypeRefactoring(matchingRemovedParameter.getVariableDeclaration(), matchingAddedParameter.getVariableDeclaration(),
+                                operationSignatureDiff.getRemovedOperation(), operationSignatureDiff.getAddedOperation(), new LinkedHashSet<AbstractCodeMapping>());
+                            refactoringsToBeAdded.add(newChangeType);
                         }
                     }
-                    UMLParameter matchingAddedParameter = null;
-                    for (UMLParameter parameter : operationSignatureDiff.getAddedParameters()) {
-                        if (parameter.getName().equals(changeType.getChangedTypeVariable().getVariableName()) &&
-                            parameter.getType().equals(changeType.getChangedTypeVariable().getType())) {
-                            matchingAddedParameter = parameter;
-                            break;
+                } else if (refactoring instanceof AddParameterRefactoring) {
+                    AddParameterRefactoring addParameter = (AddParameterRefactoring) refactoring;
+                    if (mapper.getOperation1().equals(addParameter.getOperationBefore()) && mapper.getOperation2().equals(addParameter.getOperationAfter())) {
+                        UMLParameter matchingAddedParameter = null;
+                        for (UMLParameter parameter : operationSignatureDiff.getAddedParameters()) {
+                            if (parameter.getName().equals(addParameter.getParameter().getName()) &&
+                                parameter.getType().equals(addParameter.getParameter().getType())) {
+                                matchingAddedParameter = parameter;
+                                break;
+                            }
+                        }
+                        if (matchingAddedParameter != null) {
+                            AddParameterRefactoring newAddParameter = new AddParameterRefactoring(matchingAddedParameter,
+                                operationSignatureDiff.getRemovedOperation(), operationSignatureDiff.getAddedOperation());
+                            refactoringsToBeAdded.add(newAddParameter);
                         }
                     }
-                    if (matchingRemovedParameter != null && matchingAddedParameter != null) {
-                        ChangeVariableTypeRefactoring newChangeType = new ChangeVariableTypeRefactoring(matchingRemovedParameter.getVariableDeclaration(), matchingAddedParameter.getVariableDeclaration(),
-                            operationSignatureDiff.getRemovedOperation(), operationSignatureDiff.getAddedOperation(), new LinkedHashSet<>());
-                        refactorings.add(newChangeType);
+                } else if (refactoring instanceof RemoveParameterRefactoring) {
+                    RemoveParameterRefactoring removeParameter = (RemoveParameterRefactoring) refactoring;
+                    if (mapper.getOperation1().equals(removeParameter.getOperationBefore()) && mapper.getOperation2().equals(removeParameter.getOperationAfter())) {
+                        UMLParameter matchingRemovedParameter = null;
+                        for (UMLParameter parameter : operationSignatureDiff.getRemovedParameters()) {
+                            if (parameter.getName().equals(removeParameter.getParameter().getName()) &&
+                                parameter.getType().equals(removeParameter.getParameter().getType())) {
+                                matchingRemovedParameter = parameter;
+                                break;
+                            }
+                        }
+                        if (matchingRemovedParameter != null) {
+                            RemoveParameterRefactoring newRemovedParameter = new RemoveParameterRefactoring(matchingRemovedParameter,
+                                operationSignatureDiff.getRemovedOperation(), operationSignatureDiff.getAddedOperation());
+                            refactoringsToBeAdded.add(newRemovedParameter);
+                        }
                     }
                 }
             }
         }
+        refactorings.addAll(refactoringsToBeAdded);
     }
 
     private List<UMLOperationBodyMapper> findMappersWithMatchingSignatures(UMLOperation operation1, UMLOperation operation2) {
@@ -1932,8 +1986,11 @@ public class UMLModelDiff {
                                     break;
                                 }
                             }
-                            String enclosingClassName = className.substring(0, className.indexOf(anonymousID));
-                            UMLClassBaseDiff umlClassDiff = getUMLClassDiff(enclosingClassName);
+                            UMLClassBaseDiff umlClassDiff = getUMLClassDiff(className);
+                            if (umlClassDiff == null) {
+                                String enclosingClassName = className.substring(0, className.indexOf(anonymousID));
+                                umlClassDiff = getUMLClassDiff(enclosingClassName);
+                            }
                             attributes.addAll(umlClassDiff.originalClassAttributesOfType(addedOperation.getClassName()));
                             for (UMLAnonymousClass anonymousClass : umlClassDiff.getOriginalClass().getAnonymousClassList()) {
                                 if (className.equals(anonymousClass.getCodePath())) {
@@ -2124,13 +2181,26 @@ public class UMLModelDiff {
                 addedOperations.addAll(addedClass.getOperations());
             }
         }
-        List<UMLOperation> removedOperations = getRemovedOperationsInCommonClasses();
+        List<UMLOperation> removedOperations = new ArrayList<>();
         for (UMLClass removedClass : removedClasses) {
             if (!removedClass.implementsInterface(interfaceIntersection) && !removedClass.extendsSuperclass(interfaceIntersection) && !outerClassMovedOrRenamed(removedClass)) {
                 removedOperations.addAll(removedClass.getOperations());
             }
         }
-        if (removedOperations.size() <= MAXIMUM_NUMBER_OF_COMPARED_METHODS || addedOperations.size() <= MAXIMUM_NUMBER_OF_COMPARED_METHODS) {
+        List<UMLOperation> removedOperations1 = getRemovedOperationsInCommonClasses();
+        List<UMLOperation> removedOperations2 = getRemovedOperationsInCommonMovedRenamedClasses();
+        if (condition(addedOperations.size(), removedOperations.size() + removedOperations2.size())) {
+            for (UMLOperation operation : removedOperations2) {
+                if (removedOperations1.contains(operation)) {
+                    removedOperations.add(operation);
+                } else if (!operation.isGetter() && !operation.isSetter() && !operation.isMultiSetter()) {
+                    removedOperations.add(operation);
+                }
+            }
+        } else {
+            removedOperations.addAll(removedOperations1);
+        }
+        if (condition(addedOperations.size(), removedOperations.size())) {
             checkForOperationMoves(addedOperations, removedOperations);
         }
     }
@@ -2139,9 +2209,14 @@ public class UMLModelDiff {
         List<UMLOperation> addedOperations = getAddedAndExtractedOperationsInCommonClasses();
         addedOperations.addAll(getAddedOperationsInMovedAndRenamedClasses());
         List<UMLOperation> removedOperations = getRemovedOperationsInCommonMovedRenamedClasses();
-        if (removedOperations.size() <= MAXIMUM_NUMBER_OF_COMPARED_METHODS || addedOperations.size() <= MAXIMUM_NUMBER_OF_COMPARED_METHODS) {
+        if (condition(addedOperations.size(), removedOperations.size())) {
             checkForOperationMoves(addedOperations, removedOperations);
         }
+    }
+
+    private boolean condition(int size1, int size2) {
+        return (size1 <= MAXIMUM_NUMBER_OF_COMPARED_METHODS || size2 <= MAXIMUM_NUMBER_OF_COMPARED_METHODS) &&
+            size1 * size2 <= MAXIMUM_NUMBER_OF_COMPARED_METHODS * MAXIMUM_NUMBER_OF_COMPARED_METHODS;
     }
 
     private boolean outerClassMovedOrRenamed(UMLClass umlClass) {
@@ -2216,7 +2291,11 @@ public class UMLModelDiff {
                 for (UMLOperation removedOperation : removedOperations) {
                     Pair<UMLOperation, UMLOperation> pair = Pair.of(removedOperation, addedOperation);
                     if (!processedOperationPairs.contains(pair) && removedOperation.testMethodCheck(addedOperation)) {
-                        UMLOperationBodyMapper operationBodyMapper = new UMLOperationBodyMapper(removedOperation, addedOperation, getUMLClassDiff(removedOperation.getClassName()));
+                        UMLClassBaseDiff umlClassDiff = getUMLClassDiff(removedOperation.getClassName());
+                        if (umlClassDiff == null) {
+                            umlClassDiff = getUMLClassDiff(addedOperation.getClassName());
+                        }
+                        UMLOperationBodyMapper operationBodyMapper = new UMLOperationBodyMapper(removedOperation, addedOperation, umlClassDiff);
                         processedOperationPairs.add(pair);
                         int mappings = operationBodyMapper.mappingsWithoutBlocks();
                         if ((mappings > 0 && mappedElementsMoreThanNonMappedT1AndT2(mappings, operationBodyMapper)) || addedOperation.equalSignatureForAbstractMethods(removedOperation) ||
@@ -2287,7 +2366,7 @@ public class UMLModelDiff {
                         if (refactoring != null) {
                             deleteRemovedOperation(removedOperation);
                             deleteAddedOperation(addedOperation);
-                            UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(removedOperation, addedOperation, firstMapper.getMappings());
+                            UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(firstMapper);
                             refactorings.addAll(operationSignatureDiff.getRefactorings());
                             refactorings.add(refactoring);
                             UMLClass addedClass = getAddedClass(addedOperation.getClassName());
@@ -2305,7 +2384,11 @@ public class UMLModelDiff {
                 for (UMLOperation addedOperation : addedOperations) {
                     Pair<UMLOperation, UMLOperation> pair = Pair.of(removedOperation, addedOperation);
                     if (!processedOperationPairs.contains(pair) && removedOperation.testMethodCheck(addedOperation)) {
-                        UMLOperationBodyMapper operationBodyMapper = new UMLOperationBodyMapper(removedOperation, addedOperation, getUMLClassDiff(removedOperation.getClassName()));
+                        UMLClassBaseDiff umlClassDiff = getUMLClassDiff(removedOperation.getClassName());
+                        if (umlClassDiff == null) {
+                            umlClassDiff = getUMLClassDiff(addedOperation.getClassName());
+                        }
+                        UMLOperationBodyMapper operationBodyMapper = new UMLOperationBodyMapper(removedOperation, addedOperation, umlClassDiff);
                         processedOperationPairs.add(pair);
                         int mappings = operationBodyMapper.mappingsWithoutBlocks();
                         if ((mappings > 0 && mappedElementsMoreThanNonMappedT1AndT2(mappings, operationBodyMapper)) || removedOperation.equalSignatureForAbstractMethods(addedOperation) ||
@@ -2376,7 +2459,7 @@ public class UMLModelDiff {
                         if (refactoring != null) {
                             deleteRemovedOperation(removedOperation);
                             deleteAddedOperation(addedOperation);
-                            UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(removedOperation, addedOperation, firstMapper.getMappings());
+                            UMLOperationDiff operationSignatureDiff = new UMLOperationDiff(firstMapper);
                             refactorings.addAll(operationSignatureDiff.getRefactorings());
                             refactorings.add(refactoring);
                             UMLClass addedClass = getAddedClass(addedOperation.getClassName());

@@ -5,7 +5,10 @@ import gr.uom.java.xmi.UMLOperation;
 import gr.uom.java.xmi.UMLParameter;
 import gr.uom.java.xmi.UMLType;
 import gr.uom.java.xmi.decomposition.AbstractCodeMapping;
+import gr.uom.java.xmi.decomposition.UMLOperationBodyMapper;
+import gr.uom.java.xmi.decomposition.VariableDeclaration;
 import gr.uom.java.xmi.decomposition.VariableReferenceExtractor;
+import org.apache.commons.lang3.tuple.Pair;
 import org.refactoringminer.api.Refactoring;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
@@ -30,6 +33,8 @@ public class UMLOperationDiff {
     private boolean operationRenamed;
     private boolean parametersReordered;
     private Set<AbstractCodeMapping> mappings = new LinkedHashSet<>();
+    private Set<Pair<VariableDeclaration, VariableDeclaration>> matchedVariables = new LinkedHashSet<>();
+    private Set<Refactoring> refactorings = new LinkedHashSet<>();
     private UMLAnnotationListDiff annotationListDiff;
     private List<UMLType> addedExceptionTypes;
     private List<UMLType> removedExceptionTypes;
@@ -236,9 +241,11 @@ public class UMLOperationDiff {
         return matchedParameters;
     }
 
-    public UMLOperationDiff(UMLOperation removedOperation, UMLOperation addedOperation, Set<AbstractCodeMapping> mappings) {
-        this.mappings = mappings;
-        process(removedOperation, addedOperation);
+    public UMLOperationDiff(UMLOperationBodyMapper mapper) {
+        this.mappings = mapper.getMappings();
+        this.matchedVariables = mapper.getMatchedVariables();
+        this.refactorings = mapper.getRefactoringsAfterPostProcessing();
+        process(mapper.getOperation1(), mapper.getOperation2());
     }
 
     public UMLOperation getRemovedOperation() {
@@ -312,7 +319,61 @@ public class UMLOperationDiff {
             }
         }
         for (UMLParameterDiff parameterDiff : getParameterDiffList()) {
-            refactorings.addAll(parameterDiff.getRefactorings());
+            boolean conflictFound = false;
+            for (Pair<VariableDeclaration, VariableDeclaration> matchedPair : matchedVariables) {
+                if (matchedPair.getLeft().equals(parameterDiff.getRemovedParameter().getVariableDeclaration()) &&
+                    !matchedPair.getRight().equals(parameterDiff.getAddedParameter().getVariableDeclaration())) {
+                    conflictFound = true;
+                    if (matchedPair.getLeft().isParameter() && matchedPair.getRight().isLocalVariable()) {
+                        Refactoring rename = new RenameVariableRefactoring(matchedPair.getLeft(), matchedPair.getRight(), removedOperation, addedOperation,
+                            VariableReferenceExtractor.findReferences(matchedPair.getLeft(), matchedPair.getRight(), mappings));
+                        refactorings.add(rename);
+                        Refactoring addParameter = new AddParameterRefactoring(parameterDiff.getAddedParameter(), removedOperation, addedOperation);
+                        refactorings.add(addParameter);
+                    }
+                    break;
+                }
+                if (matchedPair.getRight().equals(parameterDiff.getAddedParameter().getVariableDeclaration()) &&
+                    !matchedPair.getLeft().equals(parameterDiff.getRemovedParameter().getVariableDeclaration())) {
+                    conflictFound = true;
+                    if (matchedPair.getLeft().isLocalVariable() && matchedPair.getRight().isParameter()) {
+                        Refactoring rename = new RenameVariableRefactoring(matchedPair.getLeft(), matchedPair.getRight(), removedOperation, addedOperation,
+                            VariableReferenceExtractor.findReferences(matchedPair.getLeft(), matchedPair.getRight(), mappings));
+                        refactorings.add(rename);
+                        Refactoring removeParameter = new RemoveParameterRefactoring(parameterDiff.getRemovedParameter(), removedOperation, addedOperation);
+                        refactorings.add(removeParameter);
+                    }
+                    break;
+                }
+            }
+            for (Refactoring refactoring : this.refactorings) {
+                if (refactoring instanceof RenameVariableRefactoring) {
+                    RenameVariableRefactoring rename = (RenameVariableRefactoring) refactoring;
+                    if (rename.getOriginalVariable().equals(parameterDiff.getRemovedParameter().getVariableDeclaration()) &&
+                        !rename.getRenamedVariable().equals(parameterDiff.getAddedParameter().getVariableDeclaration())) {
+                        conflictFound = true;
+                        break;
+                    } else if (!rename.getOriginalVariable().equals(parameterDiff.getRemovedParameter().getVariableDeclaration()) &&
+                        rename.getRenamedVariable().equals(parameterDiff.getAddedParameter().getVariableDeclaration())) {
+                        conflictFound = true;
+                        break;
+                    }
+                } else if (refactoring instanceof ChangeVariableTypeRefactoring) {
+                    ChangeVariableTypeRefactoring changeType = (ChangeVariableTypeRefactoring) refactoring;
+                    if (changeType.getOriginalVariable().equals(parameterDiff.getRemovedParameter().getVariableDeclaration()) &&
+                        !changeType.getChangedTypeVariable().equals(parameterDiff.getAddedParameter().getVariableDeclaration())) {
+                        conflictFound = true;
+                        break;
+                    } else if (!changeType.getOriginalVariable().equals(parameterDiff.getRemovedParameter().getVariableDeclaration()) &&
+                        changeType.getChangedTypeVariable().equals(parameterDiff.getAddedParameter().getVariableDeclaration())) {
+                        conflictFound = true;
+                        break;
+                    }
+                }
+            }
+            if (!conflictFound) {
+                refactorings.addAll(parameterDiff.getRefactorings());
+            }
         }
         int exactMappings = 0;
         for (AbstractCodeMapping mapping : mappings) {
@@ -322,14 +383,50 @@ public class UMLOperationDiff {
         }
         if (removedParameters.isEmpty() || exactMappings > 0) {
             for (UMLParameter umlParameter : addedParameters) {
-                AddParameterRefactoring refactoring = new AddParameterRefactoring(umlParameter, removedOperation, addedOperation);
-                refactorings.add(refactoring);
+                boolean conflictFound = false;
+                for (Refactoring refactoring : this.refactorings) {
+                    if (refactoring instanceof RenameVariableRefactoring) {
+                        RenameVariableRefactoring rename = (RenameVariableRefactoring) refactoring;
+                        if (rename.getRenamedVariable().equals(umlParameter.getVariableDeclaration())) {
+                            conflictFound = true;
+                            break;
+                        }
+                    } else if (refactoring instanceof ChangeVariableTypeRefactoring) {
+                        ChangeVariableTypeRefactoring changeType = (ChangeVariableTypeRefactoring) refactoring;
+                        if (changeType.getChangedTypeVariable().equals(umlParameter.getVariableDeclaration())) {
+                            conflictFound = true;
+                            break;
+                        }
+                    }
+                }
+                if (!conflictFound) {
+                    AddParameterRefactoring refactoring = new AddParameterRefactoring(umlParameter, removedOperation, addedOperation);
+                    refactorings.add(refactoring);
+                }
             }
         }
         if (addedParameters.isEmpty() || exactMappings > 0) {
             for (UMLParameter umlParameter : removedParameters) {
-                RemoveParameterRefactoring refactoring = new RemoveParameterRefactoring(umlParameter, removedOperation, addedOperation);
-                refactorings.add(refactoring);
+                boolean conflictFound = false;
+                for (Refactoring refactoring : this.refactorings) {
+                    if (refactoring instanceof RenameVariableRefactoring) {
+                        RenameVariableRefactoring rename = (RenameVariableRefactoring) refactoring;
+                        if (rename.getOriginalVariable().equals(umlParameter.getVariableDeclaration())) {
+                            conflictFound = true;
+                            break;
+                        }
+                    } else if (refactoring instanceof ChangeVariableTypeRefactoring) {
+                        ChangeVariableTypeRefactoring changeType = (ChangeVariableTypeRefactoring) refactoring;
+                        if (changeType.getOriginalVariable().equals(umlParameter.getVariableDeclaration())) {
+                            conflictFound = true;
+                            break;
+                        }
+                    }
+                }
+                if (!conflictFound) {
+                    RemoveParameterRefactoring refactoring = new RemoveParameterRefactoring(umlParameter, removedOperation, addedOperation);
+                    refactorings.add(refactoring);
+                }
             }
         }
         if (parametersReordered) {
