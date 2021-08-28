@@ -25,4 +25,8 @@ allprojects {
         updateSinceUntilBuild = true
         buildSearchableOptions.enabled = false
     }
+
+    test {
+        maxHeapSize = "1g"
+    }
 }
