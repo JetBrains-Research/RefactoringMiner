@@ -27,15 +27,16 @@ public class DataReader {
             .collect(Collectors.toList());
     }
 
-    private static List<DetectingRefactoring> getRefactorings(List<RefactoringData> refactoringsData, Set<RefactoringType> types) {
+    private static List<DetectingRefactoring> getRefactorings(List<RefactoringData> refactoringsData,
+                                                              Set<RefactoringType> types) {
         return refactoringsData.stream()
             .filter(refactoringData ->
                 refactoringData.validation.equals("TP") || refactoringData.validation.equals("CTP"))
-            .map(refactoringData ->
-                new DetectingRefactoring(
+            .flatMap(refactoringData ->
+                DetectingRefactoring.of(
                     RefactoringType.fromName(refactoringData.type),
                     refactoringData.description
-                )
+                ).stream()
             )
             .filter(refactoring -> types.contains(refactoring.type))
             .collect(Collectors.toList());

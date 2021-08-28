@@ -12,11 +12,14 @@ public class DetectingRefactoring {
     public final RefactoringType type;
     public final String description;
 
-    public DetectingRefactoring(RefactoringType type, String description) {
+    private DetectingRefactoring(RefactoringType type, String description) {
         this.type = type;
         this.description = preprocessDescription(description);
     }
 
+    /**
+     * Split aggregate refactoring into separate ones
+     */
     public static Collection<DetectingRefactoring> of(RefactoringType type, String description) {
         int aggregationMarker = description.indexOf("from classes");
         if (aggregationMarker == -1) {
@@ -35,22 +38,25 @@ public class DetectingRefactoring {
         return description.replace('\t', ' ');
     }
 
-    public boolean detect(DetectingRefactoring refactoring) {
-        if (description.equals(refactoring.description)) {
+    /**
+     * Check if refactoring fits to another
+     */
+    public boolean detect(DetectingRefactoring other) {
+        if (description.equals(other.description)) {
             return true;
         }
         if (type.getDisplayName().contains("Annotation")) {
             // Ignore formatting
             String nonSpacedThisDescription = description.replaceAll("\\s", "");
-            String nonSpacedOtherDescription = refactoring.description.replaceAll("\\s", "");
+            String nonSpacedOtherDescription = other.description.replaceAll("\\s", "");
             if (nonSpacedThisDescription.equals(nonSpacedOtherDescription)) {
                 return true;
             }
         }
-        if (type == RefactoringType.RENAME_ATTRIBUTE && refactoring.type == RefactoringType.RENAME_ATTRIBUTE) {
+        if (type == RefactoringType.RENAME_ATTRIBUTE && other.type == RefactoringType.RENAME_ATTRIBUTE) {
             // Enum names non-qualified in dataset
-            int lcs = new LongestCommonSubsequence().apply(description, refactoring.description);
-            return lcs == Math.min(description.length(), refactoring.description.length());
+            int lcs = new LongestCommonSubsequence().apply(description, other.description);
+            return lcs == Math.min(description.length(), other.description.length());
         }
         return false;
     }
