@@ -28,7 +28,7 @@ public class TestStatistics extends LightJavaCodeInsightFixtureTestCase {
 
     public static final Path dataFile = resources.resolve("data.json");
     public static final Set<RefactoringType> types = EnumSet.allOf(RefactoringType.class);
-    public static final Path foldersRepository = Path.of("/media/roman/Roman's backup/tmp1");
+    public static final Path foldersRepository = Path.of("tmp1");
     public static final boolean printMistakes = true;
 
     public static final int expectedTruePositives = 10242;
