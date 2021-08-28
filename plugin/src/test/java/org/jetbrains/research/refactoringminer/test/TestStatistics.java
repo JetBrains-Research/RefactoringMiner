@@ -17,6 +17,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static org.jetbrains.research.refactoringminer.test.counters.Counter.Result.FALSE_NEGATIVE;
+import static org.jetbrains.research.refactoringminer.test.counters.Counter.Result.FALSE_POSITIVE;
+import static org.jetbrains.research.refactoringminer.test.counters.Counter.Result.TRUE_POSITIVE;
+
 public class TestStatistics extends LightJavaCodeInsightFixtureTestCase {
 
     public static final Path resources = Path.of("src", "test", "resources");
@@ -26,6 +30,10 @@ public class TestStatistics extends LightJavaCodeInsightFixtureTestCase {
     public static final Set<RefactoringType> types = EnumSet.allOf(RefactoringType.class);
     public static final Path foldersRepository = Path.of("/media/roman/Roman's backup/tmp1");
     public static final boolean printMistakes = true;
+
+    public static final int expectedTruePositives = 10242;
+    public static final int expectedFalsePositives = 166;
+    public static final int expectedFalseNegatives = 554;
 
     public void test() throws IOException, InterruptedException {
         List<CommitRefactorings> data = DataReader.read(dataFile, types);
@@ -52,6 +60,8 @@ public class TestStatistics extends LightJavaCodeInsightFixtureTestCase {
             mistakesCounter.printMistakes(System.out);
         }
         statisticsCounter.printStatistics(System.out);
+
+        assertTrue(checkExpected(statisticsCounter.total()));
     }
 
     private void runTests(Collection<RepositoryTest> tests, GitHistoryRefactoringMiner miner,
@@ -62,5 +72,11 @@ public class TestStatistics extends LightJavaCodeInsightFixtureTestCase {
         }
         executor.shutdown();
         executor.awaitTermination(1, TimeUnit.HOURS);
+    }
+
+    private boolean checkExpected(StatisticsCounter.Statistics statistics) {
+        return statistics.count(TRUE_POSITIVE) == expectedTruePositives
+            && statistics.count(FALSE_POSITIVE) == expectedFalsePositives
+            && statistics.count(FALSE_NEGATIVE) == expectedFalseNegatives;
     }
 }
