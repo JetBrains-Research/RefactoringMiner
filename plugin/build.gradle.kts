@@ -2,6 +2,7 @@ import java.io.OutputStream
 
 dependencies {
     implementation(project(":refactoringminer"))
+    implementation("org.eclipse.jgit:org.eclipse.jgit:5.10.0.202012080955-r")
 }
 
 open class IOCliTask : org.jetbrains.intellij.tasks.RunIdeTask() {

@@ -34,6 +34,7 @@ import org.refactoringminer.api.RefactoringHandler;
 import org.refactoringminer.api.RefactoringMinerTimedOutException;
 import org.refactoringminer.api.RefactoringType;
 import org.refactoringminer.util.GitServiceImpl;
+import org.refactoringminer.util.RefactoringTypeUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.io.File;
@@ -79,7 +80,7 @@ public class GitHistoryRefactoringMinerImpl implements GitHistoryRefactoringMine
     private GitHub gitHub;
 
     public GitHistoryRefactoringMinerImpl() {
-        this.setRefactoringTypesToConsider(RefactoringType.ALL);
+        this.setRefactoringTypesToConsider(RefactoringTypeUtils.ALL);
     }
 
     public void setRefactoringTypesToConsider(RefactoringType... types) {
